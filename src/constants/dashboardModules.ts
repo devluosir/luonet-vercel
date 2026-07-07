@@ -12,8 +12,14 @@ import {
 export const QUICK_CREATE_MODULES = [
   { 
     id: 'quotation', 
-    name: '新报价单', 
+    name: '新外贸报价单', 
     path: '/quotation?tab=quotation',
+    icon: FileText
+  },
+  {
+    id: 'quotation-domestic',
+    name: '新内销报价单',
+    path: '/quotation?tab=domestic',
     icon: FileText
   },
   { 
@@ -70,7 +76,7 @@ export const TOOLS_MODULES = [
 
 // 文档类型配置
 export const DOCUMENT_TYPES = {
-  quotation: { label: 'QTN', color: 'blue', name: '报价单' },
+  quotation: { label: 'QTN', color: 'blue', name: '外贸报价单' },
   confirmation: { label: 'SC', color: 'green', name: '销售确认' },
   packing: { label: 'PL', color: 'teal', name: '装箱单' },
   invoice: { label: 'INV', color: 'purple', name: '财务发票' },

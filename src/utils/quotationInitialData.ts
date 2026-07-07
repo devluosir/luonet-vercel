@@ -4,7 +4,7 @@ import { getDefaultNotes } from './getDefaultNotes';
 import type { QuotationData } from '@/types/quotation';
 import { calculatePaymentDate } from './quotationCalculations';
 
-export function getInitialQuotationData(pageType: 'quotation' | 'confirmation' = 'quotation'): QuotationData {
+export function getInitialQuotationData(pageType: 'quotation' | 'confirmation' | 'domestic' = 'quotation'): QuotationData {
   const username = (() => {
     // 在服务器端渲染时，返回默认值避免水合错误
     if (typeof window === 'undefined') {
@@ -26,14 +26,20 @@ export function getInitialQuotationData(pageType: 'quotation' | 'confirmation' =
   // 在服务器端渲染时，使用固定的默认日期避免水合错误
   const currentDate = typeof window === 'undefined' ? '2024-01-01' : format(new Date(), 'yyyy-MM-dd');
 
+  const isDomestic = pageType === 'domestic';
+  const notesType = pageType === 'confirmation' ? 'confirmation' : 'quotation';
+
   return {
+    mode: isDomestic ? 'domestic' : 'export',
     to: '',
+    domesticSeller: isDomestic ? { name: username } : undefined,
+    domesticBuyer: isDomestic ? {} : undefined,
     inquiryNo: '',
     quotationNo: '',
     contractNo: '',
     date: currentDate,
     from: username,
-    currency: 'USD',
+    currency: isDomestic ? 'CNY' : 'USD',
     paymentDate: calculatePaymentDate(currentDate),
     items: [{ 
       id: 1, 
@@ -45,7 +51,7 @@ export function getInitialQuotationData(pageType: 'quotation' | 'confirmation' =
       amount: 0, 
       remarks: '' 
     }],
-    notes: getDefaultNotes(username, pageType),
+    notes: getDefaultNotes(username, notesType),
     amountInWords: { 
       dollars: '', 
       cents: '', 
@@ -60,6 +66,7 @@ export function getInitialQuotationData(pageType: 'quotation' | 'confirmation' =
     showMainPaymentTerm: false, // 统一控制付款条款显示
     showInvoiceReminder: false,
     additionalPaymentTerms: '',
+    domesticTotalRemark: isDomestic ? '价格含13个点专票及运费' : undefined,
     paymentMethod: 'T/T',
     templateConfig: { 
       headerType: 'bilingual', 

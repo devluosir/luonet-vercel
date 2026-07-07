@@ -10,13 +10,20 @@ const FORCE_FULL_SYNC_EVERY_MS = 5 * 60_000;
 interface UseInquirySyncOptions {
   enabled: boolean;
   suspended?: boolean;
+  pushLocal?: boolean;
+  mergeLocal?: boolean;
 }
 
 function getMetaKey(meta: { count: number; maxUpdatedAt: string | null }): string {
   return `${meta.count}:${meta.maxUpdatedAt ?? ''}`;
 }
 
-export function useInquirySync({ enabled, suspended = false }: UseInquirySyncOptions) {
+export function useInquirySync({
+  enabled,
+  suspended = false,
+  pushLocal = true,
+  mergeLocal = true,
+}: UseInquirySyncOptions) {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const suspendedRef = useRef(suspended);
   const lastMetaRef = useRef<string | null>(null);
@@ -43,9 +50,14 @@ export function useInquirySync({ enabled, suspended = false }: UseInquirySyncOpt
       try {
         const d1Records = await inquiryService.pullFromD1();
         if (cancelled || suspendedRef.current) return;
-        inquiryService.pushLocalToD1(d1Records);
-        const merged = inquiryService.mergeFromD1(d1Records);
-        useInquiryStore.setState({ records: merged });
+        if (pushLocal) inquiryService.pushLocalToD1(d1Records);
+        const nextRecords = mergeLocal
+          ? inquiryService.mergeFromD1(d1Records)
+          : d1Records
+              .filter((record) => record.status !== 'deleted')
+              .sort((a, b) => b.inquiryNo.localeCompare(a.inquiryNo));
+        if (!mergeLocal) inquiryService.save(nextRecords);
+        useInquiryStore.setState({ records: nextRecords });
         lastFullSyncAtRef.current = Date.now();
         setLastSyncedAt(new Date());
         await refreshMetaMemory();
@@ -88,7 +100,7 @@ export function useInquirySync({ enabled, suspended = false }: UseInquirySyncOpt
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [enabled]);
+  }, [enabled, mergeLocal, pushLocal]);
 
   return { lastSyncedAt };
 }

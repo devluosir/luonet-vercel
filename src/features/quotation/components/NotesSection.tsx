@@ -32,9 +32,10 @@ interface NotesSectionProps {
 }
 
 export const NotesSection: React.FC<NotesSectionProps> = () => {
-  const { notesConfig, updateNoteVisibility, updateNoteOrder, updateNoteContent, addNote, removeNote } = useQuotationStore();
+  const { tab, notesConfig, updateNoteVisibility, updateNoteOrder, updateNoteContent, addNote, removeNote } = useQuotationStore();
   const [mounted, setMounted] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<'exw' | 'fob' | 'cif' | null>(null);
+  const isDomestic = tab === 'domestic';
 
   useEffect(() => {
     setMounted(true);
@@ -128,44 +129,50 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
       {/* 标题 + 精简操作按钮 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-base font-semibold text-gray-800 dark:text-[#F5F5F7]">Notes</h3>
+          <h3 className="text-base font-semibold text-gray-800 dark:text-[#F5F5F7]">
+            {isDomestic ? '合同条款' : 'Notes'}
+          </h3>
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => applyTemplate('exw')}
-              className={`p-1.5 rounded border border-gray-300 dark:border-gray-600 transition-colors ${
-                selectedTemplate === 'exw'
-                  ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                  : 'hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-300 text-gray-400 dark:text-gray-500'
-              }`}
-              title="套用 EXW 模板"
-            >
-              <Truck className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => applyTemplate('fob')}
-              className={`p-1.5 rounded border border-gray-300 dark:border-gray-600 transition-colors ${
-                selectedTemplate === 'fob'
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                  : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-300 text-gray-400 dark:text-gray-500'
-              }`}
-              title="套用 FOB 模板"
-            >
-              <Ship className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => applyTemplate('cif')}
-              className={`p-1.5 rounded border border-gray-300 dark:border-gray-600 transition-colors ${
-                selectedTemplate === 'cif'
-                  ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300'
-                  : 'hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600 dark:hover:text-teal-300 text-gray-400 dark:text-gray-500'
-              }`}
-              title="套用 CIF 模板"
-            >
-              <Globe className="w-4 h-4" />
-            </button>
+            {!isDomestic && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => applyTemplate('exw')}
+                  className={`p-1.5 rounded border border-gray-300 dark:border-gray-600 transition-colors ${
+                    selectedTemplate === 'exw'
+                      ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                      : 'hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-300 text-gray-400 dark:text-gray-500'
+                  }`}
+                  title="套用 EXW 模板"
+                >
+                  <Truck className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyTemplate('fob')}
+                  className={`p-1.5 rounded border border-gray-300 dark:border-gray-600 transition-colors ${
+                    selectedTemplate === 'fob'
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                      : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-300 text-gray-400 dark:text-gray-500'
+                  }`}
+                  title="套用 FOB 模板"
+                >
+                  <Ship className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyTemplate('cif')}
+                  className={`p-1.5 rounded border border-gray-300 dark:border-gray-600 transition-colors ${
+                    selectedTemplate === 'cif'
+                      ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300'
+                      : 'hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600 dark:hover:text-teal-300 text-gray-400 dark:text-gray-500'
+                  }`}
+                  title="套用 CIF 模板"
+                >
+                  <Globe className="w-4 h-4" />
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={addNote}
@@ -236,6 +243,8 @@ interface SortableNoteProps {
   onRemove: (noteId: string) => void;
 }
 
+const DOMESTIC_NUMERALS = ['二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四'];
+
 const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, onUpdateContent, onRemove: _onRemove }) => {
   const {
     attributes,
@@ -272,11 +281,13 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
   }, [showOptions]);
 
   // 获取当前Note在可见列表中的序号
-  const { notesConfig } = useQuotationStore();
+  const { tab, notesConfig } = useQuotationStore();
+  const isDomestic = tab === 'domestic';
   const visibleNotes = notesConfig
     .filter(n => n.visible)
     .sort((a, b) => a.order - b.order);
   const noteIndex = visibleNotes.findIndex(n => n.id === note.id) + 1;
+  const displayIndex = isDomestic ? (DOMESTIC_NUMERALS[noteIndex - 1] ?? String(noteIndex + 1)) : String(noteIndex);
 
   // 编辑相关函数
   const handleStartEdit = () => {
@@ -358,7 +369,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
                 title={note.visible ? `隐藏条款 (当前序号: ${noteIndex})` : '显示条款'}
               >
                 {note.visible ? (
-                  <span className="text-xs">{noteIndex}</span>
+                  <span className="text-xs">{displayIndex}</span>
                 ) : (
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -381,7 +392,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
                       onBlur={handleSaveEdit}
                       className="w-full h-auto min-h-8 max-h-32 box-border text-sm leading-5 border border-gray-300 dark:border-[#3A3A3C] rounded px-2 py-1 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-1 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] resize-none overflow-auto"
                       rows={1}
-                      placeholder="输入条款内容... (Esc 取消)"
+                      placeholder={isDomestic ? '输入合同条款... (Esc 取消)' : '输入条款内容... (Esc 取消)'}
                       autoFocus
                       onInput={(e) => {
                         adjustTextareaHeight(e.currentTarget);

@@ -341,6 +341,34 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   useEffect(() => onRemarksMergeModeChange?.(remarksMergeMode), [remarksMergeMode, onRemarksMergeModeChange]);
 
   const effectiveVisibleCols = isHydrated ? visibleCols : ['partName', 'quantity', 'unit', 'unitPrice', 'amount', 'remarks'];
+  const isDomestic = data.mode === 'domestic';
+  const labels = isDomestic
+    ? {
+        item: '产品',
+        itemNo: '序号',
+        partName: '产品名称',
+        description: '规格型号',
+        quantity: '数量',
+        unit: '单位',
+        unitPrice: '单价(含税)',
+        amount: '金额(含税)',
+        remarks: '备注',
+        otherFees: '其他费用',
+        otherFeeDescription: '费用说明',
+      }
+    : {
+        item: 'Item',
+        itemNo: 'No.',
+        partName: 'Part Name',
+        description: 'Description',
+        quantity: 'Quantity',
+        unit: 'Unit',
+        unitPrice: 'Unit Price',
+        amount: 'Amount',
+        remarks: 'Remarks',
+        otherFees: 'Other Fees',
+        otherFeeDescription: 'Description',
+      };
 
   // 使用统一的单位处理hook
   const {
@@ -910,7 +938,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
           return (
             <div key={item.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5EA] dark:border-[#2C2C2E]">
-                <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Item #{index + 1}</div>
+                <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">{labels.item} #{index + 1}</div>
                 <button type="button" onClick={() => handleSoftDelete(index)} className="transition-colors p-1 text-gray-400 hover:bg-red-100 hover:text-red-600" title="删除此项">
                   ×
                 </button>
@@ -919,7 +947,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               <div className="grid grid-cols-1 gap-4">
                 {/* Part Name */}
                 <div>
-                  <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Part Name</label>
+                  <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">{labels.partName}</label>
                   <AutoGrowTextarea
                     value={item.partName}
                     onChange={(e) => handleItemChange(index, 'partName', e.target.value)}
@@ -927,14 +955,14 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     isDarkMode={isDarkMode}
                     onFocusIOS={onFocusIOS}
                     className={`${item.highlight?.partName ? highlightClass : ''} border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg py-2`}
-                    placeholder="Enter part name..."
+                    placeholder={isDomestic ? '输入产品名称...' : 'Enter part name...'}
                   />
                 </div>
 
                 {/* Description */}
                 {effectiveVisibleCols.includes('description') && (
                   <div data-probe={`desc@row${index}`}>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">{labels.description}</label>
                     <AutoGrowTextarea
                       value={getDesc(item)}
                       onChange={(e) => handleTextareaChange(e, index, false, null, 'description')}
@@ -942,7 +970,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       isDarkMode={isDarkMode}
                       onFocusIOS={onFocusIOS}
                       className={`${item.highlight?.description ? highlightClass : ''} border rounded-lg py-2`}
-                      placeholder="Enter description..."
+                      placeholder={isDomestic ? '输入规格型号...' : 'Enter description...'}
                     />
                   </div>
                 )}
@@ -950,7 +978,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 {/* Qty + Unit */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">{labels.quantity}</label>
                     <input
                       type="text"
                       inputMode="decimal"
@@ -964,7 +992,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">{labels.unit}</label>
                     <UnitSelector
                       value={item.unit}
                       quantity={item.quantity}
@@ -981,7 +1009,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 {/* U/Price + Amount */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit Price</label>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">{labels.unitPrice}</label>
                     <input
                       type="text"
                       inputMode="decimal"
@@ -995,7 +1023,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Amount</label>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">{labels.amount}</label>
                     <input
                       type="text"
                       value={item.amount.toFixed(2)}
@@ -1010,7 +1038,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 {/* Remarks */}
                 {effectiveVisibleCols.includes('remarks') && shouldRenderRemarkCell(index, mergedRemarksCells) && (
                   <div className={`${remarkIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 rounded-lg p-2 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''}`}>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Remarks</label>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">{labels.remarks}</label>
                     <AutoGrowTextarea
                       value={remarkIsMerged ? (remarkMergedInfo?.content || '') : (item.remarks || '')}
                       onChange={(e) => handleTextareaChange(e, index, remarkIsMerged, remarkMergedInfo, 'remarks')}
@@ -1030,11 +1058,11 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
         {/* Other Fees (mobile) */}
         {(data.otherFees ?? []).length > 0 && (
           <div className="space-y-4 mt-6">
-            <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] px-1">Other Fees</div>
+            <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] px-1">{labels.otherFees}</div>
             {(data.otherFees ?? []).map((fee, index) => (
               <div key={fee.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5EA] dark:border-[#2C2C2E]">
-                  <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Item #{((data.items?.length || 0) + index + 1)}</div>
+                  <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">{labels.item} #{((data.items?.length || 0) + index + 1)}</div>
                   <button type="button" onClick={() => handleOtherFeeSoftDelete(index)} className="transition-colors p-1 text-gray-400 hover:bg-red-100 hover:text-red-600" title="删除此项">
                     ×
                   </button>
@@ -1042,7 +1070,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
                 <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">{labels.otherFeeDescription}</label>
                     <AutoGrowTextarea
                       value={fee.description}
                       onChange={(e) => handleOtherFeeChange(index, 'description', e.target.value)}
@@ -1055,7 +1083,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Amount</label>
+                      <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">{labels.amount}</label>
                       <input
                         type="text"
                         inputMode="decimal"
@@ -1087,7 +1115,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     </div>
                     {effectiveVisibleCols.includes('remarks') && (
                       <div>
-                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Remarks</label>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">{labels.remarks}</label>
                         <AutoGrowTextarea
                           value={fee.remarks || ''}
                           onChange={(e) => handleOtherFeeChange(index, 'remarks', e.target.value)}
@@ -1126,27 +1154,27 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       className={`left-0 z-10 w-12 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
                       bg-[#F5F5F7] dark:bg-[#3A3A3C] ${(data.otherFees ?? []).length === 0 ? 'rounded-tl-2xl' : ''}`}
                     >
-                      No.
+                      {labels.itemNo}
                     </th>
                     {effectiveVisibleCols.includes('partName') && (
                       <th className="px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap min-w-[120px]">
-                        Part Name
+                        {labels.partName}
                       </th>
                     )}
                     {effectiveVisibleCols.includes('description') && (
-                      <th className="px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] min-w-[120px]">Description</th>
+                      <th className="px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] min-w-[120px]">{labels.description}</th>
                     )}
                     {effectiveVisibleCols.includes('quantity') && (
-                      <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
+                      <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">{isDomestic ? labels.quantity : "Q'TY"}</th>
                     )}
                     {effectiveVisibleCols.includes('unit') && (
-                      <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
+                      <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">{labels.unit}</th>
                     )}
                     {effectiveVisibleCols.includes('unitPrice') && (
-                      <th className="w-32 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
+                      <th className="w-32 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">{isDomestic ? labels.unitPrice : 'U/Price'}</th>
                     )}
                     {effectiveVisibleCols.includes('amount') && (
-                      <th className="w-28 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
+                      <th className="w-28 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">{labels.amount}</th>
                     )}
                     {effectiveVisibleCols.includes('remarks') && (
                       <th
@@ -1154,7 +1182,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           (data.otherFees ?? []).length === 0 ? 'rounded-tr-2xl' : ''
                         }`}
                       >
-                        Remarks
+                        {labels.remarks}
                       </th>
                     )}
                     {(!effectiveVisibleCols.includes('remarks') || visibleCols.length === 0) && (

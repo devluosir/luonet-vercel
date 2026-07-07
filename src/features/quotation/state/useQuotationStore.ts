@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
 import type { NoteConfig } from '../types/notes';
-import { DEFAULT_NOTES_CONFIG } from '../types/notes';
+import { DEFAULT_NOTES_CONFIG, DOMESTIC_NOTES_CONFIG } from '../types/notes';
 import { getInitialQuotationData } from '@/utils/quotationInitialData';
 import { getDefaultNotes } from '@/utils/getDefaultNotes';
 import { eventSampler } from '../utils/eventLogger';
@@ -9,11 +9,12 @@ import { getLocalStorageJSON, getLocalStorageString } from '@/utils/safeLocalSto
 
 // 已知的QuotationData字段
 const KNOWN_KEYS = new Set<keyof QuotationData>([
-  'quotationNo', 'contractNo', 'date', 'notes', 'from', 'to', 'inquiryNo', 'currency',
+  'mode', 'quotationNo', 'contractNo', 'date', 'notes', 'from', 'to', 'inquiryNo', 'currency',
+  'domesticSeller', 'domesticBuyer',
   'paymentDate', 'items', 'amountInWords', 'showDescription', 'showRemarks', 'showBank',
   'showStamp', 'otherFees', 'customUnits', 'showMainPaymentTerm', 'showInvoiceReminder',
   'additionalPaymentTerms', 'templateConfig', 'depositPercentage', 'depositAmount',
-  'showBalance', 'balanceAmount', 'updatedAt'
+  'domesticTotalRemark', 'showBalance', 'balanceAmount', 'updatedAt'
 ]);
 
 // 浅比较工具函数
@@ -61,11 +62,11 @@ function devAuditPatch(patch: Partial<QuotationData>, source = 'unknown'): Parti
   return patch;
 }
 
-type Tab = 'quotation' | 'confirmation';
+export type QuotationTab = 'quotation' | 'confirmation' | 'domestic';
 
 export interface QuotationState {
   // 核心状态
-  tab: Tab;
+  tab: QuotationTab;
   data: QuotationData;
   editId?: string;
   isGenerating: boolean;
@@ -97,7 +98,7 @@ export interface QuotationState {
   } | null;
 
   // Actions
-  setTab: (tab: Tab) => void;
+  setTab: (tab: QuotationTab) => void;
   setData: (updater: (prev: QuotationData) => QuotationData) => void;
   setEditId: (id?: string) => void;
   setGenerating: (isGenerating: boolean) => void;
@@ -166,7 +167,29 @@ export const useQuotationStore = create<QuotationState>((set, _get) => ({
     if (tab === 'confirmation' && !state.data.showStamp) {
       return {
         tab,
-        data: { ...state.data, showStamp: true }
+        data: { ...state.data, mode: 'export', showStamp: true }
+      };
+    }
+    if (tab === 'domestic') {
+      return {
+        tab,
+        data: {
+          ...state.data,
+          mode: 'domestic',
+          currency: 'CNY',
+          domesticSeller: state.data.domesticSeller ?? { name: state.data.from },
+          domesticBuyer: state.data.domesticBuyer ?? { name: state.data.to.split('\n')[0] ?? '' },
+          domesticTotalRemark: state.data.domesticTotalRemark ?? '价格含13个点专票及运费',
+        },
+        notesConfig: state.notesConfig.some((note) => note.id.startsWith('domestic_clause_'))
+          ? state.notesConfig
+          : DOMESTIC_NOTES_CONFIG,
+      };
+    }
+    if (state.data.mode === 'domestic') {
+      return {
+        tab,
+        data: { ...state.data, mode: 'export' }
       };
     }
     return { tab };
@@ -376,7 +399,7 @@ export const useQuotationStore = create<QuotationState>((set, _get) => ({
       }
       return {};
     }
-          const nextNotes = getDefaultNotes(from, state.tab);
+          const nextNotes = getDefaultNotes(from, state.tab === 'confirmation' ? 'confirmation' : 'quotation');
       if (process.env.NODE_ENV === 'development') {
         console.log('[updateFrom] 更新from和notes', { from, notes: nextNotes });
         eventSampler.log('updateFrom', { from, notesCount: nextNotes.length });
@@ -394,7 +417,7 @@ export const useQuotationStore = create<QuotationState>((set, _get) => ({
 
       if (currentUser && currentUser.toLowerCase() !== 'roger') {
         const formattedUser = currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase();
-        const nextNotes = getDefaultNotes(formattedUser, state.tab);
+        const nextNotes = getDefaultNotes(formattedUser, state.tab === 'confirmation' ? 'confirmation' : 'quotation');
         return {
           data: { ...state.data, from: formattedUser, notes: nextNotes, updatedAt: new Date().toISOString() }
         };

@@ -2,19 +2,26 @@ import { saveQuotationHistory } from '@/utils/quotationHistory';
 import { getInitialQuotationData } from '@/utils/quotationInitialData';
 import type { QuotationData } from '@/types/quotation';
 import type { NoteConfig } from '../types/notes';
-import { DEFAULT_NOTES_CONFIG } from '../types/notes';
+import { DEFAULT_NOTES_CONFIG, DOMESTIC_NOTES_CONFIG } from '../types/notes';
 
 interface CustomWindow extends Window {
   __QUOTATION_DATA__?: QuotationData | null;
   __EDIT_MODE__?: boolean;
   __EDIT_ID__?: string;
-  __QUOTATION_TYPE__?: 'quotation' | 'confirmation';
+  __QUOTATION_TYPE__?: QuotationTab;
   __NOTES_CONFIG__?: NoteConfig[] | null;
+}
+
+export type QuotationTab = 'quotation' | 'confirmation' | 'domestic';
+export type QuotationHistoryType = 'quotation' | 'confirmation';
+
+export function getHistoryTypeFromTab(tab: QuotationTab): QuotationHistoryType {
+  return tab === 'confirmation' ? 'confirmation' : 'quotation';
 }
 
 // 保存或更新报价数据
 export async function saveOrUpdate(
-  tab: 'quotation' | 'confirmation',
+  tab: QuotationTab,
   data: QuotationData,
   notesConfig: NoteConfig[],
   editId?: string
@@ -24,20 +31,24 @@ export async function saveOrUpdate(
     let workingData = data;
 
     // confirmation 自动补合同号
-    if (tab === 'confirmation' && !data.contractNo) {
+    const historyType = getHistoryTypeFromTab(tab);
+
+    if (historyType === 'confirmation' && !data.contractNo) {
       workingData = {
         ...data,
+        mode: 'export',
         contractNo: data.quotationNo || `SC${Date.now()}`
       };
     }
 
     // 保存时包含notesConfig
-    const dataWithConfig = {
+    const dataWithConfig: QuotationData & { notesConfig: NoteConfig[] } = {
       ...workingData,
+      mode: tab === 'domestic' ? 'domestic' : 'export',
       notesConfig
     };
 
-    const result = await saveQuotationHistory(tab, dataWithConfig, editId);
+    const result = await saveQuotationHistory(historyType, dataWithConfig, editId);
     return result;
   } catch (error) {
     console.error('Error saving quotation:', error);
@@ -46,18 +57,23 @@ export async function saveOrUpdate(
 }
 
 // 从多个数据源初始化数据
-export function initDataFromSources(tab: 'quotation' | 'confirmation' = 'quotation'): QuotationData {
+export function initDataFromSources(tab: QuotationTab = 'quotation'): QuotationData {
   // 1. 优先使用全局注入的数据
   if (typeof window !== 'undefined') {
     const win = window as unknown as CustomWindow;
     if (win.__QUOTATION_DATA__) {
-      return win.__QUOTATION_DATA__;
+      return {
+        ...win.__QUOTATION_DATA__,
+        mode: tab === 'domestic' ? 'domestic' : win.__QUOTATION_DATA__.mode ?? 'export',
+        currency: tab === 'domestic' ? 'CNY' : win.__QUOTATION_DATA__.currency,
+      };
     }
   }
 
   // 2. 其次使用草稿数据，但确保合并预设值
   try {
-    const draft = localStorage.getItem('draftQuotation');
+    const draftKey = tab === 'domestic' ? 'draftDomesticQuotation' : 'draftQuotation';
+    const draft = localStorage.getItem(draftKey);
     if (draft) {
       const parsed = JSON.parse(draft);
       // 获取预设值作为基础
@@ -66,6 +82,8 @@ export function initDataFromSources(tab: 'quotation' | 'confirmation' = 'quotati
       return {
         ...defaultData,
         ...parsed,
+        mode: tab === 'domestic' ? 'domestic' : parsed.mode ?? 'export',
+        currency: tab === 'domestic' ? 'CNY' : parsed.currency ?? defaultData.currency,
         // 确保notes字段有内容
         notes: parsed.notes && parsed.notes.length > 0 ? parsed.notes : defaultData.notes,
         // 确保from字段有内容
@@ -87,7 +105,7 @@ export function initDataFromSources(tab: 'quotation' | 'confirmation' = 'quotati
 }
 
 // 从多个数据源初始化Notes配置
-export function initNotesConfigFromSources(): NoteConfig[] {
+export function initNotesConfigFromSources(tab: QuotationTab = 'quotation'): NoteConfig[] {
   // 1. 优先使用全局注入的配置
   if (typeof window !== 'undefined') {
     const win = window as unknown as CustomWindow;
@@ -98,7 +116,8 @@ export function initNotesConfigFromSources(): NoteConfig[] {
 
   // 2. 其次使用草稿数据中的配置
   try {
-    const draft = localStorage.getItem('draftQuotation');
+    const draftKey = tab === 'domestic' ? 'draftDomesticQuotation' : 'draftQuotation';
+    const draft = localStorage.getItem(draftKey);
     if (draft) {
       const parsed = JSON.parse(draft);
       if (parsed.notesConfig && Array.isArray(parsed.notesConfig)) {
@@ -111,8 +130,9 @@ export function initNotesConfigFromSources(): NoteConfig[] {
   }
 
   // 3. 最后使用默认配置
-  console.log('使用默认Notes配置:', DEFAULT_NOTES_CONFIG.length, '条');
-  return DEFAULT_NOTES_CONFIG;
+  const defaults = tab === 'domestic' ? DOMESTIC_NOTES_CONFIG : DEFAULT_NOTES_CONFIG;
+  console.log('使用默认Notes配置:', defaults.length, '条');
+  return defaults;
 }
 
 // 获取编辑ID
@@ -124,10 +144,12 @@ export function getEditIdFromPathname(pathname?: string): string | undefined {
 }
 
 // 获取标签页类型
-export function getTabFromSearchParams(searchParams?: URLSearchParams): 'quotation' | 'confirmation' {
+export function getTabFromSearchParams(searchParams?: URLSearchParams): QuotationTab {
   if (typeof window !== 'undefined' && searchParams) {
-    const tabFromUrl = searchParams.get('tab') as 'quotation' | 'confirmation' | null;
-    if (tabFromUrl) return tabFromUrl;
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl === 'confirmation' || tabFromUrl === 'domestic' || tabFromUrl === 'quotation') {
+      return tabFromUrl;
+    }
   }
 
   // 从全局变量获取

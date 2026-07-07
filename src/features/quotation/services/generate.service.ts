@@ -1,10 +1,11 @@
 import type { QuotationData } from '@/types/quotation';
 import type { NoteConfig } from '../types/notes';
+import type { QuotationTab } from './quotation.service';
 import { monitorPdfGeneration } from '@/utils/performance';
 import { sanitizeQuotation } from '@/utils/sanitizeQuotation';
 
 export const generatePdf = async (
-  tab: 'quotation' | 'confirmation',
+  tab: QuotationTab,
   rawData: QuotationData,
   notesConfig: NoteConfig[],
   setProgress: (progress: number) => void,
@@ -36,6 +37,25 @@ export const generatePdf = async (
     // 净化数据
     const data = sanitizeQuotation(rawData);
     setProgress(40);
+
+    if (tab === 'domestic') {
+      setProgress(80);
+      const blob = await monitorPdfGeneration('domestic', async () => {
+        const { generateDomesticQuotationPDF } = await import('@/utils/domesticQuotationPdfGenerator');
+        return generateDomesticQuotationPDF(
+          {
+            ...data,
+            mode: 'domestic',
+            currency: 'CNY',
+          },
+          notesConfig,
+          opts?.mode === 'preview'
+        );
+      }, { mode: opts?.mode === 'preview' ? 'preview' : 'export', operation: tab });
+
+      setProgress(100);
+      return blob;
+    }
 
     // 根据notesConfig过滤和排序notes
     const visibleNotes = notesConfig
@@ -108,14 +128,16 @@ export function useGenerateService() {
 }
 
 // 下载PDF文件
-export function downloadPdf(blob: Blob, tab: 'quotation' | 'confirmation', data: QuotationData): void {
+export function downloadPdf(blob: Blob, tab: QuotationTab, data: QuotationData): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
 
   const fileName = tab === 'confirmation'
     ? `SC_${data.contractNo || data.quotationNo || 'draft'}.pdf`
-    : `QTN_${data.quotationNo || 'draft'}.pdf`;
+    : tab === 'domestic'
+      ? `NSQ_${data.quotationNo || 'draft'}.pdf`
+      : `QTN_${data.quotationNo || 'draft'}.pdf`;
 
   link.download = fileName;
   document.body.appendChild(link);

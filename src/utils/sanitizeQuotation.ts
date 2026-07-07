@@ -27,6 +27,8 @@ export function sanitizeQuotation(raw: any): QuotationData {
     notes: printableNotes,
     from: raw.from ?? '',
     to: raw.to ?? '',
+    domesticSeller: raw.domesticSeller,
+    domesticBuyer: raw.domesticBuyer,
     inquiryNo: raw.inquiryNo ?? '',
     currency: raw.currency ?? 'USD',
     paymentDate: raw.paymentDate ?? '',
@@ -59,6 +61,7 @@ export function sanitizeQuotation(raw: any): QuotationData {
     showMainPaymentTerm: raw.showMainPaymentTerm ?? false, // 统一控制付款条款显示
     showInvoiceReminder: raw.showInvoiceReminder ?? false,
     additionalPaymentTerms: raw.additionalPaymentTerms ?? '',
+    domesticTotalRemark: raw.domesticTotalRemark ?? '',
     paymentMethod: raw.paymentMethod ?? 'T/T',
     templateConfig: raw.templateConfig ?? {
       headerType: 'bilingual',
@@ -80,6 +83,8 @@ export function pickDraft(full: any) {
     date: full.date,
     from: full.from,
     to: full.to,
+    domesticSeller: full.domesticSeller,
+    domesticBuyer: full.domesticBuyer,
     inquiryNo: full.inquiryNo,
     currency: full.currency,
     paymentDate: full.paymentDate,
@@ -109,6 +114,7 @@ export function pickDraft(full: any) {
     showMainPaymentTerm: full.showMainPaymentTerm, // 统一控制付款条款显示
     showInvoiceReminder: full.showInvoiceReminder,
     additionalPaymentTerms: full.additionalPaymentTerms,
+    domesticTotalRemark: full.domesticTotalRemark,
     paymentMethod: full.paymentMethod,
     templateConfig: full.templateConfig,
     notesConfig: full.notesConfig,

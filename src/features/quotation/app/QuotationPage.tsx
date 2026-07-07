@@ -18,7 +18,7 @@ import { getInitialQuotationData } from '@/utils/quotationInitialData';
 import { useToast } from '@/components/ui/Toast';
 import { numberToWords } from '@/utils/quotationCalculations';
 import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
-import { saveOrUpdate } from '../services/quotation.service';
+import { getHistoryTypeFromTab, saveOrUpdate, type QuotationTab } from '../services/quotation.service';
 import { useGenerateService } from '../services/generate.service';
 import { downloadPdf } from '../services/generate.service';
 import { buildPreviewPayload } from '../services/preview.service';
@@ -27,6 +27,7 @@ import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { usePdfWarmup } from '@/hooks/usePdfWarmup';
 import { PageCard } from '@/components/ui/PageCard';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { convertToRmbCapital } from '@/utils/rmbCapitalAmount';
 
 // 货币名称辅助函数
 const getCurrencyName = (currency: 'USD' | 'CNY' | 'EUR') => {
@@ -58,6 +59,7 @@ const DynamicPaymentTermsSection = dynamic(() => import('@/components/quotation/
 // 导入现有组件
 import { TabButton } from '@/components/quotation/TabButton';
 import { CustomerInfoCompact } from '@/components/quotation/CustomerInfoCompact';
+import { DomesticCustomerInfo } from '@/components/quotation/DomesticCustomerInfo';
 import { ItemsTable } from '@/components/quotation/ItemsTable';
 import { NotesSection } from '../components/NotesSection';
 import { SettingsPanel } from '@/components/quotation/SettingsPanel';
@@ -96,6 +98,8 @@ export default function QuotationPage() {
   // 原子字段 selectors（用于优化依赖）
   const from = useQuotationStore(sel.from);
   const currency = useQuotationStore(sel.currency);
+  const historyType = getHistoryTypeFromTab(activeTab);
+  const isDomesticQuotation = activeTab === 'domestic';
 
   // Action selectors（actions是稳定引用）
   const setTab = useQuotationStore(sel.setTab);
@@ -122,13 +126,13 @@ export default function QuotationPage() {
       // 商品信息
       'items', 'otherFees',
       // 客户信息（客户选择只应修改这些字段）
-      'to', 'address', 'contact', 'email', 'phone',
+      'to', 'address', 'contact', 'email', 'phone', 'domesticSeller', 'domesticBuyer',
       // 单据信息
-      'inquiryNo', 'quotationNo', 'contractNo', 'date',
+      'mode', 'inquiryNo', 'quotationNo', 'contractNo', 'date',
       // 其他必要字段
       'notes', 'currency', 'from', 'amountInWords', 'paymentDate',
       // 支付条款字段
-      'additionalPaymentTerms',
+      'additionalPaymentTerms', 'domesticTotalRemark',
       // 显示控制字段
       'showBank', 'showStamp'
     ]);
@@ -237,6 +241,7 @@ export default function QuotationPage() {
     currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '¥',
     [currency]
   );
+  const totalAmountInWords = useMemo(() => convertToRmbCapital(totalAmount), [totalAmount]);
 
   // 剪贴板导入
   const { handleClipboardButtonClick, handleGlobalPaste } = useClipboardImport();
@@ -247,13 +252,13 @@ export default function QuotationPage() {
       ...data ?? getInitialQuotationData(),
       notesConfig
     }),
-    key: 'draftQuotation',
+    key: isDomesticQuotation ? 'draftDomesticQuotation' : 'draftQuotation',
     delay: 2000,
     enabled: !editId
   });
 
   // 处理标签切换 - 同值不set，减少无谓渲染
-  const handleTabChange = useCallback((tab: 'quotation' | 'confirmation') => {
+  const handleTabChange = useCallback((tab: QuotationTab) => {
     if (activeTab === tab) return;
     setTab(tab);
   }, [activeTab, setTab]);
@@ -351,7 +356,14 @@ export default function QuotationPage() {
           setEditId(result.id);
         }
         clearAutoSave();
-        showToast(activeTab === 'quotation' ? '报价单草稿保存成功' : '销售确认草稿保存成功', 'success');
+        showToast(
+          activeTab === 'confirmation'
+            ? '销售确认草稿保存成功'
+            : isDomesticQuotation
+              ? '内销报价单草稿保存成功'
+              : '外贸报价单草稿保存成功',
+          'success'
+        );
       } else {
         showToast('保存失败，请重试', 'error');
       }
@@ -434,7 +446,7 @@ export default function QuotationPage() {
         ? (data.contractNo || data.quotationNo)
         : data.quotationNo;
       if (documentNo) {
-        recordCustomerUsage(data.to.split('\n')[0].trim(), activeTab, documentNo);
+        recordCustomerUsage(data.to.split('\n')[0].trim(), historyType, documentNo);
       }
 
       downloadPdf(pdfBlob, activeTab, data);
@@ -492,7 +504,7 @@ export default function QuotationPage() {
         await new Promise<void>(resolve => {
           requestAnimationFrame(() => {
             const previewData = {
-              ...buildPreviewPayload(activeTab, data, editId, totalAmount),
+              ...buildPreviewPayload(historyType, data, editId, totalAmount),
               pdfUrl // 使用URL而不是blob，避免大对象传递
             };
 
@@ -522,7 +534,7 @@ export default function QuotationPage() {
       if (activeTab === 'confirmation') {
         exportSalesConfirmationToExcel(data);
       } else {
-        exportQuotationToExcel(data, activeTab);
+        exportQuotationToExcel(data, historyType);
       }
       showToast('Excel导出成功', 'success');
     } catch (error) {
@@ -538,9 +550,15 @@ export default function QuotationPage() {
   };
 
   const isEditMode = pathname?.includes('/edit/') || pathname?.includes('/copy/') || !!editId;
+  const documentLabel =
+    activeTab === 'confirmation'
+      ? '销售确认'
+      : isDomesticQuotation
+        ? '内销报价单'
+        : '外贸报价单';
   const breadcrumbs = [
     { label: '首页', path: '/dashboard' },
-    { label: activeTab === 'quotation' ? '报价单' : '销售确认' },
+    { label: documentLabel },
     { label: isEditMode ? '编辑' : '新建' },
   ];
   const bottomActions: ActionButton[] = [
@@ -595,7 +613,13 @@ export default function QuotationPage() {
               active={activeTab === 'quotation'}
               onClick={() => handleTabChange('quotation')}
             >
-              Quotation
+              Export Quotation
+            </TabButton>
+            <TabButton
+              active={activeTab === 'domestic'}
+              onClick={() => handleTabChange('domestic')}
+            >
+              Domestic Quotation
             </TabButton>
             <TabButton
               active={activeTab === 'confirmation'}
@@ -612,7 +636,7 @@ export default function QuotationPage() {
               <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-100 dark:border-[#3A3A3C]">
                 <div className="flex items-center gap-3">
                   <h1 className="text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]">
-                    Generate {activeTab === 'quotation' ? 'Quotation' : 'Order'}
+                    {isDomesticQuotation ? '生成内销报价单' : `Generate ${activeTab === 'confirmation' ? 'Order' : 'Quotation'}`}
                   </h1>
                   <button
                     type="button"
@@ -625,7 +649,7 @@ export default function QuotationPage() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Link
-                    href={`/history?tab=${activeTab}`}
+                    href={`/history?tab=${historyType}`}
                     className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
                     title="历史记录"
                   >
@@ -664,22 +688,83 @@ export default function QuotationPage() {
                 isOpen={showSettings}
                 contentClassName="px-4 sm:px-6 py-3 mb-4"
               >
-                <SettingsPanel
-                  data={data}
-                  onChange={handleSettingsChange}
-                  activeTab={activeTab}
-                />
+                {isDomesticQuotation ? (
+                  <div className="rounded-lg border border-blue-200/50 bg-blue-50 p-3 text-xs shadow-sm dark:border-blue-800/50 dark:bg-blue-950/30">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="font-medium text-blue-700 dark:text-blue-300">内销设置：</span>
+                      <button
+                        type="button"
+                        onClick={() => updateData({ showBank: !data.showBank })}
+                        className={`rounded px-2 py-1 text-[11px] font-medium transition-all ${
+                          data.showBank
+                            ? 'bg-[#007AFF] text-white shadow-sm'
+                            : 'border border-gray-200 bg-white text-gray-600 hover:border-[#007AFF]/40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        显示开户行/帐号
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateData({ showStamp: !data.showStamp })}
+                        className={`rounded px-2 py-1 text-[11px] font-medium transition-all ${
+                          data.showStamp
+                            ? 'bg-[#007AFF] text-white shadow-sm'
+                            : 'border border-gray-200 bg-white text-gray-600 hover:border-[#007AFF]/40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        加盖供方印章
+                      </button>
+                      <span className="font-medium text-blue-700 dark:text-blue-300">印章：</span>
+                      {[
+                        { value: 'none', label: '无' },
+                        { value: 'shanghai', label: '上海' },
+                        { value: 'hongkong', label: '香港' },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() =>
+                            updateData({
+                              templateConfig: {
+                                headerType: data.templateConfig?.headerType ?? 'bilingual',
+                                ...data.templateConfig,
+                                stampType: option.value as 'none' | 'shanghai' | 'hongkong',
+                              },
+                            })
+                          }
+                          className={`rounded px-2 py-1 text-[11px] font-medium transition-all ${
+                            (data.templateConfig?.stampType ?? 'none') === option.value
+                              ? 'bg-[#007AFF] text-white shadow-sm'
+                              : 'border border-gray-200 bg-white text-gray-600 hover:border-[#007AFF]/40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <SettingsPanel
+                    data={data}
+                    onChange={handleSettingsChange}
+                    activeTab={historyType}
+                  />
+                )}
               </CollapsibleSection>
 
               {/* 客户信息区域 */}
               <div className={`px-4 sm:px-6 ${
                 showSettings ? 'py-2' : 'py-4'
               }`}>
-                <CustomerInfoCompact
-                  data={data}
-                  onChange={updateData}
-                  type={activeTab}
-                />
+                {isDomesticQuotation ? (
+                  <DomesticCustomerInfo data={data} onChange={updateData} />
+                ) : (
+                  <CustomerInfoCompact
+                    data={data}
+                    onChange={updateData}
+                    type={historyType}
+                  />
+                )}
               </div>
 
               {/* 商品表格区域 */}
@@ -728,7 +813,7 @@ export default function QuotationPage() {
                         transition-all duration-200"
                     >
                       <span className="text-lg leading-none translate-y-[-1px]">+</span>
-                      <span>Add Line</span>
+                      <span>{isDomesticQuotation ? '新增明细' : 'Add Line'}</span>
                     </button>
 
                     <button
@@ -753,18 +838,32 @@ export default function QuotationPage() {
                         transition-all duration-200"
                     >
                       <span className="text-lg leading-none translate-y-[-1px]">+</span>
-                      <span>Add Other Fee</span>
+                      <span>{isDomesticQuotation ? '新增其他费用' : 'Add Other Fee'}</span>
                     </button>
                   </div>
 
                   <div className="text-right">
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center gap-2">
-                        <div className="hidden sm:block text-sm text-[#86868B] dark:text-gray-400">Total Amount:</div>
+                        <div className="hidden sm:block text-sm text-[#86868B] dark:text-gray-400">
+                          {isDomesticQuotation ? '合计金额：' : 'Total Amount:'}
+                        </div>
                         <div className="text-xl sm:text-2xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                           {currencySymbol}{totalAmount.toFixed(2)}
                         </div>
                       </div>
+                      {isDomesticQuotation && (
+                        <div className="max-w-xl text-right text-xs leading-5 text-gray-500 dark:text-gray-400">
+                          <div>金额大写：{totalAmountInWords || '人民币零元整'}</div>
+                          <input
+                            type="text"
+                            value={data.domesticTotalRemark ?? ''}
+                            onChange={(e) => updateData({ domesticTotalRemark: e.target.value })}
+                            placeholder="合计备注，如：价格含13个点专票及运费"
+                            className="mt-1 h-7 w-full rounded-lg border border-gray-200 bg-white px-2 text-right text-xs text-gray-700 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                          />
+                        </div>
+                      )}
 
                       {/* 定金显示 */}
                       {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 && (
@@ -921,7 +1020,7 @@ export default function QuotationPage() {
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
         item={previewItem}
-        itemType={activeTab}
+        itemType={historyType}
       />
 
       {/* 粘贴对话框组件 */}

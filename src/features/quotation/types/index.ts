@@ -2,6 +2,11 @@ import type { BaseDocument, BaseCustomer, BaseLineItem } from '@/features/core';
 
 // 报价单特有字段
 export interface QuotationData extends BaseDocument {
+  /** 报价模式：旧数据缺省按外贸报价单处理 */
+  mode?: 'export' | 'domestic';
+  domesticSeller?: DomesticPartyDetails;
+  domesticBuyer?: DomesticPartyDetails;
+  domesticTotalRemark?: string;
   // 基础信息
   inquiryNo: string;
   quotationNo: string;
@@ -42,6 +47,15 @@ export interface QuotationData extends BaseDocument {
   depositAmount?: number;
   showBalance?: boolean;
   balanceAmount?: number;
+}
+
+export interface DomesticPartyDetails extends Partial<BaseCustomer> {
+  legalRepresentative?: string;
+  agent?: string;
+  fax?: string;
+  taxNo?: string;
+  bankName?: string;
+  bankAccount?: string;
 }
 
 // 商品项
@@ -104,7 +118,7 @@ export interface QuotationState {
   error: string | null;
 
   // 报价单特有状态
-  activeTab: 'quotation' | 'confirmation';
+  activeTab: 'quotation' | 'confirmation' | 'domestic';
   showSettings: boolean;
   showPreview: boolean;
   isPasteDialogOpen: boolean;
@@ -126,7 +140,7 @@ export interface QuotationActions {
   load: (id: string) => Promise<void>;
 
   // 报价单特有操作
-  setTab: (tab: 'quotation' | 'confirmation') => void;
+  setTab: (tab: 'quotation' | 'confirmation' | 'domestic') => void;
   setShowSettings: (show: boolean) => void;
   setShowPreview: (show: boolean) => void;
   setPasteDialogOpen: (open: boolean) => void;

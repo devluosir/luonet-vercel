@@ -8,6 +8,102 @@
 
 ---
 
+## TASK-97：内销报价单中文录入表单与合同式 PDF
+
+**状态**：已完成  
+**日期**：2026-07-07
+
+### 范围
+
+- 抽出 RMB 金额大写公共工具 `convertToRmbCapital()`，RMB 工具页改为复用同一转换逻辑。
+- 内销报价单补齐供方 / 需方中文合同字段：单位地址、法定代表人、委托代理人、传真、纳税人识别号、开户行、帐号等。
+- `/quotation?tab=domestic` 录入界面切换为中文标签，明细表、顶部单据字段、合计区和条款区均按内销业务语境展示。
+- 新增内销报价单 PDF 生成器，输出中文“产品购销合同式”版式，包含产品明细、金额大写、二至十四条款、供需双栏签章信息和供方印章叠加。
+- `generatePdf()` 在 `tab='domestic'` 时分流到内销 PDF，不影响外贸报价单和销售确认原 PDF。
+
+### 涉及文件
+
+| 文件/目录 | 说明 |
+|---|---|
+| `src/utils/rmbCapitalAmount.ts` | RMB 大写公共转换工具 |
+| `src/features/rmb/app/RmbPage.tsx` | RMB 工具页复用公共转换工具 |
+| `src/types/quotation.ts`、`src/features/quotation/types/index.ts` | 内销供需方合同字段 |
+| `src/features/quotation/types/notes.ts` | 内销二至十四默认条款 |
+| `src/components/quotation/DomesticCustomerInfo.tsx` | 内销供方 / 需方中文录入区 |
+| `src/components/quotation/ItemsTable.tsx` | 内销模式下明细表中文表头 |
+| `src/features/quotation/app/QuotationPage.tsx` | 内销中文表单、金额大写、设置区和 PDF 分流参数 |
+| `src/features/quotation/services/generate.service.ts` | `domestic` PDF 动态导入分流 |
+| `src/utils/domesticQuotationPdfGenerator.ts` | 内销中文合同式 PDF 生成器 |
+| `docs/core/CURRENT_STATE.md`、`docs/features/quotation-domestic/` | 当前状态和模块说明 |
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npx eslint src/utils/rmbCapitalAmount.ts src/features/rmb/app/RmbPage.tsx src/types/quotation.ts src/features/quotation/types/index.ts src/features/quotation/types/notes.ts src/utils/quotationInitialData.ts src/features/quotation/state/useQuotationStore.ts src/features/quotation/services/quotation.service.ts src/features/quotation/hooks/useInitQuotation.ts src/utils/sanitizeQuotation.ts src/components/quotation/DomesticCustomerInfo.tsx src/components/quotation/ItemsTable.tsx src/features/quotation/components/NotesSection.tsx src/features/quotation/app/QuotationPage.tsx src/utils/domesticQuotationPdfGenerator.ts src/features/quotation/services/generate.service.ts
+npm run build
+```
+
+### 验收标准
+
+- 内销报价单表单显示中文供方 / 需方字段、中文明细列名、中文顶部单据字段和金额大写。
+- 内销条款区默认提供二至十四条款，并可按现有 NotesConfig 机制编辑 / 开关。
+- 内销 PDF 标题为「内 销 报 价 单」，包含产品明细表、金额大写、合计备注、合同条款和供需双栏签章信息。
+- `showBank` 控制开户行 / 帐号行，`showStamp` 控制供方栏印章叠加。
+- 外贸报价单和销售确认仍走原有英文 PDF 生成器与原表单标签。
+
+---
+
+## TASK-96：新单据菜单重命名、内销报价单、采购部登记、采购订单表
+
+**状态**：已完成  
+**日期**：2026-07-07
+
+### 范围
+
+- 将报价单展示 label 调整为「外贸报价单」，保留 `quotation` moduleId、路由和历史类型。
+- 新增 `/quotation?tab=domestic` 内销报价单，复用报价单页面和生成器，默认 CNY，并通过 `QuotationData.mode='domestic'` 区分。
+- 左侧导航改为按 id 分组，不再依赖 `NAV_ITEMS.slice()` 下标。
+- 新增 `purchaseRegistration` 权限和 `/purchase-registration` 采购部登记视图，复用询报价 D1 JSON 记录，新增采购部专用字段 `purchaseContentDesc`、`purchaseInquiryStatus`。
+- 新增 `purchaseOrderTable` 权限和 `/purchase-order-table` 采购订单表，使用 D1 `Document.type='purchase'` + `_shared_purchase_` 共享记录。
+- 旧 `/purchase` 采购订单创建功能和 `purchase_history` 保持不变，不自动迁移到新采购订单表。
+
+### 涉及文件
+
+| 文件/目录 | 说明 |
+|---|---|
+| `src/components/layout/AppSidebar.tsx` | 菜单 label、内销报价单、采购部登记、采购订单表入口和 id 分组 |
+| `src/components/layout/MobileBottomTab.tsx` | 移动端报价 label |
+| `src/constants/dashboardModules.ts` | 快速创建和文档类型展示名 |
+| `src/constants/permissionModules.ts` | 新增两个登记表权限模块 |
+| `src/features/quotation/**`、`src/types/quotation.ts` | `domestic` tab、`mode` 字段、默认 CNY |
+| `src/features/inquiry/**` | 采购部登记字段和视图补丁同步 |
+| `src/features/order/components/DeliveryStatusCell.tsx` | 抽出备货 / 交货 / 发票共享编辑组件 |
+| `src/features/purchase-registration/**` | 采购部登记页面 |
+| `src/features/purchase-order-registration/**` | 采购订单表页面、store、service、组件 |
+| `src/app/api/inquiry/[[...path]]/route.ts` | 采购部登记受限字段代理 |
+| `src/app/api/purchase-order/[[...path]]/route.ts` | 采购订单表代理 |
+| `src/worker.ts` | `handlePurchaseOrderRequest` |
+| `docs/core/CURRENT_STATE.md`、`docs/features/purchase-*` | 当前状态与功能说明 |
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npx eslint <本任务改动文件>
+npm run build
+```
+
+### 验收标准
+
+- 左侧菜单「新单据」包含外贸报价单、内销报价单、销售确认、箱单发票、财务发票、采购订单；「登记表」包含询报价登记、订单状态表、采购部登记、采购订单表。
+- 外贸报价单和内销报价单均走 `/quotation`，内销 URL 为 `?tab=domestic`，默认币种 CNY，不改变旧报价单历史类型。
+- 采购部登记能查看询价编号，独立编辑采购部内容描述和采购询报价状态，并复用执行情况编辑体验。
+- 采购订单表可新增、编辑、删除、搜索采购订单，并能编辑备货 / 交货 / 发票状态。
+- 旧 `purchase_history` 不会自动出现在新采购订单表中。
+
+---
+
 ## 2026-07-06 已完成：反馈、主题、权限刷新入口和预加载排雷
 
 ### 范围

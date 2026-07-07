@@ -66,13 +66,16 @@ interface AppSidebarProps {
 /** 全量平铺列表（供外部引用） */
 export const NAV_ITEMS: SidebarItem[] = [
   { id: 'dashboard',    label: '首页',      path: '/dashboard',               icon: LayoutDashboard },
-  { id: 'quotation',    label: '报价单',    path: '/quotation',               icon: FileText,  permissionKey: 'canCreateQuotation' },
+  { id: 'quotation',    label: '外贸报价单', path: '/quotation',              icon: FileText,  permissionKey: 'canCreateQuotation' },
+  { id: 'quotation-domestic', label: '内销报价单', path: '/quotation?tab=domestic', icon: FileText, permissionKey: 'canCreateQuotation' },
   { id: 'confirmation', label: '销售确认',  path: '/quotation?tab=confirmation', icon: FileCheck, permissionKey: 'canCreateConfirmation' },
   { id: 'packing',      label: '箱单发票',  path: '/packing',                 icon: Package,   permissionKey: 'canCreatePacking' },
   { id: 'invoice',      label: '财务发票',  path: '/invoice',                 icon: Receipt,   permissionKey: 'canCreateInvoice' },
   { id: 'purchase',     label: '采购订单',  path: '/purchase',                icon: ShoppingCart, permissionKey: 'canCreatePurchase' },
   { id: 'inquiry',      label: '询报价登记', path: '/inquiry',                icon: Search,           permissionKey: 'canViewInquiry' },
   { id: 'order',        label: '订单状态表', path: '/order',                  icon: ClipboardCheck,   permissionKey: 'canViewInquiry' },
+  { id: 'purchase-registration', label: '采购部登记', path: '/purchase-registration', icon: ClipboardCheck, permissionKey: 'canViewPurchaseRegistration' },
+  { id: 'purchase-order-table', label: '采购订单表', path: '/purchase-order-table', icon: ShoppingCart, permissionKey: 'canViewPurchaseOrderTable' },
   { id: 'history',      label: '单据历史',  path: '/history',                 icon: Archive,          permissionKey: 'canViewHistory' },
   { id: 'customer',     label: '客户管理',  path: '/customer',                icon: Users,     permissionKey: 'canManageCustomers' },
   { id: 'impa',         label: 'IMPA物料', path: 'https://impa.luocompany.com', icon: PackageSearch, permissionKey: 'canUseImpa', external: true },
@@ -82,32 +85,41 @@ export const NAV_ITEMS: SidebarItem[] = [
   { id: 'mail',         label: 'AI 邮件',  path: '/mail',                    icon: Mail,      permissionKey: 'canUseAiEmail' },
 ];
 
+const navItemsById = new Map(NAV_ITEMS.map((item) => [item.id, item]));
+
+function navGroupItems(ids: string[]): SidebarItem[] {
+  return ids.flatMap((id) => {
+    const item = navItemsById.get(id);
+    return item ? [item] : [];
+  });
+}
+
 /** 分组配置 */
 const NAV_GROUPS: NavGroup[] = [
   {
     id: 'home',
     label: '',
-    items: NAV_ITEMS.slice(0, 1), // 首页
+    items: navGroupItems(['dashboard']),
   },
   {
     id: 'documents',
     label: '新单据',
-    items: NAV_ITEMS.slice(1, 6), // 报价单 ~ 采购订单
+    items: navGroupItems(['quotation', 'quotation-domestic', 'confirmation', 'packing', 'invoice', 'purchase']),
   },
   {
     id: 'registration',
     label: '登记表',
-    items: NAV_ITEMS.slice(6, 8), // 询报价登记、订单状态表
+    items: navGroupItems(['inquiry', 'order', 'purchase-registration', 'purchase-order-table']),
   },
   {
     id: 'management',
     label: '管理',
-    items: NAV_ITEMS.slice(8, 10), // 单据历史、客户管理
+    items: navGroupItems(['history', 'customer']),
   },
   {
     id: 'tools',
     label: '工具',
-    items: NAV_ITEMS.slice(10),    // AI 邮件、时区汇率…
+    items: navGroupItems(['impa', 'clock', 'holidays', 'rmb', 'mail']),
   },
 ];
 
@@ -119,6 +131,8 @@ const PERMISSION_MODULE_MAP: Record<string, string> = {
   canCreateInvoice:     'invoice',
   canCreatePurchase:    'purchase',
   canViewInquiry:       'inquiry',
+  canViewPurchaseRegistration: 'purchaseRegistration',
+  canViewPurchaseOrderTable: 'purchaseOrderTable',
   canViewHistory:       'history',
   canManageCustomers:   'customer',
   canUseClock:          'clock',
@@ -132,8 +146,10 @@ const PERMISSION_MODULE_MAP: Record<string, string> = {
 
 function isItemActive(item: SidebarItem, pathname: string, tab: string | null) {
   if (item.id === 'confirmation') return pathname.startsWith('/quotation') && tab === 'confirmation';
-  if (item.id === 'quotation')    return pathname.startsWith('/quotation') && tab !== 'confirmation';
-  return pathname.startsWith(item.path.split('?')[0]);
+  if (item.id === 'quotation-domestic') return pathname.startsWith('/quotation') && tab === 'domestic';
+  if (item.id === 'quotation')    return pathname.startsWith('/quotation') && tab !== 'confirmation' && tab !== 'domestic';
+  const itemPath = item.path.split('?')[0];
+  return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
 }
 
 // ── 组件 ──────────────────────────────────────────────────────────────────────

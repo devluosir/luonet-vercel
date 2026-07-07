@@ -32,13 +32,29 @@ export interface OtherFee {
   };
 }
 
+export interface DomesticPartyDetails {
+  name?: string;
+  address?: string;
+  legalRepresentative?: string;
+  agent?: string;
+  phone?: string;
+  fax?: string;
+  taxNo?: string;
+  bankName?: string;
+  bankAccount?: string;
+}
+
 export interface QuotationData {
+  /** 报价模式：旧数据缺省按外贸报价单处理 */
+  mode?: 'export' | 'domestic';
   quotationNo: string;
   contractNo: string;
   date: string;
   notes: string[];
   from: string;
   to: string;
+  domesticSeller?: DomesticPartyDetails;
+  domesticBuyer?: DomesticPartyDetails;
   inquiryNo: string;
   currency: 'USD' | 'EUR' | 'CNY';
   paymentDate: string;
@@ -57,6 +73,7 @@ export interface QuotationData {
   showMainPaymentTerm?: boolean; // 统一控制付款条款显示
   showInvoiceReminder?: boolean;
   additionalPaymentTerms?: string;
+  domesticTotalRemark?: string;
   paymentMethod?: 'T/T' | 'L/C' | 'D/P' | 'D/A' | 'Open Account';
   templateConfig?: {
     headerType: 'none' | 'bilingual' | 'english';
@@ -82,6 +99,6 @@ export interface CustomWindow extends Window {
   __QUOTATION_DATA__?: QuotationData | null;
   __EDIT_MODE__?: boolean;
   __EDIT_ID__?: string;
-  __QUOTATION_TYPE__?: 'quotation' | 'confirmation';
+  __QUOTATION_TYPE__?: 'quotation' | 'confirmation' | 'domestic';
   __NOTES_CONFIG__?: NoteConfig[];
 } 

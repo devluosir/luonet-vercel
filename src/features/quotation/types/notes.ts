@@ -22,6 +22,22 @@ export const DEFAULT_NOTES_CONFIG: NoteConfig[] = [
   { id: 'validity', visible: true, order: 5, content: 'Validity: 10 days.' },           // 5. Validity
 ];
 
+export const DOMESTIC_NOTES_CONFIG: NoteConfig[] = [
+  { id: 'domestic_clause_2', visible: true, order: 0, content: '质量要求技术标准：按国家标准、行业标准及双方确认的技术资料执行。' },
+  { id: 'domestic_clause_3', visible: true, order: 1, content: '交货时间：以双方确认的交货计划为准。' },
+  { id: 'domestic_clause_4', visible: true, order: 2, content: '备货时间：收到需方确认后安排备货。' },
+  { id: 'domestic_clause_5', visible: true, order: 3, content: '交货地点、运输方式及费用：按双方确认地点交货，运输方式及费用按报价约定执行。' },
+  { id: 'domestic_clause_6', visible: true, order: 4, content: '合理损耗及计算方法：按实际交付数量结算，合理损耗按双方确认标准执行。' },
+  { id: 'domestic_clause_7', visible: true, order: 5, content: '包装标准：按供方常规包装或双方确认的包装要求执行。' },
+  { id: 'domestic_clause_8', visible: true, order: 6, content: '验收标准、方法及异议期限：需方收货后应及时验收，如有异议应在收货后七日内书面提出。' },
+  { id: 'domestic_clause_9', visible: true, order: 7, content: '随机备品、配件工具：如有，按产品随附清单执行。' },
+  { id: 'domestic_clause_10', visible: true, order: 8, content: '结算方式：款到发货。' },
+  { id: 'domestic_clause_11', visible: true, order: 9, content: '担保：按产品原厂或双方书面确认的质保条款执行。' },
+  { id: 'domestic_clause_12', visible: true, order: 10, content: '违约责任：违约方应承担因违约给守约方造成的实际损失。' },
+  { id: 'domestic_clause_13', visible: true, order: 11, content: '争议解决方式：双方协商解决；协商不成的，提交供方所在地人民法院诉讼解决。' },
+  { id: 'domestic_clause_14', visible: true, order: 12, content: '其它约定事项：未尽事宜由双方另行协商确认。' },
+];
+
 // 条款模板预设（用于Notes中的快速模板选择时的预设条款）
 export const NOTES_TEMPLATES_BILINGUAL = {
   exw: [

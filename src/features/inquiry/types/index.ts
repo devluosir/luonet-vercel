@@ -3,6 +3,7 @@ export type SupplierStatus = 'pending' | 'quoted' | 'unavailable' | 'need_info';
 
 /** 订单附加标记：辙销C / 悬挂P / 善后S */
 export type OrderSubStatus = 'cancelled' | 'suspended' | 'followup';
+export type PurchaseInquiryStatus = 'internal_supplier' | 'reported_to_sales';
 
 export interface SupplierQuoteStatus {
   id: string;
@@ -31,6 +32,10 @@ export interface InquiryRecord {
   customerId?: string;
   contactId?: string;
   description: string;
+  /** 采购部登记专用内容描述；独立于询报价登记的 description 字段 */
+  purchaseContentDesc?: string;
+  /** 采购部登记专用询报价状态；不影响 supplierStatuses / quotedStatuses */
+  purchaseInquiryStatus?: PurchaseInquiryStatus;
   orderNo?: string;
   /** 辙销C / 悬挂P / 善后S — 仅在有订单编号时有意义 */
   orderSubStatus?: OrderSubStatus;

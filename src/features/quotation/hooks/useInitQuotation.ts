@@ -43,7 +43,7 @@ export function useInitQuotation() {
     setData(() => initialData);
 
     // 初始化Notes配置
-    const initialNotesConfig = initNotesConfigFromSources();
+    const initialNotesConfig = initNotesConfigFromSources(tab);
     setNotesConfig(initialNotesConfig);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- 初始单据数据只应在页面首次进入时装载，tab 切换不应重置用户正在编辑的数据。
   }, []);

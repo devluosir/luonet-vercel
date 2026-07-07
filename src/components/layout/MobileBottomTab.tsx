@@ -15,7 +15,7 @@ interface MobileTabItem {
 
 const MOBILE_TABS: MobileTabItem[] = [
   { id: 'dashboard', label: '首页', path: '/dashboard', icon: LayoutDashboard },
-  { id: 'quotation', label: '报价单', path: '/quotation', icon: FileText, moduleId: 'quotation' },
+  { id: 'quotation', label: '外贸报价单', path: '/quotation', icon: FileText, moduleId: 'quotation' },
   { id: 'inquiry', label: '登记表', path: '/inquiry', icon: ClipboardList, moduleId: 'inquiry' },
   { id: 'history', label: '历史', path: '/history', icon: Archive, moduleId: 'history' },
   { id: 'mail', label: '邮件', path: '/mail', icon: Mail, moduleId: 'ai-email' },
@@ -23,7 +23,7 @@ const MOBILE_TABS: MobileTabItem[] = [
 
 function isTabActive(item: MobileTabItem, pathname: string, tab: string | null) {
   if (item.id === 'quotation') {
-    return pathname.startsWith('/quotation') && tab !== 'confirmation';
+    return pathname.startsWith('/quotation') && tab !== 'confirmation' && tab !== 'domestic';
   }
 
   return pathname.startsWith(item.path);

@@ -1,6 +1,6 @@
 # Current State
 
-最后更新：2026-07-06
+最后更新：2026-07-07
 当前分支：`main`
 当前提交：以 `git log -1 --oneline` 为准
 应用版本：`1.2.0`（`package.json`）
@@ -8,7 +8,7 @@
 
 ## 定位
 
-LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。核心工作流包括报价、销售确认、询报价登记、订单状态跟踪、装箱单、财务发票、采购订单、客户资料、权限管理和 AI 邮件助手。
+LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。核心工作流包括外贸报价、内销报价、销售确认、询报价登记、订单状态跟踪、采购部登记、采购订单表、装箱单、财务发票、采购订单、客户资料、权限管理和 AI 邮件助手。
 
 维护优先级：业务稳定 > 数据兼容 > PDF/Excel 输出正确 > UI 打磨 > 重构。
 
@@ -36,9 +36,12 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 | 路由 | 模块 | 当前状态 |
 |------|------|----------|
 | `/dashboard` | 首页 | 快速创建、最近文档、权限过滤入口 |
-| `/quotation` | 报价 / 销售确认 | 本地历史为主，支持 PDF/Excel、复制、编辑 |
+| `/quotation` | 外贸报价 / 销售确认 | 本地历史为主，支持 PDF/Excel、复制、编辑 |
+| `/quotation?tab=domestic` | 内销报价单 | 复用报价单页面与历史结构，默认 CNY，中文录入表单和中文合同式 PDF，保存为 `quotation` 历史并通过 `data.mode='domestic'` 区分 |
 | `/inquiry` | 询报价登记 | 已接入 D1 `Document`，支持客户/联络人关联、批量关联、筛选 |
 | `/order` | 订单状态表 | 复用询报价记录，支持订单状态、金额权限和进行中筛选 |
+| `/purchase-registration` | 采购部登记 | 复用询报价 D1 JSON 记录，只开放采购部描述、采购询报价状态和执行情况字段 |
+| `/purchase-order-table` | 采购订单表 | 独立 D1 登记表，使用 `Document.type='purchase'` + `_shared_purchase_` 共享记录，不自动导入旧 `purchase_history` |
 | `/packing` | 箱单发票 | 支持从销售确认导入，已切断装箱单 Consignee 反向污染客户库的保存动作 |
 | `/invoice` | 财务发票 | 本地历史为主，支持导入、PDF/Excel、复制、编辑 |
 | `/purchase` | 采购订单 | 本地历史为主，支持供应商资料、PDF、草稿 |
@@ -66,6 +69,8 @@ purchase
 inquiry
 inquiry.batchEdit
 order.financials
+purchaseRegistration
+purchaseOrderTable
 history
 customer
 ai-email
@@ -77,8 +82,10 @@ rmb
 
 说明：
 
-- `quotation` 同时控制报价单和销售确认。
-- `inquiry` 同时控制询报价登记和订单状态表入口。
+- `quotation` 同时控制外贸报价单、内销报价单和销售确认。
+- `inquiry` 控制完整询报价登记和订单状态表入口。
+- `purchaseRegistration` 控制采购部登记过滤视图；该视图不授予完整询报价登记权限。
+- `purchaseOrderTable` 控制独立采购订单表登记视图。
 - `inquiry.batchEdit` 是询报价批量编辑 / 导入导出高级权限。
 - `order.financials` 是订单状态表金额、回款、到账金额高级权限。
 - `admin` 不是普通 moduleId，后台访问由 `isAdmin` 和中间件控制。
@@ -93,7 +100,7 @@ rmb
 - `User`：用户账号、密码 hash、邮箱、状态、管理员标记。
 - `Permission`：用户到 moduleId 的权限映射。
 - `quotation_history`：旧兼容表，主站历史当前不以此表为主。
-- `Document`：统一业务单据表，当前询报价登记使用该表；其他业务模块仍以本地历史为主。
+- `Document`：统一业务单据表，当前询报价登记、采购部登记过滤视图、采购订单表使用该表；其他业务模块仍以本地历史为主。
 - `Customer`：客户、供应商、收货人公司资料。
 - `Contact`：客户/供应商/收货人的联络人资料。
 - `CustomerEvent`：客户时间轴和跟进相关事件。
@@ -171,6 +178,7 @@ theme-config
 ## 询报价与订单状态现状
 
 - 询报价记录已支持 `customerId`、`contactId` 结构化关联。
+- 采购部登记复用 `InquiryRecord`，新增 `purchaseContentDesc` 与 `purchaseInquiryStatus` 两个采购部专用字段，不复用询报价登记的 `description`、`supplierStatuses` 或 `quotedStatuses` 状态。
 - 询价成单后支持 `orderSubStatus` 标记：`cancelled`（辙销C）、`suspended`（悬挂P）、`followup`（善后S）。
 - 编辑询价时选择 C/P/S 标记会出现单行「情况备注」，保存到 `orderSubStatusRemark`；取消标记或清空订单编号会清空该备注。
 - 询价 Excel 导入导出包含 `订单标记`、`订单备注` 两列；D1 仍通过 `Document.data` JSON 透传，无需 schema 迁移。
@@ -181,6 +189,13 @@ theme-config
 - 订单状态表的执行情况支持 `orderDeliveryConsignee` 收货人关联。收货人只在「交货」编辑态下选择，但关联属于订单本身；后续把执行情况改为「发票」或「备货」不会自动清空收货人。
 - 只有点击执行情况「清除」按钮，或在「交货」编辑态下把收货人下拉框选回空白，才会解除 `orderDeliveryConsignee` 关联。
 - 金额相关字段由 `order.financials` 高级权限控制。
+
+## 采购订单表现状
+
+- `/purchase` 仍是旧采购订单单据创建功能，数据保存在 `purchase_history`，用于 PDF/Excel 和草稿。
+- `/purchase-order-table` 是并行的新登记表，走 D1 `Document.type='purchase'`，`user_id='_shared_purchase_'`，用于团队共享列表和状态追踪。
+- 新采购订单表当前支持采购单号、供应商、金额、创建日期、备货/交货/发票状态的新增、编辑、删除和筛选。
+- 旧 `purchase_history` 不会自动迁移或显示在新采购订单表中。
 
 ## 文档维护规则
 

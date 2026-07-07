@@ -13,6 +13,7 @@ interface InquiryStore {
   init: () => void;
   addRecord: (draft: InquiryRecordDraft) => void;
   updateRecord: (id: string, patch: Partial<InquiryRecord>) => void;
+  patchRecordForView: (id: string, patch: Partial<InquiryRecord>) => void;
   removeRecord: (id: string) => void;
   addSupplier: (recordId: string, supplier: Omit<SupplierQuoteStatus, 'id'>) => void;
   updateSupplier: (
@@ -71,6 +72,12 @@ export const useInquiryStore = create<InquiryStore>((set, get) => ({
     const updated = inquiryService.update(id, patch);
     set({ records: updated });
     syncUpdatedRecord(updated, id);
+  },
+
+  patchRecordForView: (id, patch) => {
+    const updated = inquiryService.update(id, patch);
+    set({ records: updated });
+    inquiryService.patchInD1(id, patch);
   },
 
   removeRecord: (id) => {

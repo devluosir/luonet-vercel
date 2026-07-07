@@ -118,6 +118,20 @@ export const inquiryService = {
     })();
   },
 
+  patchInD1(id: string, patch: Partial<InquiryRecord>): void {
+    void (async () => {
+      try {
+        await fetch(`${API_BASE}/${encodeURIComponent(id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patch),
+        });
+      } catch {
+        // D1 同步失败不阻塞本地业务操作。
+      }
+    })();
+  },
+
   deleteFromD1(id: string): void {
     void (async () => {
       try {
