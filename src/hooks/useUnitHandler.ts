@@ -1,15 +1,23 @@
 import { useMemo, useCallback } from 'react';
-import { getUnitDisplay, getAllUnits, processUnitChange, updateUnitForQuantityChange, getUnitOptions, createUnitConfig } from '@/utils/unitUtils';
+import { getUnitDisplay, getAllUnits, processUnitChange, updateUnitForQuantityChange, getUnitOptions, createUnitConfig, type DefaultUnit } from '@/utils/unitUtils';
+
+export interface UnitHandlerOptions {
+  /** 覆盖默认单位列表（如内销单据的中文单位：只/套/节） */
+  baseUnits?: readonly DefaultUnit[];
+  /** 是否启用单复数处理，默认 true；中文单位场景应传 false */
+  enablePluralization?: boolean;
+}
 
 /**
  * 单位处理Hook
  * 提供统一的单位处理逻辑
  */
-export function useUnitHandler(customUnits: string[] = []) {
+export function useUnitHandler(customUnits: string[] = [], options: UnitHandlerOptions = {}) {
+  const { baseUnits, enablePluralization } = options;
   // 创建单位配置
   const unitConfig = useMemo(() => {
-    return createUnitConfig(customUnits);
-  }, [customUnits]);
+    return createUnitConfig(customUnits, { defaultUnits: baseUnits, enablePluralization });
+  }, [customUnits, baseUnits, enablePluralization]);
 
   // 获取所有可用单位
   const allUnits = useMemo(() => {
@@ -97,9 +105,10 @@ export function useUnitSelector(
   currentUnit: string,
   currentQuantity: number,
   customUnits: string[] = [],
-  onUnitChange?: (unit: string) => void
+  onUnitChange?: (unit: string) => void,
+  options: UnitHandlerOptions = {}
 ) {
-  const { getDisplayUnit, handleUnitChange, getUnitSelectOptions } = useUnitHandler(customUnits);
+  const { getDisplayUnit, handleUnitChange, getUnitSelectOptions } = useUnitHandler(customUnits, options);
 
   // 当前显示的单位
   const displayUnit = useMemo(() => {

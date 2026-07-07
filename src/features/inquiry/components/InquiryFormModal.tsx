@@ -410,6 +410,7 @@ export function InquiryFormModal({
                 <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300">
                   <UserRound className="h-3.5 w-3.5" />
                   联络人
+                  <span className="text-red-500">*</span>
                 </span>
                 <CustomerContactPicker
                   customers={customers}
@@ -419,6 +420,16 @@ export function InquiryFormModal({
                   onClear={clearCustomerContactSelection}
                   placeholder="搜索客户简称/联络人简称"
                   fallbackLabel={customerId && contactId ? inquirer : undefined}
+                />
+                {/* 隐藏字段：借助原生表单校验为"联络人"提供必填提示 */}
+                <input
+                  type="text"
+                  value={inquirer}
+                  onChange={() => {}}
+                  required
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="h-0 w-0 opacity-0"
                 />
               </div>
 
@@ -467,7 +478,10 @@ export function InquiryFormModal({
           {/* ── 基本信息字段 ── */}
           <div className="mb-4 space-y-3">
             <div className="space-y-1">
-              <label className={LABEL_CLS}>客户询价编号</label>
+              <label className={LABEL_CLS}>
+                客户询价编号
+                <span className="text-red-500">*</span>
+              </label>
               <input
                 value={customerNo}
                 onChange={(e) => setCustomerNo(e.target.value)}

@@ -120,6 +120,9 @@ export default function QuotationPage() {
   const updateFromField = useQuotationStore(sel.updateFromField);
   const updateCurrency = useMemo(() => _updateCurrency ?? (() => {}), [_updateCurrency]); // 空函数兜底
 
+  // 内销报价合同设置面板：自定义单位（内联输入，独立于导出报价单的 SettingsPanel 组件）
+  const [domesticCustomUnit, setDomesticCustomUnit] = useState('');
+
   // 页面级白名单：覆盖Items & CustomerInfo & AutoSave等所有入口
   const PAGE_ALLOWED_KEYS = useMemo(() => {
     const pageKeys = new Set<string>([
@@ -740,6 +743,63 @@ export default function QuotationPage() {
                             </button>
                           ))}
                         </>
+                      )}
+                      <span className="text-blue-300 dark:text-blue-700">|</span>
+                      <span className="font-medium text-blue-700 dark:text-blue-300">自定义单位：</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={domesticCustomUnit}
+                          onChange={(e) => setDomesticCustomUnit(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const unit = domesticCustomUnit.trim();
+                              if (unit && !(data.customUnits || []).includes(unit)) {
+                                updateData({ customUnits: [...(data.customUnits || []), unit] });
+                              }
+                              setDomesticCustomUnit('');
+                            }
+                          }}
+                          placeholder="新增单位"
+                          className="w-20 rounded border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-800 outline-none focus:border-[#007AFF]/40 focus:ring-1 focus:ring-[#007AFF]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const unit = domesticCustomUnit.trim();
+                            if (unit && !(data.customUnits || []).includes(unit)) {
+                              updateData({ customUnits: [...(data.customUnits || []), unit] });
+                            }
+                            setDomesticCustomUnit('');
+                          }}
+                          className="rounded bg-[#007AFF]/10 px-2 py-1 text-[11px] font-medium text-[#007AFF] hover:bg-[#007AFF]/20 dark:bg-[#0A84FF]/10 dark:text-[#0A84FF]"
+                        >
+                          +
+                        </button>
+                      </div>
+                      {(data.customUnits || []).length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1">
+                          {(data.customUnits || []).map((unit, index) => (
+                            <span
+                              key={`${unit}-${index}`}
+                              className="flex items-center gap-1 rounded bg-[#007AFF]/10 px-1.5 py-0.5 text-[11px] text-[#007AFF] dark:bg-[#0A84FF]/10 dark:text-[#0A84FF]"
+                            >
+                              {unit}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateData({
+                                    customUnits: (data.customUnits || []).filter((_, i) => i !== index),
+                                  })
+                                }
+                                className="flex h-3 w-3 items-center justify-center rounded-full text-[9px] hover:bg-[#007AFF]/20 dark:hover:bg-[#0A84FF]/20"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>

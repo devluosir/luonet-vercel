@@ -11,6 +11,7 @@ import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
 import type { ParseResult } from '@/features/quotation/utils/quickSmartParse';
 import { useUnitHandler } from '@/hooks/useUnitHandler';
 import { UnitSelector } from '@/components/ui/UnitSelector';
+import { DOMESTIC_DEFAULT_UNITS } from '@/utils/unitUtils';
 
 /* =========================================================================
  * Section 1: Types / Constants
@@ -375,7 +376,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     handleItemChange: handleUnitItemChange,
     getDisplayUnit: _getDisplayUnit,
     allUnits: _allUnits
-  } = useUnitHandler(data.customUnits || []);
+  } = useUnitHandler(data.customUnits || [], isDomestic
+    ? { baseUnits: DOMESTIC_DEFAULT_UNITS, enablePluralization: false }
+    : {});
 
   const updateItems = useCallback(
     (newItems: LineItem[]) => {
@@ -1005,6 +1008,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       value={item.unit}
                       quantity={item.quantity}
                       customUnits={data.customUnits || []}
+                      baseUnits={isDomestic ? DOMESTIC_DEFAULT_UNITS : undefined}
+                      enablePluralization={!isDomestic}
                       onChange={(unit) => handleUnitChange(index, unit)}
                       onDoubleClick={() => handleDoubleClick(index, 'unit')}
                       className={`w-full px-3 py-2 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
@@ -1282,6 +1287,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               value={item.unit}
                               quantity={item.quantity}
                               customUnits={data.customUnits || []}
+                              baseUnits={isDomestic ? DOMESTIC_DEFAULT_UNITS : undefined}
+                              enablePluralization={!isDomestic}
                               onChange={(unit) => handleUnitChange(index, unit)}
                               onDoubleClick={() => handleDoubleClick(index, 'unit')}
                               className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useUnitSelector } from '@/hooks/useUnitHandler';
+import type { DefaultUnit } from '@/utils/unitUtils';
 
 // 单位选择器组件属性
 export interface UnitSelectorProps {
@@ -9,6 +10,10 @@ export interface UnitSelectorProps {
   quantity: number;
   /** 自定义单位列表 */
   customUnits?: string[];
+  /** 覆盖默认单位列表（如内销单据的中文单位：只/套/节） */
+  baseUnits?: readonly DefaultUnit[];
+  /** 是否启用单复数处理，默认 true；中文单位场景应传 false */
+  enablePluralization?: boolean;
   /** 单位变更回调 */
   onChange?: (unit: string) => void;
   /** 是否禁用 */
@@ -19,8 +24,6 @@ export interface UnitSelectorProps {
   className?: string;
   /** 是否显示数量提示 */
   showQuantityHint?: boolean;
-  /** 是否启用单复数处理 */
-  enablePluralization?: boolean;
   /** 双击事件处理 */
   onDoubleClick?: () => void;
   /** 焦点事件处理 */
@@ -37,12 +40,13 @@ export const UnitSelector: React.FC<UnitSelectorProps> = React.memo(({
   value,
   quantity,
   customUnits = [],
+  baseUnits,
+  enablePluralization,
   onChange,
   disabled = false,
   placeholder = '',
   className = '',
   showQuantityHint = false,
-  enablePluralization: _enablePluralization = true,
   onDoubleClick,
   onFocus,
   onBlur,
@@ -51,7 +55,8 @@ export const UnitSelector: React.FC<UnitSelectorProps> = React.memo(({
     value,
     quantity,
     customUnits,
-    onChange
+    onChange,
+    { baseUnits, enablePluralization }
   );
 
   // 处理选择变更

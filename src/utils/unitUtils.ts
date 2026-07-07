@@ -6,8 +6,11 @@
 // 默认单位列表（需要单复数变化的单位）
 export const DEFAULT_UNITS = ['pc', 'set', 'length'] as const;
 
+// 内销单据默认单位列表（中文单位，不做单复数变化）
+export const DOMESTIC_DEFAULT_UNITS = ['只', '套', '节'] as const;
+
 // 单位类型定义
-export type DefaultUnit = typeof DEFAULT_UNITS[number];
+export type DefaultUnit = string;
 export type CustomUnit = string;
 export type Unit = DefaultUnit | CustomUnit;
 
@@ -267,9 +270,16 @@ export class UnitConfigBuilder {
 
 /**
  * 创建单位配置的便捷方法
+ * @param customUnits 自定义单位列表
+ * @param overrides 可选覆盖项：默认单位列表 / 是否启用单复数处理（用于内销等中文单据场景）
  */
-export function createUnitConfig(customUnits: CustomUnit[] = []): UnitConfig {
-  return new UnitConfigBuilder()
-    .withCustomUnits(customUnits)
-    .build();
+export function createUnitConfig(
+  customUnits: CustomUnit[] = [],
+  overrides: { defaultUnits?: readonly DefaultUnit[]; enablePluralization?: boolean } = {}
+): UnitConfig {
+  return {
+    defaultUnits: overrides.defaultUnits ?? DEFAULT_UNIT_CONFIG.defaultUnits,
+    customUnits: [...customUnits],
+    enablePluralization: overrides.enablePluralization ?? DEFAULT_UNIT_CONFIG.enablePluralization,
+  };
 }
