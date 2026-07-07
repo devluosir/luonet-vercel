@@ -41,6 +41,18 @@ export async function saveOrUpdate(
       };
     }
 
+    // 内销报价单：历史记录列表/Dashboard 展示用的 customerName 取自 data.to，
+    // 但内销的供需方资料独立存在 domesticSeller/domesticBuyer 中（不再双向同步 to/from，
+    // 避免污染外贸报价单/销售确认的客户资料，见 DomesticCustomerInfo.tsx）。
+    // 这里只在"保存历史记录的这份副本"上补齐 to/from 展示值，不回写到编辑中的 data。
+    if (historyType === 'domestic') {
+      workingData = {
+        ...workingData,
+        to: workingData.domesticBuyer?.name?.trim() || workingData.to,
+        from: workingData.domesticSeller?.name?.trim() || workingData.from,
+      };
+    }
+
     // 保存时包含notesConfig
     const dataWithConfig: QuotationData & { notesConfig: NoteConfig[] } = {
       ...workingData,

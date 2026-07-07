@@ -3,6 +3,7 @@ import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
 import type { NoteConfig } from '../types/notes';
 import { DEFAULT_NOTES_CONFIG, DOMESTIC_NOTES_CONFIG } from '../types/notes';
 import { getInitialQuotationData } from '@/utils/quotationInitialData';
+import { OUR_COMPANY_PROFILE } from '@/utils/domesticCompanyProfile';
 import { getDefaultNotes } from '@/utils/getDefaultNotes';
 import { eventSampler } from '../utils/eventLogger';
 import { getLocalStorageJSON, getLocalStorageString } from '@/utils/safeLocalStorage';
@@ -199,8 +200,10 @@ export const useQuotationStore = create<QuotationState>((set, _get) => ({
           ...state.data,
           mode: 'domestic',
           currency: 'CNY',
-          domesticSeller: state.data.domesticSeller ?? { name: state.data.from },
-          domesticBuyer: state.data.domesticBuyer ?? { name: state.data.to.split('\n')[0] ?? '' },
+          // 供方默认用我方公司真实资料；需方独立留空，不从外贸单/销售确认的 to 字段带入，
+          // 避免内销与外贸客户资料互相污染（两者往往是完全不同的交易对象）
+          domesticSeller: state.data.domesticSeller ?? { ...OUR_COMPANY_PROFILE },
+          domesticBuyer: state.data.domesticBuyer ?? {},
           domesticTotalRemark: state.data.domesticTotalRemark ?? '价格含13个点专票及运费',
         },
         notesConfig: state.notesConfig.some((note) => note.id.startsWith('domestic_clause_'))

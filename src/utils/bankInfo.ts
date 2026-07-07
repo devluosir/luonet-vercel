@@ -1,10 +1,13 @@
+import { OUR_COMPANY_PROFILE } from './domesticCompanyProfile';
+
 export const getBankInfo = () => {
+  const p = OUR_COMPANY_PROFILE;
   return [
     '开票资料：',
-    '公司名称：上海飞罗贸易有限公司',
-    '公司住所：中国（上海）自由贸易区富特北路211号302部位368室',
-    '电话：4008930883',
-    '税号：913101150935185537',
-    '开户行及账号：中国银行上海市外高桥保税区支行 455969175704'
+    `公司名称：${p.name}`,
+    `公司住所：${p.address}`,
+    `电话：${p.phone}`,
+    `税号：${p.taxNo}`,
+    `开户行及账号：${p.bankName} ${p.bankAccount}`
   ];
-}; 
+};

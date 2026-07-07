@@ -1,5 +1,7 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DomesticPartyDetails, QuotationData } from '@/types/quotation';
+import type { Customer } from '@/features/customer/types';
+import { findCustomerByName, getAllCustomers, getCachedCustomers, upsertDomesticCustomerInfo } from '@/features/customer/services/customerService';
 
 interface DomesticCustomerInfoProps {
   data: QuotationData;
@@ -21,14 +23,20 @@ const partyFields: Array<{ key: PartyField; label: string }> = [
   { key: 'bankAccount', label: '帐号' },
 ];
 
+const BUYER_CUSTOMER_LIST_ID = 'domestic-buyer-customer-options';
+
 function FieldInput({
   label,
   value,
   onChange,
+  onBlur,
+  listId,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
+  listId?: string;
 }) {
   return (
     <label className="block">
@@ -39,6 +47,8 @@ function FieldInput({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
+        list={listId}
         className="h-8 w-full rounded-lg border border-[#E5E5EA] bg-white px-2 text-sm text-[#1D1D1F] outline-none transition-colors focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF]/25 dark:border-[#3A3A3C] dark:bg-[#1C1C1E] dark:text-[#F5F5F7]"
       />
     </label>
@@ -52,23 +62,94 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
   const seller = useMemo(() => data.domesticSeller ?? {}, [data.domesticSeller]);
   const buyer = useMemo(() => data.domesticBuyer ?? {}, [data.domesticBuyer]);
 
+  const [customerOptions, setCustomerOptions] = useState<Customer[]>([]);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveMessage, setSaveMessage] = useState('');
+
+  // 需方"客户名称"候选列表，用于 <datalist> 提示 + 精确匹配后调用已保存资料
+  useEffect(() => {
+    let cancelled = false;
+    setCustomerOptions(getCachedCustomers('customer'));
+    getAllCustomers().then((customers) => {
+      if (!cancelled) setCustomerOptions(customers);
+    }).catch(() => {
+      // 静默失败：保留缓存/空列表，不影响手动录入
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // 供方/需方字段的独立更新：仅写入 domesticSeller/domesticBuyer 自身，
+  // 不再回写 data.from/data.to —— 那两个字段是外贸报价单/销售确认的客户资料，
+  // 内销报价单必须与它们完全独立，避免互相污染
   const updateParty = useCallback(
     (party: PartyKey, field: PartyField, value: string) => {
       const current = party === 'domesticSeller' ? seller : buyer;
       const nextParty = { ...current, [field]: value };
-      const patch: Partial<QuotationData> = { [party]: nextParty };
-
-      if (party === 'domesticSeller' && field === 'name') {
-        patch.from = value;
-      }
-      if (party === 'domesticBuyer' && field === 'name') {
-        patch.to = value;
-      }
-
-      onChange(patch);
+      onChange({ [party]: nextParty } as Partial<QuotationData>);
     },
     [buyer, onChange, seller]
   );
+
+  // 需方单位名称失焦时，若与已保存客户档案精确匹配，则整段调用该客户的内销资料
+  const handleBuyerNameBlur = useCallback(() => {
+    const name = (buyer.name ?? '').trim();
+    if (!name) return;
+    const matched = customerOptions.find((c) => c.name.trim() === name);
+    if (!matched) return;
+
+    const nextBuyer: DomesticPartyDetails = {
+      ...buyer,
+      name: matched.name,
+      address: matched.address || buyer.address,
+      legalRepresentative: matched.domesticInfo?.legalRepresentative ?? buyer.legalRepresentative,
+      agent: matched.domesticInfo?.agent ?? buyer.agent,
+      phone: matched.domesticInfo?.phone ?? buyer.phone,
+      fax: matched.domesticInfo?.fax ?? buyer.fax,
+      taxNo: matched.domesticInfo?.taxNo ?? buyer.taxNo,
+      bankName: matched.domesticInfo?.bankName ?? buyer.bankName,
+      bankAccount: matched.domesticInfo?.bankAccount ?? buyer.bankAccount,
+    };
+    onChange({ domesticBuyer: nextBuyer });
+  }, [buyer, customerOptions, onChange]);
+
+  const handleSaveBuyerToCustomer = useCallback(async () => {
+    const name = (buyer.name ?? '').trim();
+    if (!name) {
+      setSaveState('error');
+      setSaveMessage('请先填写需方单位名称');
+      return;
+    }
+    setSaveState('saving');
+    setSaveMessage('');
+    try {
+      await upsertDomesticCustomerInfo({
+        name,
+        address: buyer.address,
+        domesticInfo: {
+          legalRepresentative: buyer.legalRepresentative,
+          agent: buyer.agent,
+          phone: buyer.phone,
+          fax: buyer.fax,
+          taxNo: buyer.taxNo,
+          bankName: buyer.bankName,
+          bankAccount: buyer.bankAccount,
+        },
+      });
+      setSaveState('saved');
+      setSaveMessage('已保存至客户资料，下次输入相同单位名称可自动调用');
+      // 刷新候选列表，便于同一页面内立即"调用"
+      const refreshed = await findCustomerByName(name);
+      if (refreshed) {
+        setCustomerOptions((prev) => {
+          const others = prev.filter((c) => c.id !== refreshed.id);
+          return [...others, refreshed];
+        });
+      }
+    } catch (error) {
+      setSaveState('error');
+      setSaveMessage(error instanceof Error ? error.message : '保存失败');
+    }
+  }, [buyer]);
 
   return (
     <div className="space-y-4">
@@ -90,6 +171,12 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
         />
       </div>
 
+      <datalist id={BUYER_CUSTOMER_LIST_ID}>
+        {customerOptions.map((customer) => (
+          <option key={customer.id} value={customer.name} />
+        ))}
+      </datalist>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {([
           ['domesticSeller', '供方', seller],
@@ -99,9 +186,21 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
             key={party}
             className="rounded-xl border border-[#E5E5EA] bg-white/70 p-3 dark:border-[#3A3A3C] dark:bg-[#1C1C1E]/60"
           >
-            <h3 className="mb-3 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-              {title}
-            </h3>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                {title}
+              </h3>
+              {party === 'domesticBuyer' && (
+                <button
+                  type="button"
+                  onClick={handleSaveBuyerToCustomer}
+                  disabled={saveState === 'saving'}
+                  className="rounded-lg border border-[#007AFF]/30 px-2 py-1 text-xs font-medium text-[#007AFF] transition-colors hover:bg-[#007AFF]/10 disabled:opacity-50 dark:border-[#0A84FF]/40 dark:text-[#0A84FF]"
+                >
+                  {saveState === 'saving' ? '保存中…' : '保存客户资料'}
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {partyFields.map((field) => (
                 <FieldInput
@@ -109,9 +208,21 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
                   label={field.label}
                   value={String(details[field.key] ?? '')}
                   onChange={(value) => updateParty(party, field.key, value)}
+                  onBlur={party === 'domesticBuyer' && field.key === 'name' ? handleBuyerNameBlur : undefined}
+                  listId={party === 'domesticBuyer' && field.key === 'name' ? BUYER_CUSTOMER_LIST_ID : undefined}
                 />
               ))}
             </div>
+            {party === 'domesticBuyer' && saveMessage && (
+              <p className={`mt-2 text-xs ${saveState === 'error' ? 'text-red-500' : 'text-[#34C759] dark:text-[#30D158]'}`}>
+                {saveMessage}
+              </p>
+            )}
+            {party === 'domesticBuyer' && (
+              <p className="mt-2 text-[11px] text-[#86868B] dark:text-[#98989D]">
+                提示：单位名称与已保存客户资料完全一致时，失焦后会自动调用其地址/税号/开户行等信息。
+              </p>
+            )}
           </section>
         ))}
       </div>

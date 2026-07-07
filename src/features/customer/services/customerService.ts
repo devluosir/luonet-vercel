@@ -1,5 +1,5 @@
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
-import { Contact, Customer, CustomerCategory, HistoryDocument } from '../types';
+import { Contact, Customer, CustomerCategory, CustomerDomesticInfo, HistoryDocument } from '../types';
 
 const VALID_CATEGORIES: CustomerCategory[] = ['A', 'B', 'C', 'New', 'Blacklist'];
 
@@ -26,6 +26,7 @@ export interface CustomerProfileInput {
   contacts?: Contact[];
   category?: CustomerCategory;
   categoryNote?: string;
+  domesticInfo?: CustomerDomesticInfo;
   createdAt?: string;
 }
 
@@ -152,6 +153,11 @@ function normalizeProfile(row: D1Customer): Customer {
   const createdAt = row.created_at ?? new Date().toISOString();
   const updatedAt = row.updated_at ?? createdAt;
 
+  const domesticInfoRaw = data.domesticInfo;
+  const domesticInfo = domesticInfoRaw && typeof domesticInfoRaw === 'object'
+    ? (domesticInfoRaw as CustomerDomesticInfo)
+    : undefined;
+
   return {
     id: row.id,
     type: row.type,
@@ -162,6 +168,7 @@ function normalizeProfile(row: D1Customer): Customer {
     contacts: normalizeContacts((row.contacts ?? []).map(toContact)),
     category: toCustomerCategory(data.category),
     categoryNote: typeof data.categoryNote === 'string' && data.categoryNote.trim() ? data.categoryNote : undefined,
+    domesticInfo,
     createdAt,
     updatedAt,
   };
@@ -236,6 +243,12 @@ function buildBasePayload(profile: CustomerProfileInput) {
   if (profile.category) data.category = profile.category;
   const categoryNote = profile.categoryNote?.trim();
   if (categoryNote) data.categoryNote = categoryNote;
+  if (profile.domesticInfo) {
+    const cleaned = Object.fromEntries(
+      Object.entries(profile.domesticInfo).filter(([, v]) => typeof v === 'string' && v.trim())
+    );
+    if (Object.keys(cleaned).length > 0) data.domesticInfo = cleaned;
+  }
 
   return {
     type: profile.type,
@@ -298,7 +311,44 @@ export async function saveCustomer(customer: Customer, isNew = false): Promise<C
     contacts: customer.contacts,
     category: customer.category,
     categoryNote: customer.categoryNote,
+    domesticInfo: customer.domesticInfo,
     createdAt: customer.createdAt,
+  });
+}
+
+// 内销报价单需方资料：按名称精确匹配（忽略首尾空白）查找已保存的客户档案，用于"调用"已存资料
+export async function findCustomerByName(name: string): Promise<Customer | null> {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  const result = await fetchAllCustomers('customer');
+  return result.items.find((customer) => customer.name.trim() === trimmed) ?? null;
+}
+
+// 内销报价单需方资料：保存/更新客户的内销专用字段（法定代表人/税号/开户行等），
+// 若客户已存在则合并更新，否则新建一条客户档案。不影响该客户其他已保存信息。
+export async function upsertDomesticCustomerInfo(params: {
+  name: string;
+  address?: string;
+  domesticInfo: CustomerDomesticInfo;
+}): Promise<Customer> {
+  const existing = await findCustomerByName(params.name);
+  // 只用本次表单里"实际填写"的字段覆盖已保存资料，未填写的字段（undefined/空白）
+  // 不应该把客户档案里之前已保存的值抹掉
+  const filledInfo = Object.fromEntries(
+    Object.entries(params.domesticInfo).filter(([, v]) => typeof v === 'string' && v.trim())
+  ) as CustomerDomesticInfo;
+  return saveCustomerProfile({
+    id: existing?.id,
+    type: 'customer',
+    name: params.name,
+    shortName: existing?.shortName,
+    code: existing?.code,
+    address: params.address?.trim() || existing?.address,
+    contacts: existing?.contacts,
+    category: existing?.category,
+    categoryNote: existing?.categoryNote,
+    domesticInfo: { ...existing?.domesticInfo, ...filledInfo },
+    createdAt: existing?.createdAt,
   });
 }
 
@@ -372,4 +422,6 @@ export const customerService = {
   checkCustomerUsage,
   getConsigneeDisplayName,
   getCustomersForDropdown,
+  findCustomerByName,
+  upsertDomesticCustomerInfo,
 };

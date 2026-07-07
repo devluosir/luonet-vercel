@@ -3,6 +3,7 @@ import { getLocalStorageJSON, getLocalStorageString } from '@/utils/safeLocalSto
 import { getDefaultNotes } from './getDefaultNotes';
 import type { QuotationData } from '@/types/quotation';
 import { calculatePaymentDate } from './quotationCalculations';
+import { OUR_COMPANY_PROFILE } from './domesticCompanyProfile';
 
 export function getInitialQuotationData(pageType: 'quotation' | 'confirmation' | 'domestic' = 'quotation'): QuotationData {
   const username = (() => {
@@ -32,7 +33,7 @@ export function getInitialQuotationData(pageType: 'quotation' | 'confirmation' |
   return {
     mode: isDomestic ? 'domestic' : 'export',
     to: '',
-    domesticSeller: isDomestic ? { name: username } : undefined,
+    domesticSeller: isDomestic ? { ...OUR_COMPANY_PROFILE } : undefined,
     domesticBuyer: isDomestic ? {} : undefined,
     inquiryNo: '',
     quotationNo: '',

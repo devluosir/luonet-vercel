@@ -10,6 +10,17 @@ export interface Contact {
 // 客户分类：根据订单量、付款及时性等人为评定 A/B/C 三档，New 表示尚未成单的新客户，Blacklist 为黑名单
 export type CustomerCategory = 'A' | 'B' | 'C' | 'New' | 'Blacklist';
 
+// 内销报价单专用的需方资料（法定代表人/税号/开户行等），存于 Customer.data.domesticInfo，不改动 worker/schema
+export interface CustomerDomesticInfo {
+  legalRepresentative?: string;
+  agent?: string;
+  phone?: string;
+  fax?: string;
+  taxNo?: string;
+  bankName?: string;
+  bankAccount?: string;
+}
+
 export interface CustomerProfile {
   id: string;
   type: 'customer' | 'supplier' | 'consignee';
@@ -20,6 +31,7 @@ export interface CustomerProfile {
   contacts: Contact[];
   category?: CustomerCategory;
   categoryNote?: string;
+  domesticInfo?: CustomerDomesticInfo;
   createdAt: string;
   updatedAt: string;
 }
