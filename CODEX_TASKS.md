@@ -10,8 +10,14 @@
 
 ## TASK-102：Worker 部署 + D1 迁移/回填运维任务合集
 
-**状态**：待执行
+**状态**：已完成（2026-07-08，Codex 执行）
 **日期**：2026-07-08
+
+**执行记录**：
+- Worker 已本地 `npx wrangler deploy` 到生产自定义域 `udb.luocompany.net`，Version ID：`217e2853-b839-4364-ac75-5c6b813c2e3e`；`/api/purchase-order` 已验证返回 404。
+- 远程 D1 复查确认 `Document.type` CHECK 约束已包含 `'domestic'`，未重复执行 008 重建表迁移；已在 `docs/core/CURRENT_STATE.md` 补充生产确认记录。
+- 采购部登记历史状态回填已执行：先单条 `C260706F` 写入成功 1 条，再全量写入成功 760 条、失败 0 条；最终 dry-run 显示已有采购部专属状态数据 761 条、无来源跳过 206 条、待回填 0 条。
+- 回填备份文件：`backups/backup-before-task100-quote-backfill-2026-07-07T16-56-22-344Z.json`（单条验证）和 `backups/backup-before-task100-quote-backfill-2026-07-07T16-56-45-600Z.json`（全量回填）。
 
 ### 背景
 
