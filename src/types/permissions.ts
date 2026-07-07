@@ -30,6 +30,8 @@ export interface PermissionMap {
   documentTypePermissions: {
     quotation: boolean;
     confirmation: boolean;
+    'domestic-quotation': boolean;
+    'domestic-contract': boolean;
     packing: boolean;
     invoice: boolean;
     purchase: boolean;

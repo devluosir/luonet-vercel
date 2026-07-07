@@ -48,6 +48,8 @@ export const buildPermissionMap = (
       documentTypePermissions: {
         quotation: false,
         confirmation: false,
+        'domestic-quotation': false,
+        'domestic-contract': false,
         packing: false,
         invoice: false,
         purchase: false
@@ -75,6 +77,8 @@ export const buildPermissionMap = (
   const documentTypePermissions = {
     quotation: permissionMap.get('quotation') === true,
     confirmation: permissionMap.get('quotation') === true, // 销售确认也属于报价模块
+    'domestic-quotation': permissionMap.get('quotation') === true, // 内销报价单也属于报价模块
+    'domestic-contract': permissionMap.get('quotation') === true, // 内销合同也属于报价模块
     packing: permissionMap.get('packing') === true,
     invoice: permissionMap.get('invoice') === true,
     purchase: permissionMap.get('purchase') === true
@@ -111,6 +115,8 @@ export const hasDocumentTypePermission = (
   switch (documentType) {
     case 'quotation':
     case 'confirmation':
+    case 'domestic-quotation':
+    case 'domestic-contract':
       return permissionMap.get('quotation') === true;
     case 'packing':
       return permissionMap.get('packing') === true;

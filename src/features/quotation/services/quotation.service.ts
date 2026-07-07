@@ -69,7 +69,14 @@ export async function saveOrUpdate(
 }
 
 // 从多个数据源初始化数据
-export function initDataFromSources(tab: QuotationTab = 'quotation'): QuotationData {
+// domesticDocTypeOverride：内销单据类型强制覆盖（报价单/合同），用于首页快速创建按钮指定入口
+export function initDataFromSources(
+  tab: QuotationTab = 'quotation',
+  domesticDocTypeOverride?: 'quotation' | 'contract'
+): QuotationData {
+  const docTypeOverride =
+    tab === 'domestic' && domesticDocTypeOverride ? { domesticDocType: domesticDocTypeOverride } : {};
+
   // 1. 优先使用全局注入的数据
   if (typeof window !== 'undefined') {
     const win = window as unknown as CustomWindow;
@@ -78,6 +85,7 @@ export function initDataFromSources(tab: QuotationTab = 'quotation'): QuotationD
         ...win.__QUOTATION_DATA__,
         mode: tab === 'domestic' ? 'domestic' : win.__QUOTATION_DATA__.mode ?? 'export',
         currency: tab === 'domestic' ? 'CNY' : win.__QUOTATION_DATA__.currency,
+        ...docTypeOverride,
       };
     }
   }
@@ -105,7 +113,8 @@ export function initDataFromSources(tab: QuotationTab = 'quotation'): QuotationD
         // 确保templateConfig有正确的默认值
         templateConfig: parsed.templateConfig || defaultData.templateConfig,
         // 确保付款条款使用默认值false
-        showMainPaymentTerm: defaultData.showMainPaymentTerm
+        showMainPaymentTerm: defaultData.showMainPaymentTerm,
+        ...docTypeOverride,
       };
     }
   } catch (error) {
@@ -113,7 +122,15 @@ export function initDataFromSources(tab: QuotationTab = 'quotation'): QuotationD
   }
 
   // 3. 最后使用默认数据
-  return getInitialQuotationData(tab);
+  return { ...getInitialQuotationData(tab), ...docTypeOverride };
+}
+
+// 从 URL 查询参数获取内销单据类型覆盖值（报价单/合同），仅首页快速创建入口会携带该参数
+export function getDomesticDocTypeFromSearchParams(
+  searchParams?: URLSearchParams
+): 'quotation' | 'contract' | undefined {
+  const docType = searchParams?.get('docType');
+  return docType === 'quotation' || docType === 'contract' ? docType : undefined;
 }
 
 // 从多个数据源初始化Notes配置

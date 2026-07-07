@@ -6,6 +6,8 @@ interface PermissionMap {
   documentTypePermissions: {
     quotation: boolean;
     confirmation: boolean;
+    'domestic-quotation': boolean;
+    'domestic-contract': boolean;
     packing: boolean;
     invoice: boolean;
     purchase: boolean;
@@ -16,10 +18,10 @@ interface PermissionMap {
 interface DashboardDocumentsProps {
   documents: DocumentWithType[];
   timeFilter: 'today' | '3days' | 'week' | 'month';
-  typeFilter: 'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase';
+  typeFilter: 'all' | DocumentType;
   showAllFilters: boolean;
   onTimeFilterChange: (filter: 'today' | '3days' | 'week' | 'month') => void;
-  onTypeFilterChange: (filter: 'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase') => void;
+  onTypeFilterChange: (filter: 'all' | DocumentType) => void;
   onShowAllFiltersChange: (show: boolean) => void;
   permissionMap: PermissionMap;
 }

@@ -16,6 +16,8 @@ import type { StatCounts } from '../components/StatsCards';
 const EMPTY_COUNTS: StatCounts = {
   quotation: 0,
   confirmation: 0,
+  'domestic-quotation': 0,
+  'domestic-contract': 0,
   invoice: 0,
   packing: 0,
   purchase: 0
@@ -43,6 +45,8 @@ export const useDashboardDocuments = (permissionMap: PermissionMap, mounted: boo
   const [documentCounts, setDocumentCounts] = useState({
     quotation: 0,
     confirmation: 0,
+    'domestic-quotation': 0,
+    'domestic-contract': 0,
     invoice: 0,
     packing: 0,
     purchase: 0

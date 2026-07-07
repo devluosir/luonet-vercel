@@ -18,6 +18,8 @@ interface DashboardModule {
 interface DocumentCounts {
   quotation: number;
   confirmation: number;
+  'domestic-quotation': number;
+  'domestic-contract': number;
   invoice: number;
   packing: number;
   purchase: number;
@@ -65,6 +67,8 @@ export const DashboardModules: React.FC<DashboardModulesProps> = ({
             onHover={onModuleHover}
             quotationCount={documentCounts.quotation}
             confirmationCount={documentCounts.confirmation}
+            domesticQuotationCount={documentCounts['domestic-quotation']}
+            domesticContractCount={documentCounts['domestic-contract']}
             invoiceCount={documentCounts.invoice}
             packingCount={documentCounts.packing}
             purchaseCount={documentCounts.purchase}

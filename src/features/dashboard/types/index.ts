@@ -1,3 +1,6 @@
+export type { DocumentType } from '@/utils/dashboardUtils';
+import type { DocumentType } from '@/utils/dashboardUtils';
+
 // Dashboard模块类型定义
 export interface DashboardModule {
   id: string;
@@ -16,6 +19,8 @@ export interface DashboardModule {
 export interface DocumentCounts {
   quotation: number;
   confirmation: number;
+  'domestic-quotation': number;
+  'domestic-contract': number;
   invoice: number;
   packing: number;
   purchase: number;
@@ -36,6 +41,8 @@ export interface PermissionMap {
   documentTypePermissions: {
     quotation: boolean;
     confirmation: boolean;
+    'domestic-quotation': boolean;
+    'domestic-contract': boolean;
     packing: boolean;
     invoice: boolean;
     purchase: boolean;
@@ -52,5 +59,4 @@ export interface SuccessMessage {
 
 // 文档筛选器类型
 export type TimeFilter = 'today' | '3days' | 'week' | 'month';
-export type DocumentType = 'quotation' | 'confirmation' | 'invoice' | 'packing' | 'purchase';
 export type TypeFilter = 'all' | DocumentType;

@@ -10,26 +10,32 @@ import {
 
 // 快速创建单据的模块
 export const QUICK_CREATE_MODULES = [
-  { 
-    id: 'quotation', 
-    name: '新外贸报价单', 
+  {
+    id: 'quotation',
+    name: '外贸报价',
     path: '/quotation?tab=quotation',
     icon: FileText
   },
   {
-    id: 'quotation-domestic',
-    name: '新内销报价单',
-    path: '/quotation?tab=domestic',
-    icon: FileText
-  },
-  { 
-    id: 'confirmation', 
-    name: '销售确认', 
+    id: 'confirmation',
+    name: '外贸合同',
     path: '/quotation?tab=confirmation',
     icon: FileText
   },
-  { 
-    id: 'packing', 
+  {
+    id: 'quotation-domestic',
+    name: '内销报价',
+    path: '/quotation?tab=domestic&docType=quotation',
+    icon: FileText
+  },
+  {
+    id: 'quotation-domestic-contract',
+    name: '内销合同',
+    path: '/quotation?tab=domestic&docType=contract',
+    icon: FileText
+  },
+  {
+    id: 'packing',
     name: '箱单发票', 
     path: '/packing',
     icon: Package

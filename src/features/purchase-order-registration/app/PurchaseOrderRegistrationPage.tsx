@@ -228,7 +228,13 @@ export function PurchaseOrderRegistrationPage() {
           supplierOptions={supplierOptions}
           onKeywordChange={setKeyword}
           onTimeRangeChange={setTimeRange}
-          onOrderStatusChange={setOrderStatusFilter}
+          onOrderStatusChange={(filter) => {
+            // "进行中"通常跨越较长周期，选中时时间范围一并放宽到"全部"（与订单状态表 /order 一致）
+            if (filter === 'inProgress') {
+              setTimeRange('all');
+            }
+            setOrderStatusFilter(filter);
+          }}
           onSupplierFilterChange={setSupplierFilter}
           onReset={() => {
             setKeyword('');

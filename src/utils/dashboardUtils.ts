@@ -2,7 +2,14 @@ import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 import type { HistoryItem } from '@/features/history/types';
 
 // 文档类型定义
-export type DocumentType = 'quotation' | 'confirmation' | 'invoice' | 'packing' | 'purchase';
+export type DocumentType =
+  | 'quotation'
+  | 'confirmation'
+  | 'domestic-quotation'
+  | 'domestic-contract'
+  | 'invoice'
+  | 'packing'
+  | 'purchase';
 
 // 时间筛选类型
 export type TimeFilter = 'today' | '3days' | 'week' | 'month';
@@ -32,6 +39,17 @@ const isDomesticQuotationRecord = (doc: DocumentWithType): boolean => {
     !Array.isArray(data) &&
     (data as { mode?: unknown }).mode === 'domestic'
   );
+};
+
+// 内销单据的子类型（报价单 / 合同），未填写时按历史默认值归为"合同"
+// （与 quotationInitialData.ts / QuotationPage.tsx 里 `data.domesticDocType ?? 'contract'` 的兼容口径保持一致）
+const getDomesticDocSubtype = (doc: DocumentWithType): 'quotation' | 'contract' | undefined => {
+  if (!isDomesticQuotationRecord(doc)) return undefined;
+  const data = doc.data;
+  const docType = typeof data === 'object' && data !== null && !Array.isArray(data)
+    ? (data as { domesticDocType?: unknown }).domesticDocType
+    : undefined;
+  return docType === 'quotation' ? 'quotation' : 'contract';
 };
 
 // 权限事件工具函数
@@ -80,6 +98,14 @@ export const getDocumentsByType = (type: DocumentType): DocumentWithType[] => {
         return !isUpgraded;
       })
       .map((doc) => ({ ...doc, type: 'quotation' as DocumentType }));
+  } else if (type === 'domestic-quotation' || type === 'domestic-contract') {
+    // 内销报价单/内销合同同样存储在 quotation_history 中（type==='domestic'），
+    // 按 data.domesticDocType 子类型（报价单/合同）二次拆分
+    const wantedSubtype = type === 'domestic-quotation' ? 'quotation' : 'contract';
+    const quotationHistory = getLocalStorageJSON<DocumentWithType[]>('quotation_history', []);
+    return quotationHistory
+      .filter((doc) => getDomesticDocSubtype(doc) === wantedSubtype)
+      .map((doc) => ({ ...doc, type }));
   } else {
     const storageKey = `${type}_history`;
     const docs = getLocalStorageJSON<HistoryItem[]>(storageKey, []);
@@ -109,11 +135,21 @@ export const getStartDateByFilter = (filter: TimeFilter): Date => {
   return startDate;
 };
 
+// 内销报价单/内销合同与销售确认一样，权限上都归属于"报价"模块
+const getDocumentTypePermissionKey = (type: DocumentType): DocumentType =>
+  type === 'confirmation' || type === 'domestic-quotation' || type === 'domestic-contract'
+    ? 'quotation'
+    : type;
+
+const ALL_DOCUMENT_TYPES: DocumentType[] = [
+  'quotation', 'confirmation', 'domestic-quotation', 'domestic-contract', 'invoice', 'packing', 'purchase'
+];
+
 // 根据权限过滤文档类型
 export const getAccessibleDocumentTypes = (permissionMap: DashboardPermissionMap): DocumentType[] => {
-  return (['quotation', 'confirmation', 'invoice', 'packing', 'purchase'] as DocumentType[])
+  return ALL_DOCUMENT_TYPES
     .filter(type => {
-      const permissionKey = type === 'confirmation' ? 'quotation' : type;
+      const permissionKey = getDocumentTypePermissionKey(type);
       return permissionMap.documentTypePermissions[permissionKey];
     });
 };
@@ -122,8 +158,8 @@ export const getAccessibleDocumentTypes = (permissionMap: DashboardPermissionMap
 export const loadAllDocumentsByPermissions = (permissionMap: DashboardPermissionMap): DocumentWithType[] => {
   const allDocuments: DocumentWithType[] = [];
 
-  (['quotation', 'confirmation', 'invoice', 'packing', 'purchase'] as DocumentType[]).forEach(type => {
-    const permissionKey = type === 'confirmation' ? 'quotation' : type;
+  ALL_DOCUMENT_TYPES.forEach(type => {
+    const permissionKey = getDocumentTypePermissionKey(type);
     if (permissionMap.documentTypePermissions[permissionKey]) {
       // 使用修复后的getDocumentsByType函数来加载文档
       allDocuments.push(...getDocumentsByType(type));

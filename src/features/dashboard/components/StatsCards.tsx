@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import {
   FileCheck,
   FileText,
+  FileSignature,
   Package,
   Receipt,
   ShoppingCart,
@@ -12,7 +13,7 @@ import {
 import type { PermissionMap } from '../types';
 
 interface StatItem {
-  type: 'quotation' | 'confirmation' | 'invoice' | 'packing' | 'purchase';
+  type: 'quotation' | 'confirmation' | 'domestic-quotation' | 'domestic-contract' | 'invoice' | 'packing' | 'purchase';
   label: string;
   tag: string;
   icon: LucideIcon;
@@ -23,6 +24,8 @@ interface StatItem {
 export interface StatCounts {
   quotation: number;
   confirmation: number;
+  'domestic-quotation': number;
+  'domestic-contract': number;
   invoice: number;
   packing: number;
   purchase: number;
@@ -48,6 +51,22 @@ const STAT_ITEMS: StatItem[] = [
     label: '销售确认',
     tag: 'SC',
     icon: FileCheck,
+    textColorClass: 'text-green-600 dark:text-green-400',
+    dotClass: 'bg-green-500',
+  },
+  {
+    type: 'domestic-quotation',
+    label: '内销报价',
+    tag: '内销报价',
+    icon: FileSignature,
+    textColorClass: 'text-blue-600 dark:text-blue-400',
+    dotClass: 'bg-blue-500',
+  },
+  {
+    type: 'domestic-contract',
+    label: '内销合同',
+    tag: '内销合同',
+    icon: FileSignature,
     textColorClass: 'text-green-600 dark:text-green-400',
     dotClass: 'bg-green-500',
   },

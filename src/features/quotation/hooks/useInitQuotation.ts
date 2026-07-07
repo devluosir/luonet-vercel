@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 import { useQuotationStore } from '../state/useQuotationStore';
-import { initDataFromSources, initNotesConfigFromSources, getEditIdFromPathname, getTabFromSearchParams } from '../services/quotation.service';
+import { initDataFromSources, initNotesConfigFromSources, getEditIdFromPathname, getTabFromSearchParams, getDomesticDocTypeFromSearchParams } from '../services/quotation.service';
 
 // 初始化报价页面状态
 export function useInitQuotation() {
@@ -39,7 +39,8 @@ export function useInitQuotation() {
     if (!initialized.current) return;
 
     const tab = getTabFromSearchParams(searchParams || undefined);
-    const initialData = initDataFromSources(tab);
+    const domesticDocType = getDomesticDocTypeFromSearchParams(searchParams || undefined);
+    const initialData = initDataFromSources(tab, domesticDocType);
     setData(() => initialData);
 
     // 初始化Notes配置

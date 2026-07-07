@@ -24,6 +24,14 @@ const isDomesticQuotationRecord = (item: DocumentRecord): boolean => (
   item.type === 'domestic' || item.data?.mode === 'domestic'
 );
 
+// 内销单据子类型（报价单 / 合同），未填写时按历史默认值归为"合同"
+// （与 dashboardUtils.ts::getDomesticDocSubtype 口径保持一致）
+const getDomesticDocSubtype = (item: DocumentRecord): 'quotation' | 'contract' | undefined => {
+  if (!isDomesticQuotationRecord(item)) return undefined;
+  const docType = (item.data as { domesticDocType?: unknown } | undefined)?.domesticDocType;
+  return docType === 'quotation' ? 'quotation' : 'contract';
+};
+
 // 统一的文档计数工具函数
 export const getAllDocuments = (): DocumentRecord[] => {
   if (typeof window === 'undefined') return [];
@@ -85,6 +93,28 @@ export const getConfirmationCount = (): number => {
   }
 };
 
+export const getDomesticQuotationCount = (): number => {
+  try {
+    if (typeof window === 'undefined') return 0;
+    const quotationHistory = getHistoryRecords('quotation_history');
+    return quotationHistory.filter((item) => getDomesticDocSubtype(item) === 'quotation').length;
+  } catch (error) {
+    console.error('获取内销报价单数量失败:', error);
+    return 0;
+  }
+};
+
+export const getDomesticContractCount = (): number => {
+  try {
+    if (typeof window === 'undefined') return 0;
+    const quotationHistory = getHistoryRecords('quotation_history');
+    return quotationHistory.filter((item) => getDomesticDocSubtype(item) === 'contract').length;
+  } catch (error) {
+    console.error('获取内销合同数量失败:', error);
+    return 0;
+  }
+};
+
 export const getInvoiceCount = (): number => {
   try {
     if (typeof window === 'undefined') return 0;
@@ -123,6 +153,8 @@ export const getAllDocumentCounts = () => {
   return {
     quotation: getQuotationCount(),
     confirmation: getConfirmationCount(),
+    'domestic-quotation': getDomesticQuotationCount(),
+    'domestic-contract': getDomesticContractCount(),
     invoice: getInvoiceCount(),
     packing: getPackingCount(),
     purchase: getPurchaseCount()

@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, ChevronDown, ChevronUp, Archive } from 'lucide-react';
-import { FileText, Package, Receipt, ShoppingCart } from 'lucide-react';
+import { FileText, FileSignature, Package, Receipt, ShoppingCart } from 'lucide-react';
 import { DocumentWithType } from '@/utils/dashboardUtils';
 
-type DocumentTypeFilter = 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase';
+type DocumentTypeFilter = 'quotation' | 'confirmation' | 'domestic-quotation' | 'domestic-contract' | 'packing' | 'invoice' | 'purchase';
 
 type DocumentFieldData = {
   quotationNo?: string;
@@ -34,6 +34,8 @@ interface RecentDocumentsListProps {
     documentTypePermissions: {
       quotation: boolean;
       confirmation: boolean;
+      'domestic-quotation': boolean;
+      'domestic-contract': boolean;
       packing: boolean;
       invoice: boolean;
       purchase: boolean;
@@ -76,6 +78,8 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       return [
         { label: 'QTN', value: 'quotation', color: 'blue' },
         { label: 'SC', value: 'confirmation', color: 'green' },
+        { label: '内销报价', value: 'domestic-quotation', color: 'blue' },
+        { label: '内销合同', value: 'domestic-contract', color: 'green' },
         { label: 'PL', value: 'packing', color: 'teal' },
         { label: 'INV', value: 'invoice', color: 'purple' },
         { label: 'PO', value: 'purchase', color: 'orange' },
@@ -90,6 +94,12 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     }
     if (documentTypePermissions.confirmation) {
       availableTypes.push({ label: 'SC', value: 'confirmation', color: 'green' });
+    }
+    if (documentTypePermissions['domestic-quotation']) {
+      availableTypes.push({ label: '内销报价', value: 'domestic-quotation', color: 'blue' });
+    }
+    if (documentTypePermissions['domestic-contract']) {
+      availableTypes.push({ label: '内销合同', value: 'domestic-contract', color: 'green' });
     }
     if (documentTypePermissions.packing) {
       availableTypes.push({ label: 'PL', value: 'packing', color: 'teal' });
@@ -110,6 +120,8 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     let num = '';
     switch (doc.type) {
       case 'quotation':
+      case 'domestic-quotation':
+      case 'domestic-contract':
         num = firstString(doc.quotationNo, data.quotationNo);
         break;
       case 'confirmation':
@@ -160,6 +172,10 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
             return permissionMap.documentTypePermissions.quotation;
           case 'confirmation':
             return permissionMap.documentTypePermissions.confirmation;
+          case 'domestic-quotation':
+            return permissionMap.documentTypePermissions['domestic-quotation'];
+          case 'domestic-contract':
+            return permissionMap.documentTypePermissions['domestic-contract'];
           case 'packing':
             return permissionMap.documentTypePermissions.packing;
           case 'invoice':
@@ -208,8 +224,10 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
   const getColorClasses = (docType: string) => {
     switch (docType) {
       case 'quotation':
+      case 'domestic-quotation':
         return 'group-hover:text-blue-600 dark:group-hover:text-blue-400';
       case 'confirmation':
+      case 'domestic-contract':
         return 'group-hover:text-green-600 dark:group-hover:text-green-400';
       case 'packing':
         return 'group-hover:text-teal-600 dark:group-hover:text-teal-400';
@@ -226,8 +244,10 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
   const getHoverBgColor = (docType: string) => {
     switch (docType) {
       case 'quotation':
+      case 'domestic-quotation':
         return 'hover:bg-blue-50 dark:hover:bg-blue-900/20';
       case 'confirmation':
+      case 'domestic-contract':
         return 'hover:bg-green-50 dark:hover:bg-green-900/20';
       case 'packing':
         return 'hover:bg-teal-50 dark:hover:bg-teal-900/20';
@@ -269,6 +289,8 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       'all': '所有类型',
       'quotation': 'QTN',
       'confirmation': 'SC',
+      'domestic-quotation': '内销报价',
+      'domestic-contract': '内销合同',
       'packing': 'PL',
       'invoice': 'INV',
       'purchase': 'PO'
@@ -288,6 +310,10 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
         return { Icon: FileText, bgColor: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-700 dark:text-blue-300' };
       case 'confirmation':
         return { Icon: FileText, bgColor: 'bg-green-100 dark:bg-green-900/30', textColor: 'text-green-700 dark:text-green-300' };
+      case 'domestic-quotation':
+        return { Icon: FileSignature, bgColor: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-700 dark:text-blue-300' };
+      case 'domestic-contract':
+        return { Icon: FileSignature, bgColor: 'bg-green-100 dark:bg-green-900/30', textColor: 'text-green-700 dark:text-green-300' };
       case 'packing':
         return { Icon: Package, bgColor: 'bg-teal-100 dark:bg-teal-900/30', textColor: 'text-teal-700 dark:text-teal-300' };
       case 'invoice':
@@ -300,10 +326,11 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
   };
 
   const handleDocumentClick = (doc: DocumentWithType) => {
-    // 对于confirmation类型，需要跳转到quotation页面并设置tab
+    // 对于confirmation/内销报价/内销合同，都需要跳转到quotation页面并设置对应tab
     if (doc.type === 'confirmation') {
-      const editPath = `/quotation/edit/${doc.id}?tab=confirmation`;
-      router.push(editPath);
+      router.push(`/quotation/edit/${doc.id}?tab=confirmation`);
+    } else if (doc.type === 'domestic-quotation' || doc.type === 'domestic-contract') {
+      router.push(`/quotation/edit/${doc.id}?tab=domestic`);
     } else {
       const editPath = `/${doc.type}/edit/${doc.id}`;
       router.push(editPath);

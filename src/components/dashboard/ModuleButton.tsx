@@ -13,6 +13,8 @@ interface ModuleButtonProps {
   onHover?: (module: Module) => void;
   quotationCount?: number;
   confirmationCount?: number;
+  domesticQuotationCount?: number;
+  domesticContractCount?: number;
   invoiceCount?: number;
   packingCount?: number;
   purchaseCount?: number;
@@ -24,7 +26,17 @@ const MODULE_STYLES: Record<string, { card: string; icon: string; badge: string 
     icon: 'text-blue-600 dark:text-blue-400',
     badge: 'bg-blue-600 dark:bg-blue-500',
   },
+  'quotation-domestic': {
+    card: 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/15',
+    icon: 'text-blue-600 dark:text-blue-400',
+    badge: 'bg-blue-600 dark:bg-blue-500',
+  },
   confirmation: {
+    card: 'bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/15',
+    icon: 'text-emerald-600 dark:text-emerald-400',
+    badge: 'bg-emerald-600 dark:bg-emerald-500',
+  },
+  'quotation-domestic-contract': {
     card: 'bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/15',
     icon: 'text-emerald-600 dark:text-emerald-400',
     badge: 'bg-emerald-600 dark:bg-emerald-500',
@@ -73,6 +85,8 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
   onHover,
   quotationCount = 0,
   confirmationCount = 0,
+  domesticQuotationCount = 0,
+  domesticContractCount = 0,
   invoiceCount = 0,
   packingCount = 0,
   purchaseCount = 0,
@@ -84,6 +98,8 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
     switch (moduleId) {
       case 'quotation': return quotationCount;
       case 'confirmation': return confirmationCount;
+      case 'quotation-domestic': return domesticQuotationCount;
+      case 'quotation-domestic-contract': return domesticContractCount;
       case 'invoice': return invoiceCount;
       case 'packing': return packingCount;
       case 'purchase': return purchaseCount;
