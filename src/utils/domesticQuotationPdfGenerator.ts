@@ -183,7 +183,8 @@ function drawClauses(
   margin: number,
   pageWidth: number,
   pageHeight: number,
-  y: number
+  y: number,
+  isContract: boolean
 ): number {
   const contentWidth = pageWidth - margin * 2;
   const clauses = notesConfig
@@ -192,7 +193,7 @@ function drawClauses(
 
   doc.setFontSize(9);
   clauses.forEach((note, index) => {
-    const number = getDomesticClauseNumber(index);
+    const number = isContract ? getDomesticClauseNumber(index) : String(index + 1);
     const { title, body } = splitClause(note.content ?? '');
     const text = `${number}.${title}${body}`;
     const lines = doc.splitTextToSize(text, contentWidth);
@@ -323,7 +324,7 @@ export async function generateDomesticQuotationPDF(
 
   doc.setFontSize(10);
   setCnFont(doc, 'bold');
-  doc.text('一、产品名称、规格型号、数量、金额', margin, y);
+  doc.text(isContract ? '一、产品名称、规格型号、数量、金额' : '感谢您的询价，现报价如下：', margin, y);
   y += 5;
 
   doc.autoTable({
@@ -386,7 +387,7 @@ export async function generateDomesticQuotationPDF(
   });
   y += 7;
 
-  y = drawClauses(doc, notesConfig, margin, pageWidth, pageHeight, y);
+  y = drawClauses(doc, notesConfig, margin, pageWidth, pageHeight, y, isContract);
 
   if (isContract) {
     y = await drawPartyTable(doc, data, margin, pageWidth, pageHeight, y);

@@ -280,13 +280,16 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
   }, [showOptions]);
 
   // 获取当前Note在可见列表中的序号
-  const { tab, notesConfig } = useQuotationStore();
+  const { tab, notesConfig, data } = useQuotationStore();
   const isDomestic = tab === 'domestic';
+  // 内销"合同"子类型沿用中文数字编号（一/二/三...，"一"预留给产品表标题）；
+  // "报价单"子类型改用简单问候语标题，条款直接用阿拉伯数字 1/2/3...
+  const isDomesticContract = isDomestic && (data?.domesticDocType ?? 'contract') === 'contract';
   const visibleNotes = notesConfig
     .filter(n => n.visible)
     .sort((a, b) => a.order - b.order);
   const noteIndex = visibleNotes.findIndex(n => n.id === note.id) + 1;
-  const displayIndex = isDomestic ? getDomesticClauseNumber(noteIndex - 1) : String(noteIndex);
+  const displayIndex = isDomesticContract ? getDomesticClauseNumber(noteIndex - 1) : String(noteIndex);
 
   // 编辑相关函数
   const handleStartEdit = () => {

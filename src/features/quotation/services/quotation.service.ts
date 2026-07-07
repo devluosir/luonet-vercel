@@ -2,7 +2,7 @@ import { saveQuotationHistory } from '@/utils/quotationHistory';
 import { getInitialQuotationData } from '@/utils/quotationInitialData';
 import type { QuotationData } from '@/types/quotation';
 import type { NoteConfig } from '../types/notes';
-import { DEFAULT_NOTES_CONFIG, DOMESTIC_NOTES_CONFIG } from '../types/notes';
+import { DEFAULT_NOTES_CONFIG, DOMESTIC_NOTES_CONFIG, DOMESTIC_QUOTATION_NOTES_CONFIG } from '../types/notes';
 
 interface CustomWindow extends Window {
   __QUOTATION_DATA__?: QuotationData | null;
@@ -134,7 +134,11 @@ export function getDomesticDocTypeFromSearchParams(
 }
 
 // 从多个数据源初始化Notes配置
-export function initNotesConfigFromSources(tab: QuotationTab = 'quotation'): NoteConfig[] {
+// domesticDocType：内销单据子类型（报价单/合同），仅在 tab === 'domestic' 时用于选择默认条款模板
+export function initNotesConfigFromSources(
+  tab: QuotationTab = 'quotation',
+  domesticDocType?: 'quotation' | 'contract'
+): NoteConfig[] {
   // 1. 优先使用全局注入的配置
   if (typeof window !== 'undefined') {
     const win = window as unknown as CustomWindow;
@@ -159,7 +163,12 @@ export function initNotesConfigFromSources(tab: QuotationTab = 'quotation'): Not
   }
 
   // 3. 最后使用默认配置
-  const defaults = tab === 'domestic' ? DOMESTIC_NOTES_CONFIG : DEFAULT_NOTES_CONFIG;
+  const defaults =
+    tab === 'domestic'
+      ? domesticDocType === 'quotation'
+        ? DOMESTIC_QUOTATION_NOTES_CONFIG
+        : DOMESTIC_NOTES_CONFIG
+      : DEFAULT_NOTES_CONFIG;
   console.log('使用默认Notes配置:', defaults.length, '条');
   return defaults;
 }

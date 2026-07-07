@@ -22,6 +22,15 @@ export const DEFAULT_NOTES_CONFIG: NoteConfig[] = [
   { id: 'validity', visible: true, order: 5, content: 'Validity: 10 days.' },           // 5. Validity
 ];
 
+// 内销"报价单"子类型的默认条款（比合同简单，序号用阿拉伯数字 1/2/3...）
+export const DOMESTIC_QUOTATION_NOTES_CONFIG: NoteConfig[] = [
+  { id: 'domestic_quote_clause_1', visible: true, order: 0, content: '以上报价为含税，含运费到武汉。' },
+  { id: 'domestic_quote_clause_2', visible: true, order: 1, content: '交货期:25天(若对交货期有特殊要求，可以协商)。' },
+  { id: 'domestic_quote_clause_3', visible: true, order: 2, content: '付款方式:30%预付，70%余款发货前付清。' },
+  { id: 'domestic_quote_clause_4', visible: true, order: 3, content: '包装:裸装。' },
+  { id: 'domestic_quote_clause_5', visible: true, order: 4, content: '报价有效期:7天。' },
+];
+
 export const DOMESTIC_NOTES_CONFIG: NoteConfig[] = [
   { id: 'domestic_clause_2', visible: true, order: 0, content: '质量要求技术标准：按国家标准、行业标准及双方确认的技术资料执行。' },
   { id: 'domestic_clause_3', visible: true, order: 1, content: '交货时间：以双方确认的交货计划为准。' },
