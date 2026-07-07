@@ -637,7 +637,7 @@ export default function QuotationPage() {
               <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-100 dark:border-[#3A3A3C]">
                 <div className="flex items-center gap-3">
                   <h1 className="text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]">
-                    {isDomesticQuotation ? '生成内销报价单' : `Generate ${activeTab === 'confirmation' ? 'Order' : 'Quotation'}`}
+                    {isDomesticQuotation ? '生成报价单/产品购销合同' : `Generate ${activeTab === 'confirmation' ? 'Order' : 'Quotation'}`}
                   </h1>
                   <button
                     type="button"
@@ -798,8 +798,9 @@ export default function QuotationPage() {
                 </div>
 
                 {/* 按钮和总金额区域 */}
-                <div className="mt-4 px-4 sm:px-0 flex items-center justify-between">
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div className="mt-4 px-4 sm:px-0">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-1">
                     <button
                       type="button"
                       onClick={() => {
@@ -864,18 +865,6 @@ export default function QuotationPage() {
                           {currencySymbol}{totalAmount.toFixed(2)}
                         </div>
                       </div>
-                      {isDomesticQuotation && (
-                        <div className="max-w-xl text-right text-xs leading-5 text-gray-500 dark:text-gray-400">
-                          <div>金额大写：{totalAmountInWords || '人民币零元整'}</div>
-                          <input
-                            type="text"
-                            value={data.domesticTotalRemark ?? ''}
-                            onChange={(e) => updateData({ domesticTotalRemark: e.target.value })}
-                            placeholder="合计备注，如：价格含13个点专票及运费"
-                            className="mt-1 h-7 w-full rounded-lg border border-gray-200 bg-white px-2 text-right text-xs text-gray-700 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-                          />
-                        </div>
-                      )}
 
                       {/* 定金显示 */}
                       {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 && (
@@ -904,6 +893,22 @@ export default function QuotationPage() {
                       )}
                     </div>
                   </div>
+                </div>
+
+                {/* 金额大写：按钮行下方单独一行，备注放在大写金额后的括号里 */}
+                {isDomesticQuotation && (
+                  <div className="mt-2 flex flex-wrap items-baseline justify-end gap-1 text-right text-xs text-gray-500 dark:text-gray-400">
+                    <span>金额大写：{totalAmountInWords || '人民币零元整'}（</span>
+                    <input
+                      type="text"
+                      value={data.domesticTotalRemark ?? ''}
+                      onChange={(e) => updateData({ domesticTotalRemark: e.target.value })}
+                      placeholder="价格含13个点专票及运费"
+                      className="h-5 min-w-[120px] max-w-[220px] rounded border border-transparent bg-transparent px-1 text-right text-xs text-gray-700 outline-none hover:border-gray-200 focus:border-blue-400 focus:bg-white focus:ring-1 focus:ring-blue-200 dark:text-gray-200 dark:hover:border-gray-700 dark:focus:bg-gray-900"
+                    />
+                    <span>）</span>
+                  </div>
+                )}
                 </div>
               </div>
 
