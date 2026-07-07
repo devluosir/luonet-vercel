@@ -6,10 +6,14 @@ const WORKER_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocomp
 const FINANCIAL_FIELDS = ['orderAmount', 'orderPaymentDate', 'orderReceivedAmount', 'purchaseOrderAmount'] as const;
 
 // 采购部登记（purchaseRegistration 权限，无 inquiry 权限时）可读写的字段
+// 注意：supplierStatuses 本是询报价登记的字段，这里放行仅用于"已报价自动同步飞罗"
+// 场景——采购部登记的询报价状态变为已报价时，前端会计算出只调整了"飞罗"这一条的
+// supplierStatuses 补丁再写回来，不是让本视图随意改写整份供应商列表。
 const PURCHASE_REGISTRATION_WRITE_FIELDS = [
   'description',
   'purchaseSupplierStatuses',
   'purchaseQuotedStatuses',
+  'supplierStatuses',
 ] as const;
 
 // 采购订单表（purchaseOrderTable 权限，无 inquiry 权限时）可读写的字段
@@ -58,6 +62,9 @@ function sanitizeRestrictedRecord(
     result.description = record.description;
     result.purchaseSupplierStatuses = record.purchaseSupplierStatuses;
     result.purchaseQuotedStatuses = record.purchaseQuotedStatuses;
+    // 只读展示 + "已报价自动同步飞罗"逻辑需要读到询报价登记原始的供应商列表，
+    // 才能判断飞罗当前状态、日期是否已经是最新，避免每次保存都重复写入。
+    result.supplierStatuses = record.supplierStatuses;
   }
 
   if (flags.allowPurchaseOrderTable) {

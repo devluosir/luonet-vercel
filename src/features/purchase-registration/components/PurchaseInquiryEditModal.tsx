@@ -4,7 +4,32 @@ import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { InquiryQuoteStatus } from '@/features/inquiry/components/InquiryQuoteStatus';
+import { createId } from '@/features/inquiry/utils/inquiryUtils';
 import type { CustomerQuoteStatus, InquiryRecord, SupplierQuoteStatus } from '@/features/inquiry/types';
+
+/** 飞罗（上海飞罗贸易有限公司）在供应商列表中的短名，代表"我方自己"这一自供应商身份 */
+const SELF_SUPPLIER_NAME = '飞罗';
+
+/**
+ * 从采购部登记的"已报价"列表里取出用来同步的日期：
+ * 只看常规已报价条目（排除无法报价/已补充/已关闭），按 m.D 取最大（最新）的一条。
+ */
+function pickLatestQuoteDate(statuses: CustomerQuoteStatus[]): string | undefined {
+  const regular = statuses.filter((s) => !s.type || s.type === 'quoted');
+  if (regular.length === 0) return undefined;
+
+  const parse = (raw: string): number => {
+    const clean = raw.replace(/[[\]]/g, '');
+    const [mStr, dStr] = clean.split('.');
+    const m = parseInt(mStr ?? '0', 10);
+    const d = parseInt(dStr ?? '0', 10);
+    return m ? m * 100 + (d || 0) : 0;
+  };
+
+  return regular.reduce((best, current) =>
+    parse(current.quoteDate) >= parse(best.quoteDate) ? current : best
+  ).quoteDate;
+}
 
 interface PurchaseInquiryEditModalProps {
   record: InquiryRecord | null;
@@ -33,10 +58,36 @@ export function PurchaseInquiryEditModal({ record, onClose, onSave }: PurchaseIn
   if (!record || !shimRecord) return null;
 
   const handleSave = () => {
-    onSave(record.id, {
+    const patch: Partial<InquiryRecord> = {
       purchaseSupplierStatuses: localSuppliers,
       purchaseQuotedStatuses: localQuoted,
-    });
+    };
+
+    // 采购部登记的询报价状态一旦变为"已报价"——不管这次用的供应商、已报价单位是不是飞罗——
+    // 都自动把询报价登记原始供应商列表里的"飞罗"同步为已报价，日期取采购部登记这边已报价的日期。
+    const latestQuoteDate = pickLatestQuoteDate(localQuoted);
+    if (latestQuoteDate) {
+      const selfSupplier = record.supplierStatuses.find(
+        (s) => s.supplierShortName === SELF_SUPPLIER_NAME
+      );
+      const needsSync =
+        !selfSupplier || selfSupplier.status !== 'quoted' || selfSupplier.quoteDate !== latestQuoteDate;
+
+      if (needsSync) {
+        patch.supplierStatuses = selfSupplier
+          ? record.supplierStatuses.map((s) =>
+              s.supplierShortName === SELF_SUPPLIER_NAME
+                ? { ...s, status: 'quoted', quoteDate: latestQuoteDate }
+                : s
+            )
+          : [
+              ...record.supplierStatuses,
+              { id: createId(), supplierShortName: SELF_SUPPLIER_NAME, status: 'quoted', quoteDate: latestQuoteDate },
+            ];
+      }
+    }
+
+    onSave(record.id, patch);
     onClose();
   };
 

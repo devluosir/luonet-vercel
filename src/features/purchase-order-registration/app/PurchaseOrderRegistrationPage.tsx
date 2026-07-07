@@ -13,13 +13,33 @@ import { getCustomersForDropdown } from '@/features/customer/services/customerSe
 import { useInquirySync } from '@/features/inquiry/hooks/useInquirySync';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { getDateInputValueFromInquiryNo } from '@/features/inquiry/utils/inquiryUtils';
-import type { InquiryRecord } from '@/features/inquiry/types';
-import { PurchaseOrderFilterBar } from '../components/PurchaseOrderFilterBar';
+import type { InquiryRecord, OrderSubStatus } from '@/features/inquiry/types';
+import {
+  PurchaseOrderFilterBar,
+  type PurchaseOrderStatusFilter,
+} from '../components/PurchaseOrderFilterBar';
 import { PurchaseOrderTable } from '../components/PurchaseOrderTable';
 
 /** 采购订单表只展示"已成单"的记录（orderNo 有值），与订单状态表的过滤条件一致 */
 function hasOrder(record: InquiryRecord): boolean {
   return Boolean(record.orderNo?.trim());
+}
+
+/** 与订单状态表 OrderPage 完全一致的"进行中"判定，保证两个视图对同一批记录筛选出相同结果 */
+function isInProgressOrder(record: InquiryRecord): boolean {
+  if (record.orderSubStatus === 'cancelled') return false;
+  if (record.orderSubStatus === 'suspended' || record.orderSubStatus === 'followup') return true;
+  const deliveryStatus = record.orderDeliveryStatus?.trim() ?? '';
+  return !deliveryStatus || deliveryStatus.startsWith('备货') || deliveryStatus.startsWith('交货');
+}
+
+/** 与订单状态表 OrderPage 完全一致的订单状态匹配逻辑 */
+function matchesOrderStatus(record: InquiryRecord, filter: PurchaseOrderStatusFilter): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'inProgress') return isInProgressOrder(record);
+  if (filter === 'normal')
+    return record.orderSubStatus === undefined || record.orderSubStatus === 'suspended';
+  return record.orderSubStatus === (filter as OrderSubStatus);
 }
 
 /** 判断记录是否落在指定时间范围内（按询价编号日期，月维度比较，与询报价登记表/采购部登记表一致） */
@@ -71,6 +91,8 @@ export function PurchaseOrderRegistrationPage() {
 
   const [keyword, setKeyword] = useState('');
   const [timeRange, setTimeRange] = useState<MonthTimeRange>('3months');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<PurchaseOrderStatusFilter>('all');
+  const [customerFilter, setCustomerFilter] = useState('');
   const [consigneeOptions, setConsigneeOptions] = useState<string[]>([]);
 
   const now = useMemo(() => new Date(), []);
@@ -109,20 +131,57 @@ export function PurchaseOrderRegistrationPage() {
     [records]
   );
 
+  const customerOptions = useMemo(
+    () =>
+      Array.from(new Set(orderRecords.map((r) => r.inquirer.trim()).filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b, 'zh-CN')),
+    [orderRecords]
+  );
+
   const timeFiltered = useMemo(
     () => orderRecords.filter((record) => matchesTimeRange(record, timeRange, now)),
     [orderRecords, timeRange, now]
   );
 
-  const filteredRecords = useMemo(
+  // 应用关键词 + 客户筛选，状态角标基于该集合计算（与订单状态表一致）
+  const baseFiltered = useMemo(
     () =>
-      timeFiltered
-        .filter((record) => matchesKeyword(record, keyword))
-        .sort((a, b) => (b.orderNo ?? '').localeCompare(a.orderNo ?? '')),
-    [timeFiltered, keyword]
+      timeFiltered.filter(
+        (record) =>
+          matchesKeyword(record, keyword) &&
+          (!customerFilter || record.inquirer.trim() === customerFilter)
+      ),
+    [timeFiltered, keyword, customerFilter]
   );
 
-  const activeCount = [timeRange !== '3months', keyword.trim() !== ''].filter(Boolean).length;
+  const statusCounts = useMemo(
+    () => ({
+      all: baseFiltered.length,
+      inProgress: baseFiltered.filter(isInProgressOrder).length,
+      normal: baseFiltered.filter(
+        (r) => r.orderSubStatus === undefined || r.orderSubStatus === 'suspended'
+      ).length,
+      cancelled: baseFiltered.filter((r) => r.orderSubStatus === 'cancelled').length,
+      suspended: baseFiltered.filter((r) => r.orderSubStatus === 'suspended').length,
+      followup: baseFiltered.filter((r) => r.orderSubStatus === 'followup').length,
+    }),
+    [baseFiltered]
+  );
+
+  const filteredRecords = useMemo(
+    () =>
+      baseFiltered
+        .filter((record) => matchesOrderStatus(record, orderStatusFilter))
+        .sort((a, b) => (b.orderNo ?? '').localeCompare(a.orderNo ?? '')),
+    [baseFiltered, orderStatusFilter]
+  );
+
+  const activeCount = [
+    timeRange !== '3months',
+    keyword.trim() !== '',
+    customerFilter !== '',
+    orderStatusFilter !== 'all',
+  ].filter(Boolean).length;
 
   if (status === 'loading' || !user || !permissionUser) {
     return <FullScreenSpinner />;
@@ -156,11 +215,19 @@ export function PurchaseOrderRegistrationPage() {
           timeRange={timeRange}
           filteredCount={filteredRecords.length}
           activeCount={activeCount}
+          orderStatusFilter={orderStatusFilter}
+          statusCounts={statusCounts}
+          customerFilter={customerFilter}
+          customerOptions={customerOptions}
           onKeywordChange={setKeyword}
           onTimeRangeChange={setTimeRange}
+          onOrderStatusChange={setOrderStatusFilter}
+          onCustomerFilterChange={setCustomerFilter}
           onReset={() => {
             setKeyword('');
             setTimeRange('3months');
+            setOrderStatusFilter('all');
+            setCustomerFilter('');
           }}
         />
         <PurchaseOrderTable
