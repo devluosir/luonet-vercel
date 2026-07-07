@@ -23,12 +23,12 @@ interface PurchaseOrderFilterBarProps {
   activeCount: number;
   orderStatusFilter: PurchaseOrderStatusFilter;
   statusCounts: PurchaseOrderStatusCounts;
-  customerFilter: string;
-  customerOptions: string[];
+  supplierFilter: string;
+  supplierOptions: string[];
   onKeywordChange: (keyword: string) => void;
   onTimeRangeChange: (range: MonthTimeRange) => void;
   onOrderStatusChange: (filter: PurchaseOrderStatusFilter) => void;
-  onCustomerFilterChange: (customer: string) => void;
+  onSupplierFilterChange: (supplier: string) => void;
   onReset: () => void;
 }
 
@@ -39,12 +39,12 @@ export function PurchaseOrderFilterBar({
   activeCount,
   orderStatusFilter,
   statusCounts,
-  customerFilter,
-  customerOptions,
+  supplierFilter,
+  supplierOptions,
   onKeywordChange,
   onTimeRangeChange,
   onOrderStatusChange,
-  onCustomerFilterChange,
+  onSupplierFilterChange,
   onReset,
 }: PurchaseOrderFilterBarProps) {
   return (
@@ -130,12 +130,12 @@ export function PurchaseOrderFilterBar({
             className="h-7 min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 outline-none placeholder:text-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-500 dark:focus:border-blue-500 sm:w-44 sm:flex-none lg:w-52 xl:w-56"
           />
           <select
-            value={customerFilter}
-            onChange={(e) => onCustomerFilterChange(e.target.value)}
+            value={supplierFilter}
+            onChange={(e) => onSupplierFilterChange(e.target.value)}
             className="h-7 min-w-0 shrink-0 rounded-lg border border-gray-200 bg-white px-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
           >
-            <option value="">客户</option>
-            {customerOptions.map((name) => (
+            <option value="">供应商</option>
+            {supplierOptions.map((name) => (
               <option key={name} value={name}>{name}</option>
             ))}
           </select>

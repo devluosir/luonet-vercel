@@ -92,7 +92,7 @@ export function PurchaseOrderRegistrationPage() {
   const [keyword, setKeyword] = useState('');
   const [timeRange, setTimeRange] = useState<MonthTimeRange>('3months');
   const [orderStatusFilter, setOrderStatusFilter] = useState<PurchaseOrderStatusFilter>('all');
-  const [customerFilter, setCustomerFilter] = useState('');
+  const [supplierFilter, setSupplierFilter] = useState('');
   const [consigneeOptions, setConsigneeOptions] = useState<string[]>([]);
 
   const now = useMemo(() => new Date(), []);
@@ -131,9 +131,9 @@ export function PurchaseOrderRegistrationPage() {
     [records]
   );
 
-  const customerOptions = useMemo(
+  const supplierOptions = useMemo(
     () =>
-      Array.from(new Set(orderRecords.map((r) => r.inquirer.trim()).filter(Boolean)))
+      Array.from(new Set(orderRecords.map((r) => (r.purchaseOrderSupplier ?? '').trim()).filter(Boolean)))
         .sort((a, b) => a.localeCompare(b, 'zh-CN')),
     [orderRecords]
   );
@@ -143,15 +143,15 @@ export function PurchaseOrderRegistrationPage() {
     [orderRecords, timeRange, now]
   );
 
-  // 应用关键词 + 客户筛选，状态角标基于该集合计算（与订单状态表一致）
+  // 应用关键词 + 供应商筛选，状态角标基于该集合计算（与订单状态表一致）
   const baseFiltered = useMemo(
     () =>
       timeFiltered.filter(
         (record) =>
           matchesKeyword(record, keyword) &&
-          (!customerFilter || record.inquirer.trim() === customerFilter)
+          (!supplierFilter || (record.purchaseOrderSupplier ?? '').trim() === supplierFilter)
       ),
-    [timeFiltered, keyword, customerFilter]
+    [timeFiltered, keyword, supplierFilter]
   );
 
   const statusCounts = useMemo(
@@ -179,7 +179,7 @@ export function PurchaseOrderRegistrationPage() {
   const activeCount = [
     timeRange !== '3months',
     keyword.trim() !== '',
-    customerFilter !== '',
+    supplierFilter !== '',
     orderStatusFilter !== 'all',
   ].filter(Boolean).length;
 
@@ -224,17 +224,17 @@ export function PurchaseOrderRegistrationPage() {
           activeCount={activeCount}
           orderStatusFilter={orderStatusFilter}
           statusCounts={statusCounts}
-          customerFilter={customerFilter}
-          customerOptions={customerOptions}
+          supplierFilter={supplierFilter}
+          supplierOptions={supplierOptions}
           onKeywordChange={setKeyword}
           onTimeRangeChange={setTimeRange}
           onOrderStatusChange={setOrderStatusFilter}
-          onCustomerFilterChange={setCustomerFilter}
+          onSupplierFilterChange={setSupplierFilter}
           onReset={() => {
             setKeyword('');
             setTimeRange('3months');
             setOrderStatusFilter('all');
-            setCustomerFilter('');
+            setSupplierFilter('');
           }}
         />
         <PurchaseOrderTable
