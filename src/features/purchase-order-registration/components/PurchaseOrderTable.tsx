@@ -5,47 +5,50 @@ import {
   headerCellOverflowRightClass,
   headerRowClass,
 } from '@/components/table/tableHeaderStyles';
-import type { PurchaseOrderRecord } from '../types';
+import type { InquiryRecord } from '@/features/inquiry/types';
 import { PurchaseOrderRow } from './PurchaseOrderRow';
 
 interface PurchaseOrderTableProps {
-  records: PurchaseOrderRecord[];
-  onEdit: (record: PurchaseOrderRecord) => void;
-  onDelete: (record: PurchaseOrderRecord) => void;
-  onUpdate: (id: string, patch: Partial<PurchaseOrderRecord>) => void;
+  records: InquiryRecord[];
+  canViewFinancials: boolean;
+  consigneeOptions: string[];
+  onUpdate: (id: string, patch: Partial<InquiryRecord>) => void;
 }
 
-export function PurchaseOrderTable({ records, onEdit, onDelete, onUpdate }: PurchaseOrderTableProps) {
+export function PurchaseOrderTable({ records, canViewFinancials, consigneeOptions, onUpdate }: PurchaseOrderTableProps) {
   if (records.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-gray-700 dark:bg-[#2C2C2E]">
-        <h2 className="text-base font-semibold text-gray-900 dark:text-white">暂无采购订单表记录</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-white">暂无采购订单记录</h2>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          新增记录后可在这里追踪备货、交货和发票状态
+          在询报价登记中填写订单编号后，记录会自动显示在这里
         </p>
       </div>
     );
   }
 
+  const colWidths = canViewFinancials
+    ? ['14%', '13%', '15%', '10%', '9%', '9%', '13%', '17%']
+    : ['15%', '14%', '17%', '10%', '10%', '14%', '20%'];
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <table className="w-full table-fixed">
         <colgroup>
-          <col className="w-[18%]" />
-          <col className="w-[22%]" />
-          <col className="w-[14%]" />
-          <col className="w-[14%]" />
-          <col className="w-[24%]" />
-          <col className="w-[8%]" />
+          {colWidths.map((w, i) => (
+            <col key={i} style={{ width: w }} />
+          ))}
         </colgroup>
         <thead>
           <tr className={headerRowClass}>
-            <th className={headerCellOverflowClass}>采购单号</th>
-            <th className={headerCellOverflowClass}>供应商</th>
-            <th className={headerCellOverflowRightClass}>金额</th>
-            <th className={headerCellOverflowClass}>创建日期</th>
-            <th className={headerCellOverflowClass}>备货 / 交货 / 发票</th>
-            <th className={headerCellOverflowRightClass}>操作</th>
+            <th className={`${headerCellOverflowClass} sm:px-3`}>订单编号</th>
+            <th className={`${headerCellOverflowClass} px-1.5 sm:px-2`}>采购单号</th>
+            <th className={`${headerCellOverflowClass} px-1.5 sm:px-2`}>供应商</th>
+            {canViewFinancials && <th className={headerCellOverflowRightClass}>金额</th>}
+            <th className={`${headerCellOverflowClass} px-1.5 sm:px-2`}>交货日期</th>
+            <th className={headerCellOverflowClass}>确认日期</th>
+            <th className={headerCellOverflowClass}>客户订单号</th>
+            <th className={`${headerCellOverflowClass} px-1.5 sm:px-2`}>执行情况</th>
           </tr>
         </thead>
         <tbody>
@@ -53,8 +56,8 @@ export function PurchaseOrderTable({ records, onEdit, onDelete, onUpdate }: Purc
             <PurchaseOrderRow
               key={record.id}
               record={record}
-              onEdit={() => onEdit(record)}
-              onDelete={() => onDelete(record)}
+              canViewFinancials={canViewFinancials}
+              consigneeOptions={consigneeOptions}
               onUpdate={(patch) => onUpdate(record.id, patch)}
             />
           ))}

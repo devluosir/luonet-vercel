@@ -159,19 +159,6 @@ type InquiryRecordPayload = {
   [key: string]: unknown;
 };
 
-type PurchaseOrderPayload = {
-  id?: string;
-  purchaseNo?: string;
-  supplier?: string;
-  amount?: string | number;
-  currency?: string;
-  orderDeliveryStatus?: string;
-  orderDeliveryConsignee?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  [key: string]: unknown;
-};
-
 const INQUIRY_CLEARABLE_FIELDS = [
   'orderNo',
   'orderSubStatus',
@@ -262,11 +249,6 @@ const worker = {
     // 处理询报价共享数据 API
     if (path.startsWith('/api/inquiry')) {
       return handleInquiryRequest(request, path, env);
-    }
-
-    // 处理采购订单登记表共享数据 API
-    if (path.startsWith('/api/purchase-order')) {
-      return handlePurchaseOrderRequest(request, path, env);
     }
 
     // 处理业务单据 API
@@ -1648,154 +1630,6 @@ async function handleInquiryRequest(
         UPDATE Document
         SET status = 'deleted', updated_at = ?
         WHERE id = ? AND type = 'inquiry'
-      `).bind(new Date().toISOString(), id).run();
-
-      return jsonResponse({ success: true });
-    }
-
-    return jsonResponse({ error: 'Not Found' }, 404);
-  } catch (error) {
-    return jsonResponse({
-      error: '服务器错误',
-      details: error instanceof Error ? error.message : '未知错误',
-    }, 500);
-  }
-}
-
-async function handlePurchaseOrderRequest(
-  request: Request,
-  path: string,
-  env: Env
-): Promise<Response> {
-  try {
-    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
-
-    if (request.method === 'GET' && path === '/api/purchase-order') {
-      const url = new URL(request.url);
-      const limit = Math.min(Number(url.searchParams.get('limit')) || 2000, 2000);
-      const offset = Number(url.searchParams.get('offset')) || 0;
-
-      const countRow = await env.USERS_DB.prepare(`
-        SELECT COUNT(*) as cnt FROM Document
-        WHERE type = 'purchase'
-          AND user_id = '_shared_purchase_'
-          AND (status = 'active' OR updated_at >= datetime('now', '-30 days'))
-      `).bind().first<{ cnt: number }>();
-      const totalCount = countRow?.cnt ?? 0;
-
-      const result = await env.USERS_DB.prepare(`
-        SELECT * FROM Document
-        WHERE type = 'purchase'
-          AND user_id = '_shared_purchase_'
-          AND (status = 'active' OR updated_at >= datetime('now', '-30 days'))
-        ORDER BY doc_no DESC
-        LIMIT ? OFFSET ?
-      `).bind(limit, offset).all<DocumentRow>();
-
-      const records = result.results.map((row) => {
-        const data = parseJsonData<PurchaseOrderPayload>(row.data, {});
-        return {
-          ...data,
-          id: row.id,
-          status: row.status as 'active' | 'deleted',
-          purchaseNo: typeof data.purchaseNo === 'string' ? data.purchaseNo : row.doc_no,
-          supplier: typeof data.supplier === 'string' ? data.supplier : row.customer_name ?? '',
-          amount: data.amount ?? row.total_amount ?? '',
-          currency: typeof data.currency === 'string' ? data.currency : row.currency ?? 'CNY',
-          createdAt: typeof data.createdAt === 'string' ? data.createdAt : row.created_at,
-          updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : row.updated_at,
-        };
-      });
-
-      return jsonResponse({ records, total: totalCount });
-    }
-
-    if (request.method === 'GET' && path === '/api/purchase-order/meta') {
-      const metaRow = await env.USERS_DB.prepare(`
-        SELECT COUNT(*) as cnt, MAX(updated_at) as maxUpdatedAt FROM Document
-        WHERE type = 'purchase'
-          AND user_id = '_shared_purchase_'
-          AND (status = 'active' OR updated_at >= datetime('now', '-30 days'))
-      `).bind().first<{ cnt: number; maxUpdatedAt: string | null }>();
-
-      return jsonResponse({
-        count: metaRow?.cnt ?? 0,
-        maxUpdatedAt: metaRow?.maxUpdatedAt ?? null,
-      });
-    }
-
-    if (request.method === 'POST' && path === '/api/purchase-order') {
-      const body = await request.json() as PurchaseOrderPayload;
-      const now = new Date().toISOString();
-      const id = typeof body.id === 'string' && body.id ? body.id : crypto.randomUUID();
-      const createdAt = typeof body.createdAt === 'string' && body.createdAt ? body.createdAt : now;
-      const purchaseNo = typeof body.purchaseNo === 'string' ? body.purchaseNo : '';
-      const supplier = typeof body.supplier === 'string' ? body.supplier : '';
-      const currency = typeof body.currency === 'string' ? body.currency : 'CNY';
-      const totalAmount = Number(body.amount ?? 0) || 0;
-      const data = JSON.stringify({ ...body, id, createdAt, updatedAt: now });
-
-      await env.USERS_DB.prepare(`
-        INSERT OR REPLACE INTO Document (
-          id, user_id, type, doc_no, customer_name, total_amount, currency, status, data, created_at, updated_at
-        ) VALUES (?, '_shared_purchase_', 'purchase', ?, ?, ?, ?, 'active', ?, ?, ?)
-      `).bind(
-        id,
-        purchaseNo,
-        supplier,
-        totalAmount,
-        currency,
-        data,
-        createdAt,
-        now
-      ).run();
-
-      return jsonResponse({ success: true, id }, 201);
-    }
-
-    const itemMatch = path.match(/^\/api\/purchase-order\/([^/]+)$/);
-
-    if (request.method === 'PUT' && itemMatch) {
-      const id = itemMatch[1];
-      const body = await request.json() as PurchaseOrderPayload;
-      const now = new Date().toISOString();
-
-      const existingRow = await env.USERS_DB.prepare(
-        `SELECT created_at, data FROM Document WHERE id = ? AND type = 'purchase' AND user_id = '_shared_purchase_'`
-      ).bind(id).first<{ created_at: string; data: string | null }>();
-      const createdAt = existingRow?.created_at ?? now;
-      const existingData = parseJsonData<PurchaseOrderPayload>(existingRow?.data ?? null, {});
-      const mergedData: PurchaseOrderPayload = { ...existingData, ...body, id, updatedAt: now };
-      const purchaseNo = typeof mergedData.purchaseNo === 'string' ? mergedData.purchaseNo : '';
-      const supplier = typeof mergedData.supplier === 'string' ? mergedData.supplier : '';
-      const currency = typeof mergedData.currency === 'string' ? mergedData.currency : 'CNY';
-      const totalAmount = Number(mergedData.amount ?? 0) || 0;
-      const data = JSON.stringify(mergedData);
-
-      await env.USERS_DB.prepare(`
-        INSERT OR REPLACE INTO Document
-          (id, user_id, type, doc_no, customer_name, total_amount, currency, status, data, created_at, updated_at)
-        VALUES (?, '_shared_purchase_', 'purchase', ?, ?, ?, ?, 'active', ?, ?, ?)
-      `).bind(
-        id,
-        purchaseNo,
-        supplier,
-        totalAmount,
-        currency,
-        data,
-        createdAt,
-        now
-      ).run();
-
-      return jsonResponse({ success: true, id });
-    }
-
-    if (request.method === 'DELETE' && itemMatch) {
-      const id = itemMatch[1];
-      await env.USERS_DB.prepare(`
-        UPDATE Document
-        SET status = 'deleted', updated_at = ?
-        WHERE id = ? AND type = 'purchase' AND user_id = '_shared_purchase_'
       `).bind(new Date().toISOString(), id).run();
 
       return jsonResponse({ success: true });

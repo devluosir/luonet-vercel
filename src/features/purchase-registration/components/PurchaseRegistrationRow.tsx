@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { InquiryQuoteStatusDisplay } from '@/features/inquiry/components/InquiryQuoteStatusDisplay';
+import { getRecordColorState } from '@/features/inquiry/utils/inquiryUtils';
 import type { InquiryRecord } from '@/features/inquiry/types';
 
 type EditField = 'content' | null;
@@ -10,12 +11,13 @@ interface EditableTextProps {
   editing: boolean;
   value: string | undefined;
   placeholder: string;
+  colorClassName?: string;
   onActivate: () => void;
   onSave: (value: string | undefined) => void;
   onCancel: () => void;
 }
 
-function EditableText({ editing, value, placeholder, onActivate, onSave, onCancel }: EditableTextProps) {
+function EditableText({ editing, value, placeholder, colorClassName, onActivate, onSave, onCancel }: EditableTextProps) {
   const display = value?.trim() || '';
 
   if (editing) {
@@ -47,8 +49,8 @@ function EditableText({ editing, value, placeholder, onActivate, onSave, onCance
         if (e.key === 'Enter' || e.key === ' ') onActivate();
       }}
       title={display || undefined}
-      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/5 ${
-        display ? 'text-gray-800 dark:text-gray-100' : 'text-gray-300 dark:text-gray-700'
+      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-xs font-medium hover:bg-black/5 dark:hover:bg-white/5 ${
+        display ? (colorClassName ?? 'text-gray-800 dark:text-gray-100') : 'text-gray-300 dark:text-gray-700'
       }`}
     >
       {display || placeholder}
@@ -73,13 +75,17 @@ export function PurchaseRegistrationRow({ record, onUpdate, onEditRecord }: Purc
     quotedStatuses: record.purchaseQuotedStatuses ?? [],
   };
 
+  // 行颜色规则与询报价登记表一致（getRecordColorState），但依据采购部专属的 purchaseQuotedStatuses 判断：
+  // 无法报价/已关闭→灰，已报价→蓝，其余（含未报价）→粉
+  const mainColorClass = getRecordColorState(previewRecord);
+
   return (
     <tr
       className="group cursor-pointer border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/30"
       onClick={() => onEditRecord(record)}
     >
       <td className="max-w-0 overflow-hidden px-3 py-2">
-        <span className="block truncate font-mono text-[11px] font-bold text-gray-800 dark:text-gray-100">
+        <span className={`block truncate font-mono text-[11px] font-bold ${mainColorClass}`}>
           {record.inquiryNo}
         </span>
       </td>
@@ -88,6 +94,7 @@ export function PurchaseRegistrationRow({ record, onUpdate, onEditRecord }: Purc
           editing={activeField === 'content'}
           value={record.description}
           placeholder="内容描述"
+          colorClassName={mainColorClass}
           onActivate={() => setActiveField('content')}
           onSave={(value) => {
             setActiveField(null);

@@ -62,6 +62,18 @@ export interface InquiryRecord {
   purchaseSupplierStatuses?: SupplierQuoteStatus[];
   /** 采购部登记专属已报价状态；结构与 quotedStatuses 相同，数据独立存储 */
   purchaseQuotedStatuses?: CustomerQuoteStatus[];
+
+  // ── 采购订单表专属字段（仅在 orderNo 有值的记录上有意义，无需 D1 迁移）──
+  /** 采购单号，采购部自行编排 */
+  purchaseOrderNo?: string;
+  /** 供应商（采购订单表专属，与询报价登记的 supplierStatuses/purchaseSupplierStatuses 无关） */
+  purchaseOrderSupplier?: string;
+  /** 采购金额（需要 order.financials 权限），含币种符号自由录入，如 ¥120000 / $15000 / €1000 */
+  purchaseOrderAmount?: string;
+  // 交货日期(orderDeliveryDate)、执行情况(orderDeliveryStatus/orderDeliveryConsignee) 与订单状态表双向共享，直接复用上面的字段；
+  // 确认日期(orderConfirmDate)、客户订单号(orderCustomerNo) 同样复用上面的字段，但采购订单表这边只读展示，不允许编辑。
+  // ─────────────────────────────────────────────────────────────────────
+
   createdAt: string;
   updatedAt: string;
   /** D1 软删除标记；'deleted' 表示已被删除，不应在 UI 中显示 */

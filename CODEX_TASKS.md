@@ -8,6 +8,179 @@
 
 ---
 
+## TASK-102：Worker 部署 + D1 迁移/回填运维任务合集
+
+**状态**：待执行
+**日期**：2026-07-08
+
+### 背景
+
+这是一次梳理：把当前仓库里"代码已经写好/规格已经写好，但还没有在生产环境真正跑起来"的 Worker 部署和 D1 数据任务集中到一起，交给 Codex 按顺序执行。三项任务彼此独立，没有先后依赖，可以按任意顺序做，但建议按下面的顺序（风险从低到高）。
+
+**执行前必读**：`AGENTS.md`。三项任务都涉及生产环境（Worker 部署或生产 D1 写入），执行前务必按各自要求先备份/先小范围验证。
+
+**两种 token 不要搞混**：
+- `API_TOKEN`：应用层 Bearer token，`/api/inquiry` 等 Next.js 代理和 `scripts/backfill-purchase-quote-status.js` 这类脚本直连 Worker 时用，已迁移到 Cloudflare secret，需要找 Roger 拿实际值。
+- `CLOUDFLARE_API_TOKEN`：部署 Worker（`wrangler deploy`）和执行 D1 迁移（`wrangler d1 execute`）时 wrangler CLI 需要的账号级 token，配置在 GitHub Actions secret 里；本地执行需要 `npx wrangler login` 或本地配置同名环境变量。
+
+---
+
+### 任务 1：部署 TASK-101 的 worker.ts 改动（采购订单表重构）
+
+**现状**：`src/worker.ts` 在工作区里已经改好（删除了 `handlePurchaseOrderRequest` 函数、`PurchaseOrderPayload` 类型、`/api/purchase-order` 路由分发，共 166 行纯删除，`tsc`/`eslint` 已验证通过），但**改动尚未提交，也从未部署到生产 Worker**。生产环境现在跑的还是含 `handlePurchaseOrderRequest` 的旧版本。联动改动还包括 `src/app/api/inquiry/[[...path]]/route.ts`、`src/features/inquiry/types/index.ts`、已删除的 `src/app/api/purchase-order/[[...path]]/route.ts` 和整个 `purchase-order-registration/{service,store,FormModal,types}`，以及重写过的 `purchase-order-registration` 下 4 个组件/页面文件。完整背景见本文件 `TASK-101` 段落。
+
+**执行步骤**：
+
+```bash
+# 1. 先确认当前 tsc/eslint 仍然通过（如果 Codex 接手时环境有变化）
+npx tsc --noEmit
+npx eslint src/worker.ts "src/app/api/inquiry/[[...path]]/route.ts" src/features/inquiry/types/index.ts \
+  src/features/purchase-order-registration/app/PurchaseOrderRegistrationPage.tsx \
+  src/features/purchase-order-registration/components/PurchaseOrderFilterBar.tsx \
+  src/features/purchase-order-registration/components/PurchaseOrderRow.tsx \
+  src/features/purchase-order-registration/components/PurchaseOrderTable.tsx
+
+# 2. 提交并推送到 main（会触发 .github/workflows/ci.yml 的 deploy-worker job 自动部署）
+git add -A
+git commit -m "TASK-101: 采购订单表重构为询报价登记过滤视图，删除独立后端"
+git push origin main
+
+# 如果不想等 CI，或者想先在本地确认部署本身没问题，可以本地直接部署（需要 CLOUDFLARE_API_TOKEN / wrangler 登录态）：
+npx wrangler deploy
+```
+
+**部署后验证**：
+- `curl` 或在页面上确认 `/purchase-order-table` 能正常加载、编辑交货日期后 `/order` 订单状态表同一条记录立刻能看到相同值。
+- 确认 `/api/purchase-order` 路径现在返回 404（旧路由已删除）。
+- 抽查一次采购部登记/采购订单表的字段编辑，确认 Worker 合并写入没有意外清空其它字段。
+
+---
+
+### 任务 2：执行 D1 迁移 008（Document.type 约束新增 'domestic'）
+
+**现状**：`migrations/008_add_domestic_document_type.sql` 已经在仓库里（TASK-98 附带产出），文件头注释写明背景和执行命令，但 `docs/core/CURRENT_STATE.md` 的"生产确认"记录里**只有 007 写了"已在远程 D1 执行"，008 没有任何执行确认**，判断为尚未在生产跑过。这个迁移是重建 `Document` 表以扩展 `type` 的 CHECK 约束（加入 `'domestic'`），SQLite/D1 不支持直接 `ALTER TABLE` 改 CHECK，所以用"建新表→全量迁移数据→改名"的方式。
+
+**执行步骤**：
+
+```bash
+# 1. 先导出远程 D1 全量备份（务必先做这一步）
+npx wrangler d1 export mluonet-users --remote --output=backups/backup-before-migration008-$(date +%Y%m%d-%H%M%S).sql
+
+# 2. 执行迁移
+npx wrangler d1 execute mluonet-users --file=./migrations/008_add_domestic_document_type.sql --remote
+```
+
+**执行后验证**：
+
+```bash
+npx wrangler d1 execute mluonet-users --remote --command="SELECT type, COUNT(*) as cnt FROM Document GROUP BY type;"
+```
+确认各 `type`（含 `domestic`）分组计数总和与迁移前一致（可以对照备份文件里 `Document` 表的总行数），并确认内销报价单实际保存时不再报 CHECK 约束错误。验证通过后，在 `docs/core/CURRENT_STATE.md` 第 122 行附近补一条"008 已在远程 D1 执行"的确认记录（格式参考同处 007 那一行）。
+
+---
+
+### 任务 3：执行采购部登记「已报价」历史数据回填脚本
+
+**现状**：`scripts/backfill-purchase-quote-status.js` 已写好并做过 `node --check` 语法自测 + 4 组样例数据的纯函数逻辑自测（结果符合预期），但**从未真正对生产数据执行过**——`backups/` 目录下只有 TASK-59 那次的 `.sql` 备份，没有这个脚本 `--apply` 时应该自动生成的 `backup-before-task100-quote-backfill-*.json`，可以据此确认从未跑过写入。完整背景、回填规则见本文件 `TASK-100` 段落"附属：初始数据回填脚本"。
+
+**执行步骤**：
+
+```bash
+# 1. dry-run，只打印会改哪些记录、改成什么，不写入
+API_TOKEN=<生产 API_TOKEN> node scripts/backfill-purchase-quote-status.js
+
+# 2. 挑 1~2 条 dry-run 输出里的记录，人工核对无误后，单条验证一次实际写入
+API_TOKEN=<生产 API_TOKEN> node scripts/backfill-purchase-quote-status.js --only=<询价编号> --apply
+
+# 3. 确认单条结果符合预期后，全量执行
+API_TOKEN=<生产 API_TOKEN> node scripts/backfill-purchase-quote-status.js --apply
+```
+
+**执行后验证**：
+- 确认 `backups/backup-before-task100-quote-backfill-<时间戳>.json` 已生成。
+- 抽查几条记录在 `/purchase-registration` 页面上的"询报价状态"预览是否符合预期（如"6.20飞罗a"）。
+- 脚本输出的"成功/失败"计数，失败的记录用 `--only=<询价编号>` 单独重跑。
+- 确认跳过计数（已有采购部专属状态数据的记录）不为异常大的数字——如果几乎全部记录都被跳过，可能说明判断条件有问题，需要停下来复查，不要盲目全量执行。
+
+---
+
+### 三项任务的验收标准汇总
+
+- Worker 已部署，`/api/purchase-order` 返回 404，采购订单表/采购部登记/订单状态表功能正常。
+- D1 迁移 008 执行成功，内销报价单可以正常保存为 `type='domestic'`，`CURRENT_STATE.md` 已补充执行确认记录。
+- 采购部登记表历史记录里能看到回填出来的"已报价"/"无法报价"/"询价已关闭"初始状态，且没有覆盖任何已手动编辑过的记录。
+
+---
+
+## TASK-101：采购订单表重构 —— 从独立数据表改为询报价登记的过滤视图
+
+**状态**：已完成（由 Claude 直接实施，非 Codex；Roger 明确说"将采购订单表重构"）
+**日期**：2026-07-08
+
+### 背景
+
+Roger 要求：采购订单表（`/purchase-order-table`）与采购部登记表之间的关系，应该像"订单状态表 (`/order`) 与询报价登记表"的关系一样——即不是独立数据表，而是询报价登记 `InquiryRecord` 的一个过滤视图。同时明确了具体字段行为：
+
+- 交货日期（`orderDeliveryDate`）：**双向**，和订单状态表编辑的是同一份数据。
+- 确认日期（`orderConfirmDate`）、客户订单号（`orderCustomerNo`）：**来自订单状态表**，采购订单表这边只读展示，不能编辑。
+- 执行情况（`orderDeliveryStatus`/`orderDeliveryConsignee`）：**双向**，和订单状态表编辑的是同一份数据。
+
+调研发现，重构前 `/purchase-order-table` 是完全独立的 `PurchaseOrderRecord`，存在 D1 `Document.type='purchase'`（`user_id='_shared_purchase_'`），有自己的 store/service/API 代理/Worker handler，和 InquiryRecord 之间除了字段名相似（`orderDeliveryStatus`/`orderDeliveryConsignee`）外没有任何数据关联。该模块 2026-07-07 才上线（TASK-96），确认历史数据风险极低，Roger 确认可以直接弃用删除，不做数据迁移。
+
+**Roger 确认的关键决策**（通过 AskUserQuestion 逐一确认）：
+1. 记录范围自动化：采购订单表和订单状态表一样，自动列出所有"已成单"（`orderNo` 有值）的记录，不能手动新增/删除。
+2. 采购单号/供应商/金额三个新字段作为 `InquiryRecord` 新字段；金额加 `order.financials` 权限门槛，和订单状态表的"金额"栏处理方式一致。
+3. 去掉原来的"创建日期"列（这张表不再是独立记录，没有自己的"创建时间"概念；采购部真正关心的交货日期/确认日期已经保留）。
+4. 旧的 `Document.type='purchase'` 数据和独立后端代码直接弃用删除，不做迁移。
+
+### 涉及文件
+
+| 文件 | 改动 |
+|---|---|
+| `src/features/inquiry/types/index.ts` | 新增 `purchaseOrderNo`/`purchaseOrderSupplier`/`purchaseOrderAmount` 三个字段；交货日期/确认日期/客户订单号/执行情况复用已有的 `orderDeliveryDate`/`orderConfirmDate`/`orderCustomerNo`/`orderDeliveryStatus`/`orderDeliveryConsignee`，不新增字段 |
+| `src/app/api/inquiry/[[...path]]/route.ts` | 受限视图逻辑从"只处理 purchaseRegistration"泛化为"purchaseRegistration 和 purchaseOrderTable 可同时存在、取并集"；新增 `PURCHASE_ORDER_TABLE_WRITE_FIELDS`（不含 `orderConfirmDate`/`orderCustomerNo`，强制这两个字段在采购订单表侧只读）；`sanitizeRestrictedRecord` 按持有的权限组合返回字段并集；`FINANCIAL_FIELDS` 新增 `purchaseOrderAmount` |
+| `src/worker.ts` | 删除 `handlePurchaseOrderRequest` 函数、`PurchaseOrderPayload` 类型、`/api/purchase-order` 路由分发 |
+| `src/app/api/purchase-order/[[...path]]/route.ts` | **删除**（不再需要独立代理） |
+| `src/features/purchase-order-registration/services/purchase-order.service.ts`、`state/purchase-order.store.ts`、`components/PurchaseOrderFormModal.tsx`、`types/index.ts` | **删除** |
+| `src/features/purchase-order-registration/components/PurchaseOrderRow.tsx` | 整个重写：基于 `InquiryRecord`，列变为 订单编号(只读)/采购单号(可编辑)/供应商(可编辑)/金额(可编辑，需 `order.financials`)/交货日期(可编辑，双向)/确认日期(只读)/客户订单号(只读)/执行情况(可编辑，双向，复用共享的 `DeliveryStatusCell`) |
+| `src/features/purchase-order-registration/components/PurchaseOrderTable.tsx` | 表头/colgroup 对齐新列，`canViewFinancials` 时才渲染金额列 |
+| `src/features/purchase-order-registration/components/PurchaseOrderFilterBar.tsx` | 改为"近3月/全部/选月"（`MonthRangeNav`）+ 关键词搜索，去掉新增/手动刷新按钮（自动同步 + 无手动创建） |
+| `src/features/purchase-order-registration/app/PurchaseOrderRegistrationPage.tsx` | 改用 `useInquiryStore`/`useInquirySync`（`pushLocal:false, mergeLocal:false`，同采购部登记）；过滤条件 `record.status!=='deleted' && Boolean(record.orderNo?.trim())`（与订单状态表一致）；加载收货人下拉选项（同订单状态表）；写入用 `patchRecordForView` |
+| `docs/features/purchase-order-table/PURCHASE_ORDER_TABLE_MODULE.md` | 整篇重写，说明新架构、字段双向/只读关系、权限、历史数据处理 |
+| `docs/core/CURRENT_STATE.md` | 路由表、权限说明、"采购订单表现状"整节同步更新 |
+
+### 实现要点
+
+- **金额支持 ¥/$/€ 三种币种循环切换**（原 `PurchaseOrderRecord.currency` 支持 CNY/USD/EUR 三种，为保留这个能力，`PurchaseOrderRow.tsx` 里的 `AmountEditCell` 做了 ¥→$→€→¥ 循环，而不是照搬订单状态表 `AmountCell` 的 ¥/$ 两态切换）。金额仍是单一字符串字段（如 `¥12000.00`），不单独存币种。
+- **行内小组件未做跨文件抽取共享**：`PurchaseOrderRow.tsx` 里的 `EditableText`/`DateEditCell`/`AmountEditCell`/`ReadOnlyText` 是新写的私有组件，没有复用/修改 `OrderRow.tsx` 内部同名私有组件（那些没有 export），避免为了共享而改动已在生产使用的 `OrderRow.tsx`，符合 `AGENTS.md`"不要为了重构而重构"的要求。只有 `DeliveryStatusCell` 是原本就共享的组件，直接复用。
+- **权限并集设计**：如果一个用户同时有 `purchaseRegistration` 和 `purchaseOrderTable`（但没有 `inquiry`），`route.ts` 的 GET 净化字段和 PUT 可写字段都会取两者的并集，而不是互斥覆盖——这是本次重构里专门补的边界情况（重构前 `purchaseRegistrationOnly` 逻辑是排他的，只判断"有没有 inquiry"，没考虑"同时有两个受限权限"的组合）。
+- **旧数据不迁移**：D1 里残留的 `Document.type='purchase'` 记录未做任何处理，功能上线仅 1 天，风险评估后 Roger 确认可以直接弃用。
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npx eslint src/worker.ts "src/app/api/inquiry/[[...path]]/route.ts" src/features/inquiry/types/index.ts src/features/purchase-order-registration/app/PurchaseOrderRegistrationPage.tsx src/features/purchase-order-registration/components/PurchaseOrderFilterBar.tsx src/features/purchase-order-registration/components/PurchaseOrderRow.tsx src/features/purchase-order-registration/components/PurchaseOrderTable.tsx src/features/purchase-order-registration/index.ts
+grep -rn "PurchaseOrderRecord\|usePurchaseOrderStore\|purchaseOrderService\|PurchaseOrderFormModal" src/
+grep -rn "/api/purchase-order\|handlePurchaseOrderRequest\|purchase_order_table_records" src/
+# 预期：以上两个 grep 均无匹配
+npm run build
+```
+
+结果：`tsc --noEmit` 无输出（通过）；`eslint`（8 个改动/新建文件）无输出（通过）；两个 grep 均无匹配（确认无残留引用）；`git status --porcelain` 确认改动范围精确匹配方案（5 个删除 + 9 个修改/新建，含本任务外此前已完成的 TASK-100 相关改动）；`npm run build` 在本次审核环境因 SWC 原生二进制在 arm64 sandbox 缺失无法跑完整（环境限制，与历次记录一致），前面的 tsc + eslint + 双重 grep + diff 走查已足够确认改动正确。工作区未提交。**`worker.ts` 的改动需要单独 `npx wrangler deploy` 才会在线上生效，需和 Roger 确认这一步是否已跑过。**
+
+### 验收标准
+
+- `/purchase-order-table` 不再有"新增"/手动"刷新"按钮，记录随询价成单（`orderNo` 有值）自动出现。
+- 交货日期、执行情况在 `/purchase-order-table` 编辑后，`/order` 订单状态表里同一条记录立刻能看到相同的值，反之亦然。
+- 确认日期、客户订单号在 `/purchase-order-table` 里只能看不能编辑（无点击进入编辑态的交互）。
+- 采购单号、供应商、金额是采购订单表专属，编辑后不影响 `/order`、`/inquiry`、`/purchase-registration` 的任何展示。
+- 只有 `order.financials` 权限的用户才能看到/编辑金额列。
+- 只有 `purchaseOrderTable` 权限（无 `inquiry`）的用户：能看到本表需要的字段，不能新增/删除记录，不能编辑确认日期/客户订单号。
+- 旧的 `/api/purchase-order`、`handlePurchaseOrderRequest`、`purchase-order.store.ts` 等文件已删除，全仓库搜索无残留引用。
+
+---
+
 ## TASK-100：采购部登记表 —— 内容描述改为共享 description，询报价状态改为点击整行弹窗编辑
 
 **状态**：已完成（由 Claude 直接实施，非 Codex；Roger 明确说"请开始实施"）
@@ -662,6 +835,64 @@ grep -rn "orderDeliveryStatus\|orderDeliveryConsignee" src/features/purchase-reg
 - 保存后数据写入 `purchaseSupplierStatuses` / `purchaseQuotedStatuses`，不影响同一条记录在 `/inquiry` 里显示的 `supplierStatuses` / `quotedStatuses`（两边互相独立）。
 - 只有 `purchaseRegistration` 权限（无 `inquiry` 权限）的用户仍无法新增/删除询报价记录，但可以编辑 `description`、`purchaseSupplierStatuses`、`purchaseQuotedStatuses`；不再能通过这个代理改 `orderDeliveryStatus`/`orderDeliveryConsignee`（这两个字段不属于采购部登记的写入范围）。
 - 全仓库搜索确认 `purchaseContentDesc` / `purchaseInquiryStatus` 无业务代码残留（`CODEX_TASKS.md` 里 TASK-96/99 的历史记录原文不用改）。
+
+### TASK-100 附属：`purchaseSupplierStatuses` / `purchaseQuotedStatuses` 初始数据回填脚本
+
+**状态**：脚本已写好并做过纯函数逻辑自测（`node --check` 通过 + 4 组样例数据验证），**尚未在生产环境执行**——本次会话沙箱里没有生产 `API_TOKEN`（已按 TASK-01 迁移到 Cloudflare secret），Claude 这边连不上生产 D1。需要 Roger 在能拿到 `API_TOKEN` 的环境（本地 / Codex）运行。
+
+**背景**：TASK-100 上线后，所有已存在的询报价记录的 `purchaseSupplierStatuses` / `purchaseQuotedStatuses` 都是空的。Roger 要求做一次性历史数据回填：从询报价登记该记录原有的 `supplierStatuses` / `quotedStatuses` 里提取"飞罗"的已报价日期、以及"无法报价"/"询价已关闭"标记，写成采购部登记表初始的"已报价"状态（格式如"6.20飞罗a"），三种状态互不排斥、同时保留。只回填 `purchaseSupplierStatuses`/`purchaseQuotedStatuses` 都还是空的记录，不覆盖上线后已经手动编辑过的记录。订单号相关的"成单状态"不需要回填，因为那是直接读共享字段 `record.orderNo`，本来就是准的。
+
+**文件**：`scripts/backfill-purchase-quote-status.js`（新建，纯 Node 脚本，不改动应用代码）
+
+**用法**：
+
+```bash
+# 1. 先 dry-run，只打印会改哪些记录、改成什么，不写入
+API_TOKEN=<生产 API_TOKEN> node scripts/backfill-purchase-quote-status.js
+
+# 2. 建议先用 --only 挑 1~2 条肉眼核对过的记录跑一遍 --apply，确认结果符合预期
+API_TOKEN=<生产 API_TOKEN> node scripts/backfill-purchase-quote-status.js --only=C260620F --apply
+
+# 3. 确认无误后，对全量记录执行
+API_TOKEN=<生产 API_TOKEN> node scripts/backfill-purchase-quote-status.js --apply
+```
+
+`--apply` 执行前会自动把受影响记录的完整原始数据备份到 `backups/backup-before-task100-quote-backfill-<时间戳>.json`，写入用的是 Worker 现有的合并写入 PUT（`handleInquiryRequest` 里的 `mergedData = { ...existingData, ...body }`），只传 `purchaseSupplierStatuses`/`purchaseQuotedStatuses` 两个字段，不会触碰记录其余数据。
+
+**回填规则**（脚本 `computePatch` 函数）：
+
+- 若 `supplierStatuses` 里"飞罗"的 `status === 'quoted'` 且有 `quoteDate`：写入 `purchaseSupplierStatuses`（镜像一条飞罗供应商标签）+ `purchaseQuotedStatuses`（一条 `{quoteDate, supplierShortName:'飞罗', version:'a'}`，页面上显示为"6.20飞罗a"）。
+- 若 `quotedStatuses` 里有 `type==='unavailable'`：额外在 `purchaseQuotedStatuses` 加一条 `{quoteDate, type:'unavailable'}`（无法报价）。
+- 若 `quotedStatuses` 里有 `type==='closed'`：额外在 `purchaseQuotedStatuses` 加一条 `{quoteDate, type:'closed'}`（询价已关闭）。
+- 三者互不排斥，一条记录可能同时命中多个，全部保留。
+- 若三者都没有命中（比如飞罗还是 pending、且没有无法报价/已关闭标记），跳过，不产生任何改动。
+- 若该记录的 `purchaseSupplierStatuses` 或 `purchaseQuotedStatuses` 已经有数据（说明采购部登记表上线后被手动编辑过），跳过，不覆盖。
+
+**How to apply**（下次 Roger 反馈"回填脚本跑完了"，重点核对）：(1) 抽查几条 dry-run 输出和 `/purchase-registration` 页面实际展示是否一致；(2) 备份 JSON 文件确实生成在 `backups/` 下；(3) 确认没有动到已经手动编辑过的记录（跳过计数 > 0 且抽查确实是已编辑过的记录）；(4) 全量执行的"成功/失败"计数，失败的记录用 `--only=<询价编号>` 单独重跑。
+
+### TASK-100 附属：行颜色随询报价状态变化（已完成，Claude 直接实施）
+
+Roger 要求采购部登记表每行的颜色变化规则要和询报价登记表一致——即复用 `getRecordColorState`（无法报价/已关闭 → 灰 `text-gray-400`；已报价 → 蓝 `text-blue-600`；其余含未报价 → 粉 `text-pink-500`），但依据采购部专属的 `purchaseQuotedStatuses` 而不是销售视图的 `quotedStatuses`（本来就有的 `previewRecord` 影子记录已经把 `purchaseQuotedStatuses` 接到 `quotedStatuses` 字段名上，直接传给 `getRecordColorState` 即可复用）。
+
+**文件**：`src/features/purchase-registration/components/PurchaseRegistrationRow.tsx`
+
+- 新增 `import { getRecordColorState } from '@/features/inquiry/utils/inquiryUtils'`。
+- 新增 `const mainColorClass = getRecordColorState(previewRecord);`（放在已有的 `previewRecord` 定义之后）。
+- 询价编号 `<span>` 的 className 从写死的 `text-gray-800 dark:text-gray-100` 改成 `${mainColorClass}`。
+- `EditableText` 组件新增可选 `colorClassName` prop：非编辑态且有内容时用 `colorClassName ?? 'text-gray-800 dark:text-gray-100'`（保留原有的空值 placeholder 灰色不受影响），并把 `text-xs` 改成 `text-xs font-medium`（和询报价登记表 `mainTextClass` 的 `font-medium` 保持一致的视觉权重）。内容描述这一列的 `EditableText` 调用传入 `colorClassName={mainColorClass}`。
+
+验证：`npx tsc --noEmit`、`npx eslint src/features/purchase-registration/components/PurchaseRegistrationRow.tsx` 均无输出（通过）。
+
+### TASK-100 附属：接入月度筛选控件（已完成，Claude 直接实施）
+
+Roger 要求采购部登记表也用上和询报价登记表/订单状态表一致的月度筛选控件（`MonthRangeNav`：‹ 选月/M月 › + 月份浮层，近3月/全部两个 chip）。采购部登记表之前完全没有时间筛选，只有关键词+成单状态。
+
+**文件**：
+
+- `src/features/purchase-registration/app/PurchaseRegistrationPage.tsx`：新增 `timeRange`（`MonthTimeRange`，默认 `'3months'`）状态；新增 `matchesTimeRange`（按询价编号解析日期，复用 `getDateInputValueFromInquiryNo`，月维度比较，逻辑与 `useInquiryFilter.ts`/`OrderPage.tsx` 一致）；筛选管线从 `activeRecords → keywordFiltered` 改成 `activeRecords → timeFiltered → keywordFiltered`；`activeCount`/`onReset` 加入 `timeRange`；`filteredCount={filteredRecords.length}` 传给筛选栏做角标。
+- `src/features/purchase-registration/components/PurchaseRegistrationFilterBar.tsx`：新增 `timeRange`/`filteredCount`/`onTimeRangeChange` props；在成单状态 chips 前面加"近3月"/"全部" `FilterChip` + `MonthRangeNav`，用 `·` 分隔，样式和交互与 `InquiryFilterBar.tsx`/`OrderPage.tsx` 一致（含 `overflow-visible` 保证选月浮层不被裁剪）。
+
+验证：`npx tsc --noEmit`、`npx eslint`（两个改动文件）均无输出（通过）。
 
 ---
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { FilterChip } from '@/components/FilterChip';
+import { MonthRangeNav, type MonthTimeRange } from '@/components/MonthRangeNav';
 
 export type OrderStateFilter = 'all' | 'has_order' | 'no_order';
 
@@ -9,8 +10,11 @@ interface PurchaseRegistrationFilterBarProps {
   orderState: OrderStateFilter;
   counts: Record<OrderStateFilter, number>;
   activeCount: number;
+  timeRange: MonthTimeRange;
+  filteredCount: number;
   onKeywordChange: (keyword: string) => void;
   onOrderStateChange: (state: OrderStateFilter) => void;
+  onTimeRangeChange: (range: MonthTimeRange) => void;
   onReset: () => void;
 }
 
@@ -19,14 +23,38 @@ export function PurchaseRegistrationFilterBar({
   orderState,
   counts,
   activeCount,
+  timeRange,
+  filteredCount,
   onKeywordChange,
   onOrderStateChange,
+  onTimeRangeChange,
   onReset,
 }: PurchaseRegistrationFilterBarProps) {
   return (
     <div className="mb-3 overflow-visible rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-col gap-2.5 overflow-visible lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-1.5 overflow-visible">
+          {/* 时间范围：近3月 / 全部 / 选月导航器（与询报价登记表、订单状态表一致） */}
+          <FilterChip
+            label="近3月"
+            active={timeRange === '3months'}
+            badge={timeRange === '3months' ? filteredCount : undefined}
+            onClick={() => onTimeRangeChange('3months')}
+          />
+          <FilterChip
+            label="全部"
+            active={timeRange === 'all'}
+            badge={timeRange === 'all' ? filteredCount : undefined}
+            onClick={() => onTimeRangeChange('all')}
+          />
+          <MonthRangeNav
+            range={timeRange}
+            onChange={onTimeRangeChange}
+            badge={timeRange.startsWith('month:') ? filteredCount : undefined}
+          />
+
+          <span className="select-none text-gray-200 dark:text-gray-700">·</span>
+
           <FilterChip
             label="全部"
             active={orderState === 'all'}
