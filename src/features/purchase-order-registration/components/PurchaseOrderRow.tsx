@@ -297,7 +297,7 @@ export function PurchaseOrderRow({ record, canViewFinancials, consigneeOptions, 
   const rowTextClass = getRowTextClass(record);
 
   // 客户订单号只读展示，fallback 逻辑与订单状态表一致（RFQ→PO）
-  const customerNoFallback = record.customerNo.replace(/RFQ/g, 'PO');
+  const customerNoFallback = (record.customerNo ?? '').replace(/RFQ/g, 'PO');
 
   return (
     <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getRowBgClass(record)}`}>

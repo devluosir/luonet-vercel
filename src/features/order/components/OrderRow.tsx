@@ -412,7 +412,7 @@ export function OrderRow({
   const orderSubStatusRemark = record.orderSubStatusRemark?.trim();
 
   // 客户订单号的 fallback：自动将 RFQ 显示/输入替换为 PO
-  const customerNoFallback = record.customerNo.replace(/RFQ/g, 'PO');
+  const customerNoFallback = (record.customerNo ?? '').replace(/RFQ/g, 'PO');
 
   const saveCustomerNo = (raw: string) => {
     setActiveField(null);

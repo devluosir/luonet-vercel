@@ -124,11 +124,11 @@ export function OrderPage() {
       if (
         r.status !== 'deleted' &&
         r.orderNo?.trim() &&
-        r.customerNo.includes('RFQ') &&
+        (r.customerNo ?? '').includes('RFQ') &&
         !r.orderCustomerNo
       ) {
         store.updateRecord(r.id, {
-          orderCustomerNo: r.customerNo.replace(/RFQ/g, 'PO'),
+          orderCustomerNo: (r.customerNo ?? '').replace(/RFQ/g, 'PO'),
         });
       }
     });

@@ -101,7 +101,7 @@ export function useInquiryFilter(records: InquiryRecord[]) {
         const kw = filter.keyword.trim().toLowerCase();
         const hit =
           record.inquiryNo.toLowerCase().includes(kw) ||
-          record.customerNo.toLowerCase().includes(kw) ||
+          (record.customerNo ?? '').toLowerCase().includes(kw) ||
           (record.description ?? '').toLowerCase().includes(kw);
         if (!hit) return false;
       }
