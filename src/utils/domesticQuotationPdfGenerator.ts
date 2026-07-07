@@ -251,22 +251,22 @@ async function drawPartyTable(
 
   const finalY = doc.lastAutoTable.finalY;
 
-  if (data.showStamp) {
-    try {
-      const stampImage = await getStampImage(data.templateConfig?.stampType);
-      if (stampImage) {
-        const stampWidth = data.templateConfig?.stampType === 'hongkong' ? 58 : 34;
-        const stampHeight = data.templateConfig?.stampType === 'hongkong' ? 27 : 34;
-        const stampX = margin + 34;
-        const stampY = Math.max(y + 10, finalY - stampHeight - 4);
-        doc.saveGraphicsState();
-        doc.setGState(new GState({ opacity: 0.82 }));
-        doc.addImage(stampImage, 'PNG', stampX, stampY, stampWidth, stampHeight);
-        doc.restoreGraphicsState();
-      }
-    } catch (error) {
-      console.warn('[DomesticQuotationPDF] 印章加载失败', error);
+  // 是否盖章只由"印章：无/上海/香港"这一个选择器决定，不再叠加 showStamp 开关
+  // （原来两个控件都要打开才会出章，容易选了印章样式却忘记开开关，一直不出章）
+  try {
+    const stampImage = await getStampImage(data.templateConfig?.stampType);
+    if (stampImage) {
+      const stampWidth = data.templateConfig?.stampType === 'hongkong' ? 58 : 34;
+      const stampHeight = data.templateConfig?.stampType === 'hongkong' ? 27 : 34;
+      const stampX = margin + 34;
+      const stampY = Math.max(y + 10, finalY - stampHeight - 4);
+      doc.saveGraphicsState();
+      doc.setGState(new GState({ opacity: 0.82 }));
+      doc.addImage(stampImage, 'PNG', stampX, stampY, stampWidth, stampHeight);
+      doc.restoreGraphicsState();
     }
+  } catch (error) {
+    console.warn('[DomesticQuotationPDF] 印章加载失败', error);
   }
 
   return finalY + 6;
