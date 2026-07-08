@@ -128,21 +128,24 @@ export function useInquiryFilter(records: InquiryRecord[]) {
   const filteredAndSorted = useMemo(() => {
     return baseFiltered
       .filter((record) => {
+        // 防御性兜底：受限视图/异常数据可能缺失 quotedStatuses/supplierStatuses 字段
+        const quotedStatuses = record.quotedStatuses ?? [];
+        const supplierStatuses = record.supplierStatuses ?? [];
         switch (filter.quoteStatus) {
           case 'supplier_pending':
-            return record.supplierStatuses.some(
+            return supplierStatuses.some(
               (s) => !s.status || s.status === 'pending'
             );
           case 'customer_pending':
-            return record.quotedStatuses.every((s) => s.type === 'supplemented');
+            return quotedStatuses.every((s) => s.type === 'supplemented');
           case 'customer_quoted':
             return (
-              !record.quotedStatuses.some(
+              !quotedStatuses.some(
                 (s) => s.type === 'unavailable' || s.type === 'closed'
-              ) && record.quotedStatuses.some((s) => !s.type || s.type === 'quoted')
+              ) && quotedStatuses.some((s) => !s.type || s.type === 'quoted')
             );
           case 'unavailable':
-            return record.quotedStatuses.some(
+            return quotedStatuses.some(
               (s) => s.type === 'unavailable' || s.type === 'closed'
             );
           case 'has_order':

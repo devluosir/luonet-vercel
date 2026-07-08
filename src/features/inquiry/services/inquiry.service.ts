@@ -333,7 +333,19 @@ export const inquiryService = {
       if (deletedIds[d1Record.id]) continue;
       const localRecord = localMap.get(d1Record.id);
       if (!localRecord || isRemoteNewer(d1Record, localRecord)) {
-        localMap.set(d1Record.id, d1Record);
+        // 字段级合并而非整条覆盖：受限视图（如采购部登记）拉取到的记录会被服务端
+        // 裁剪掉 quotedStatuses/inquirer/customerId 等字段（键本身缺失，而非 undefined），
+        // 若直接整条替换会用"残缺记录"冲掉本地已缓存的完整记录，污染询报价登记等
+        // 依赖完整字段的页面。这里用 spread 只覆盖 d1Record 真正带回来的字段。
+        localMap.set(d1Record.id, localRecord ? { ...localRecord, ...d1Record } : d1Record);
+      } else if (
+        !Object.prototype.hasOwnProperty.call(localRecord, 'quotedStatuses') &&
+        Object.prototype.hasOwnProperty.call(d1Record, 'quotedStatuses')
+      ) {
+        // 自愈：本地记录此前被受限视图（字段被裁剪）的一次同步污染过，缺失
+        // quotedStatuses 等字段。若这次是完整视图的拉取（带回了该字段），即便
+        // updatedAt 没有变化（没有发生新编辑）也要补全，否则残缺记录会一直卡在本地。
+        localMap.set(d1Record.id, { ...localRecord, ...d1Record });
       }
     }
 
@@ -342,6 +354,25 @@ export const inquiryService = {
     );
     this.save(merged);
     return merged;
+  },
+
+  /**
+   * 用于 mergeLocal:false 场景（如采购部登记/采购订单表）：这些页面只需要展示
+   * "当前 D1 最新数据"，不需要 mergeFromD1 的时间戳/pending 比较逻辑。但拉取结果
+   * 可能是受限视图（字段被服务端裁剪），不能直接整条 save() 覆盖共享本地缓存
+   * inquiry_records —— 否则会冲掉其它字段（quotedStatuses 等），导致询报价登记表
+   * 读到缺字段的记录而崩溃。这里对已存在的本地记录做字段级合并，保留响应中缺失的字段。
+   */
+  mergeFieldsOnly(d1Records: InquiryRecord[]): InquiryRecord[] {
+    const local = this.getAll();
+    const localMap = new Map(local.map((record) => [record.id, record]));
+    return d1Records
+      .filter((record) => record.status !== 'deleted')
+      .map((record) => {
+        const localRecord = localMap.get(record.id);
+        return localRecord ? { ...localRecord, ...record } : record;
+      })
+      .sort((a, b) => b.inquiryNo.localeCompare(a.inquiryNo));
   },
 
   pushLocalToD1(d1Records: InquiryRecord[]): void {

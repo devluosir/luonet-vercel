@@ -15,17 +15,21 @@ interface Props {
 export function InquiryQuoteStatusDisplay({ record }: Props) {
   const rowColor = getRecordColorState(record);
 
-  const supplierParts = record.supplierStatuses.map((supplier) =>
+  // 防御性兜底：受限视图/异常数据可能缺失 supplierStatuses/quotedStatuses 字段
+  const supplierStatuses = record.supplierStatuses ?? [];
+  const quotedStatuses = record.quotedStatuses ?? [];
+
+  const supplierParts = supplierStatuses.map((supplier) =>
     supplier.quoteDate
       ? `${supplier.supplierShortName}${roundDateBrackets(supplier.quoteDate)}`
       : supplier.supplierShortName
   );
-  const regularStatuses = record.quotedStatuses.filter(
+  const regularStatuses = quotedStatuses.filter(
     (s) => s.type !== 'unavailable' && s.type !== 'supplemented' && s.type !== 'closed'
   );
-  const unavailableStatus = record.quotedStatuses.find((s) => s.type === 'unavailable');
-  const closedStatus = record.quotedStatuses.find((s) => s.type === 'closed');
-  const supplementedStatus = record.quotedStatuses.find((s) => s.type === 'supplemented');
+  const unavailableStatus = quotedStatuses.find((s) => s.type === 'unavailable');
+  const closedStatus = quotedStatuses.find((s) => s.type === 'closed');
+  const supplementedStatus = quotedStatuses.find((s) => s.type === 'supplemented');
   const quotedParts = regularStatuses.map(
     (status) => `${stripDateBrackets(status.quoteDate)}${status.supplierShortName}${status.version}`
   );
@@ -38,13 +42,13 @@ export function InquiryQuoteStatusDisplay({ record }: Props) {
 
   return (
     <p className="m-0 block w-full max-w-full truncate whitespace-nowrap text-xs font-medium leading-4" title={statusTitle}>
-      {record.supplierStatuses.map((supplier, index) => {
+      {supplierStatuses.map((supplier, index) => {
         const colorClass = getSupplierStatusClass(supplier);
         const label = supplierParts[index];
         return (
           <span key={supplier.id}>
             <span className={colorClass}>{label}</span>
-            {index < record.supplierStatuses.length - 1 && <span className="text-gray-300">,</span>}
+            {index < supplierStatuses.length - 1 && <span className="text-gray-300">,</span>}
           </span>
         );
       })}

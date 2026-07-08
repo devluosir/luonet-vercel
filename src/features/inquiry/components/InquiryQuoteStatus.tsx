@@ -112,15 +112,19 @@ export function InquiryQuoteStatus({
 
   const supplierOptions = supplierOptionsProp ?? customerSupplierOptions;
 
+  // 防御性兜底：受限视图/异常数据可能缺失 quotedStatuses/supplierStatuses 字段
+  const quotedStatuses = record.quotedStatuses ?? [];
+  const supplierStatuses = record.supplierStatuses ?? [];
+
   // ── 派生数据 ──────────────────────────────────────────
-  const unavailableStatus = record.quotedStatuses.find((s) => s.type === 'unavailable');
-  const closedStatus = record.quotedStatuses.find((s) => s.type === 'closed');
-  const supplementedStatus = record.quotedStatuses.find((s) => s.type === 'supplemented');
-  const regularStatuses = record.quotedStatuses.filter(
+  const unavailableStatus = quotedStatuses.find((s) => s.type === 'unavailable');
+  const closedStatus = quotedStatuses.find((s) => s.type === 'closed');
+  const supplementedStatus = quotedStatuses.find((s) => s.type === 'supplemented');
+  const regularStatuses = quotedStatuses.filter(
     (s) => s.type !== 'unavailable' && s.type !== 'supplemented' && s.type !== 'closed'
   );
-  const hasNeedInfoSupplier = record.supplierStatuses.some((s) => s.status === 'need_info');
-  const quotedSupplierNames = record.supplierStatuses
+  const hasNeedInfoSupplier = supplierStatuses.some((s) => s.status === 'need_info');
+  const quotedSupplierNames = supplierStatuses
     .filter((s) => s.status === 'quoted' && !!s.quoteDate)
     .map((s) => s.supplierShortName);
   const mainColorClass = getRecordColorState(record);
@@ -134,7 +138,7 @@ export function InquiryQuoteStatus({
   };
 
   const openEditSupplier = (supplierId: string) => {
-    const s = record.supplierStatuses.find((item) => item.id === supplierId);
+    const s = supplierStatuses.find((item) => item.id === supplierId);
     if (!s) return;
     setSupplierForm({
       supplierShortName: s.supplierShortName,
@@ -155,18 +159,18 @@ export function InquiryQuoteStatus({
     if (!payload.supplierShortName) return;
     if (activeForm?.kind === 'supplier-edit') {
       onSuppliersChange(
-        record.supplierStatuses.map((s) =>
+        supplierStatuses.map((s) =>
           s.id === activeForm.id ? { ...s, ...payload } : s
         )
       );
     } else {
-      onSuppliersChange([...record.supplierStatuses, { ...payload, id: createId() }]);
+      onSuppliersChange([...supplierStatuses, { ...payload, id: createId() }]);
     }
     setActiveForm(null);
   };
 
   const handleRemoveSupplier = async (supplierId: string) => {
-    const s = record.supplierStatuses.find((item) => item.id === supplierId);
+    const s = supplierStatuses.find((item) => item.id === supplierId);
     const confirmed = await confirm({
       title: '删除供应商状态',
       description: `确定删除供应商「${s?.supplierShortName ?? '该供应商'}」吗？`,
@@ -175,7 +179,7 @@ export function InquiryQuoteStatus({
     });
     if (!confirmed) return;
 
-    onSuppliersChange(record.supplierStatuses.filter((item) => item.id !== supplierId));
+    onSuppliersChange(supplierStatuses.filter((item) => item.id !== supplierId));
   };
 
   // ── 已报价 CRUD ──────────────────────────────────────
@@ -206,18 +210,18 @@ export function InquiryQuoteStatus({
     if (!payload.quoteDate || !payload.supplierShortName || !payload.version) return;
     if (activeForm?.kind === 'quoted-edit') {
       onQuotedChange(
-        record.quotedStatuses.map((s) =>
+        quotedStatuses.map((s) =>
           s.id === activeForm.id ? { ...s, ...payload } : s
         )
       );
     } else {
-      onQuotedChange([...record.quotedStatuses, { ...payload, id: createId() }]);
+      onQuotedChange([...quotedStatuses, { ...payload, id: createId() }]);
     }
     setActiveForm(null);
   };
 
   const handleRemoveQuoted = async (qsId: string) => {
-    const qs = record.quotedStatuses.find((s) => s.id === qsId);
+    const qs = quotedStatuses.find((s) => s.id === qsId);
     const label = qs
       ? `${stripDateBrackets(qs.quoteDate)} ${qs.supplierShortName} ${qs.version}`
       : '该记录';
@@ -229,7 +233,7 @@ export function InquiryQuoteStatus({
     });
     if (!confirmed) return;
 
-    onQuotedChange(record.quotedStatuses.filter((s) => s.id !== qsId));
+    onQuotedChange(quotedStatuses.filter((s) => s.id !== qsId));
   };
 
   // ── 已补充信息 toggle ─────────────────────────────────
@@ -242,9 +246,9 @@ export function InquiryQuoteStatus({
         version: '',
         type: 'supplemented',
       };
-      onQuotedChange([...record.quotedStatuses, newStatus]);
+      onQuotedChange([...quotedStatuses, newStatus]);
     } else {
-      onQuotedChange(record.quotedStatuses.filter((s) => s.type !== 'supplemented'));
+      onQuotedChange(quotedStatuses.filter((s) => s.type !== 'supplemented'));
     }
   };
 
@@ -252,7 +256,7 @@ export function InquiryQuoteStatus({
     const normalized = normalizeShortDateInput(raw);
     if (!normalized) return;
     onQuotedChange(
-      record.quotedStatuses.map((s) =>
+      quotedStatuses.map((s) =>
         s.type === 'supplemented' ? { ...s, quoteDate: normalized } : s
       )
     );
@@ -268,9 +272,9 @@ export function InquiryQuoteStatus({
         version: '',
         type: 'closed',
       };
-      onQuotedChange([...record.quotedStatuses, newStatus]);
+      onQuotedChange([...quotedStatuses, newStatus]);
     } else {
-      onQuotedChange(record.quotedStatuses.filter((s) => s.type !== 'closed'));
+      onQuotedChange(quotedStatuses.filter((s) => s.type !== 'closed'));
     }
   };
 
@@ -278,7 +282,7 @@ export function InquiryQuoteStatus({
     const normalized = normalizeShortDateInput(raw);
     if (!normalized) return;
     onQuotedChange(
-      record.quotedStatuses.map((s) =>
+      quotedStatuses.map((s) =>
         s.type === 'closed' ? { ...s, quoteDate: normalized } : s
       )
     );
@@ -294,9 +298,9 @@ export function InquiryQuoteStatus({
         version: '',
         type: 'unavailable',
       };
-      onQuotedChange([...record.quotedStatuses, newStatus]);
+      onQuotedChange([...quotedStatuses, newStatus]);
     } else {
-      onQuotedChange(record.quotedStatuses.filter((s) => s.type !== 'unavailable'));
+      onQuotedChange(quotedStatuses.filter((s) => s.type !== 'unavailable'));
     }
   };
 
@@ -304,7 +308,7 @@ export function InquiryQuoteStatus({
     const normalized = normalizeShortDateInput(raw);
     if (!normalized) return;
     onQuotedChange(
-      record.quotedStatuses.map((s) =>
+      quotedStatuses.map((s) =>
         s.type === 'unavailable' ? { ...s, quoteDate: normalized } : s
       )
     );
@@ -326,7 +330,7 @@ export function InquiryQuoteStatus({
       <div className="flex items-start gap-2">
         <span className={ROW_LABEL}>供应商</span>
         <div className="flex flex-wrap items-center gap-1.5">
-          {record.supplierStatuses.map((supplier) => (
+          {supplierStatuses.map((supplier) => (
             <SupplierStatusTag
               key={supplier.id}
               supplier={supplier}

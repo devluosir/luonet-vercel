@@ -65,9 +65,7 @@ export function useInquirySync({
         if (pushLocal) inquiryService.pushLocalToD1(d1Records);
         const nextRecords = mergeLocal
           ? inquiryService.mergeFromD1(d1Records)
-          : d1Records
-              .filter((record) => record.status !== 'deleted')
-              .sort((a, b) => b.inquiryNo.localeCompare(a.inquiryNo));
+          : inquiryService.mergeFieldsOnly(d1Records);
         if (!mergeLocal) inquiryService.save(nextRecords);
         useInquiryStore.setState({ records: nextRecords });
         lastFullSyncAtRef.current = Date.now();

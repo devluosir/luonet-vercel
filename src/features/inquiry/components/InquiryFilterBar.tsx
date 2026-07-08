@@ -42,14 +42,16 @@ interface InquiryFilterBarProps {
 // ── 状态角标计数 ──────────────────────────────────────────
 function countByStatus(records: InquiryRecord[], status: QuoteStatusFilter): number {
   return records.filter((r) => {
+    // 防御性兜底：受限视图/异常数据可能缺失 quotedStatuses 字段
+    const quotedStatuses = r.quotedStatuses ?? [];
     switch (status) {
-      case 'customer_pending':  return r.quotedStatuses.length === 0;
+      case 'customer_pending':  return quotedStatuses.length === 0;
       case 'customer_quoted':
         return (
-          !r.quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed') &&
-           r.quotedStatuses.some((s) => !s.type || s.type === 'quoted')
+          !quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed') &&
+           quotedStatuses.some((s) => !s.type || s.type === 'quoted')
         );
-      case 'unavailable': return r.quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed');
+      case 'unavailable': return quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed');
       case 'has_order':
         return (
           Boolean(r.orderNo?.trim()) &&

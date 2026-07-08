@@ -48,14 +48,17 @@ const SUPPLIER_STATUS_LABEL: Record<string, string> = {
 };
 
 function recordToRow(r: InquiryRecord) {
-  const supplierText = r.supplierStatuses
+  // 防御性兜底：受限视图/异常数据可能缺失 supplierStatuses/quotedStatuses 字段
+  const supplierStatuses = r.supplierStatuses ?? [];
+  const quotedStatuses = r.quotedStatuses ?? [];
+  const supplierText = supplierStatuses
     .map((s) => `${s.supplierShortName}${s.quoteDate ? `(${s.quoteDate})` : ''}:${SUPPLIER_STATUS_LABEL[s.status ?? 'pending'] ?? s.status}`)
     .join('; ');
-  const quotedText = r.quotedStatuses
+  const quotedText = quotedStatuses
     .filter((s) => !s.type || s.type === 'quoted')
     .map((s) => `${s.quoteDate} ${s.supplierShortName} ${s.version}`.trim())
     .join('; ');
-  const unavailable = r.quotedStatuses.some((s) => s.type === 'unavailable') ? '是' : '';
+  const unavailable = quotedStatuses.some((s) => s.type === 'unavailable') ? '是' : '';
   return {
     'ID': r.id,
     '询价编号': r.inquiryNo,
