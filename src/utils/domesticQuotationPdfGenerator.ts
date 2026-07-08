@@ -57,6 +57,25 @@ function checkPage(doc: jsPDF, y: number, needed: number, margin: number, pageHe
   return y;
 }
 
+/** 从 baseFontSize 开始逐步缩小字号，直到文本能在 maxWidth 内单行显示（不超过 minFontSize），用于单位地址这类可能超长的单行字段 */
+function fitFontSizeToOneLine(
+  doc: jsPDF,
+  text: string,
+  maxWidth: number,
+  baseFontSize: number,
+  minFontSize = 6
+): number {
+  if (!text || maxWidth <= 0) return baseFontSize;
+  let size = baseFontSize;
+  while (size > minFontSize) {
+    doc.setFontSize(size);
+    if (doc.splitTextToSize(text, maxWidth).length <= 1) return size;
+    size -= 0.5;
+  }
+  doc.setFontSize(minFontSize);
+  return minFontSize;
+}
+
 async function getStampImage(stampType: 'none' | 'shanghai' | 'hongkong' | undefined): Promise<string> {
   if (!stampType || stampType === 'none') return '';
   const { embeddedResources } = await import('@/lib/embedded-resources');
@@ -197,9 +216,9 @@ function drawClauses(
     .sort((a, b) => a.order - b.order);
 
   doc.setFontSize(9);
-  // 报价单（非合同）条款：行距更紧凑、不加粗；产品购销合同保持原有更舒展的行距+首行加粗
-  const lineHeight = isContract ? 5.5 : 4.2;
-  const clauseGap = isContract ? 2.5 : 1;
+  // 报价单（非合同）条款：行距更紧凑、不加粗；产品购销合同条款也收紧了行距，但保留首行加粗
+  const lineHeight = isContract ? 4.8 : 4.2;
+  const clauseGap = isContract ? 1.5 : 1;
   clauses.forEach((note, index) => {
     const number = isContract ? getDomesticClauseNumber(index) : String(index + 1);
     const { title, body } = splitClause(note.content ?? '');
@@ -227,7 +246,6 @@ function partyRows(data: QuotationData): string[][] {
     ['法定代表人', seller.legalRepresentative ?? '', buyer.legalRepresentative ?? ''],
     ['委托代理人', seller.agent ?? '', buyer.agent ?? ''],
     ['电话', seller.phone ?? '', buyer.phone ?? ''],
-    ['传真', seller.fax ?? '', buyer.fax ?? ''],
     ['纳税人识别号', seller.taxNo ?? '', buyer.taxNo ?? ''],
   ];
 
@@ -253,6 +271,15 @@ async function drawPartyTable(
     `${label}：${seller}`,
     `${label}：${buyer}`,
   ]);
+
+  // "单位地址"行内容常常偏长（自贸区/门牌号等），字号按需缩小到能单行显示为止，避免自动换行撑高表格
+  const cellPadding = 2.2;
+  const colWidth = (pageWidth - margin * 2) / 2 - cellPadding * 2;
+  const addressRowIndex = 1; // partyRows 固定顺序：0 单位名称，1 单位地址
+  const addressFontSizes = rows[addressRowIndex]?.map((text) =>
+    fitFontSizeToOneLine(doc, text, colWidth, 8.5, 6)
+  ) ?? [8.5, 8.5];
+  doc.setFontSize(8.5); // 恢复默认字号，避免测量时的 setFontSize 调用影响后续绘制
 
   doc.autoTable({
     startY: y,
@@ -283,6 +310,9 @@ async function drawPartyTable(
     },
     didParseCell: (hookData) => {
       hookData.cell.styles.font = 'NotoSansSC';
+      if (hookData.section === 'body' && hookData.row.index === addressRowIndex) {
+        hookData.cell.styles.fontSize = addressFontSizes[hookData.column.index] ?? 8.5;
+      }
     },
   });
 
@@ -338,11 +368,13 @@ export async function generateDomesticQuotationPDF(
   y = drawHeader(doc, data, margin, pageWidth, y, isContract);
 
   doc.setFontSize(10);
-  setCnFont(doc, 'bold');
+  setCnFont(doc, isContract ? 'bold' : 'normal');
   doc.text(isContract ? '一、产品名称、规格型号、数量、金额' : '感谢您的询价，现报价如下：', margin, y);
   y += 5;
 
-  const head = ['序号', '产品名称', '规格型号', '单位', '数量', '单价(含税)', '金额(含税)'];
+  const head = isContract
+    ? ['序号', '产品名称', '规格型号', '单位', '数量', '单价(含税)', '金额(含税)']
+    : ['序号', '产品名称', '规格型号', '单位', '数量', '单价(RMB)', '金额(RMB)'];
   if (showRemarksCol) head.push('备注');
 
   const columnStyles: Record<number, { halign: 'center'; cellWidth: number }> = {

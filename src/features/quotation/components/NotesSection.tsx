@@ -33,10 +33,12 @@ interface NotesSectionProps {
 }
 
 export const NotesSection: React.FC<NotesSectionProps> = () => {
-  const { tab, notesConfig, updateNoteVisibility, updateNoteOrder, updateNoteContent, addNote, removeNote } = useQuotationStore();
+  const { tab, data, notesConfig, updateNoteVisibility, updateNoteOrder, updateNoteContent, addNote, removeNote } = useQuotationStore();
   const [mounted, setMounted] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<'exw' | 'fob' | 'cif' | null>(null);
   const isDomestic = tab === 'domestic';
+  // 内销"报价单"子类型标题用"备注："，"产品购销合同"子类型保持"合同条款"
+  const isDomesticContract = isDomestic && (data?.domesticDocType ?? 'contract') === 'contract';
 
   useEffect(() => {
     setMounted(true);
@@ -131,7 +133,7 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="text-base font-semibold text-gray-800 dark:text-[#F5F5F7]">
-            {isDomestic ? '合同条款' : 'Notes'}
+            {isDomestic ? (isDomesticContract ? '合同条款' : '备注：') : 'Notes'}
           </h3>
           <div className="flex items-center gap-1">
             {!isDomestic && (

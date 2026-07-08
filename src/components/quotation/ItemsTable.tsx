@@ -343,6 +343,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
   const effectiveVisibleCols = isHydrated ? visibleCols : ['partName', 'quantity', 'unit', 'unitPrice', 'amount', 'remarks'];
   const isDomestic = data.mode === 'domestic';
+  // 内销"报价单"子类型表头用 (RMB)，"产品购销合同"子类型保持 (含税)，与 PDF 生成器口径一致
+  const isDomesticContract = isDomestic && (data.domesticDocType ?? 'contract') === 'contract';
   const labels = isDomestic
     ? {
         item: '产品',
@@ -351,8 +353,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
         description: '规格型号',
         quantity: '数量',
         unit: '单位',
-        unitPrice: '单价(含税)',
-        amount: '金额(含税)',
+        unitPrice: isDomesticContract ? '单价(含税)' : '单价(RMB)',
+        amount: isDomesticContract ? '金额(含税)' : '金额(RMB)',
         remarks: '备注',
         otherFees: '其他费用',
         otherFeeDescription: '费用说明',

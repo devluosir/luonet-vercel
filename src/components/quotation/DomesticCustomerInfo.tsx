@@ -25,14 +25,6 @@ const partyFields: Array<{ key: PartyField; label: string }> = [
 
 const fieldLabel = (key: PartyField): string => partyFields.find((f) => f.key === key)?.label ?? key;
 
-// 单位名称/地址/税号内容通常较长（长地址、18位统一社会信用代码），单独占一行；
-// 其余字段内容较短，两两配对显示，避免奇数个字段导致最后一行落单
-const PAIRED_FIELD_GROUPS: Array<[PartyField, PartyField]> = [
-  ['legalRepresentative', 'agent'],
-  ['phone', 'fax'],
-  ['bankName', 'bankAccount'],
-];
-
 const BUYER_CUSTOMER_LIST_ID = 'domestic-buyer-customer-options';
 
 function FieldInput({
@@ -283,21 +275,38 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
                   value={String(details.taxNo ?? '')}
                   onChange={(value) => updateParty(party, 'taxNo', value)}
                 />
-                {/* 短字段两两配对，避免奇数个字段导致最后一行落单 */}
-                {PAIRED_FIELD_GROUPS.map(([keyA, keyB]) => (
-                  <div key={`${keyA}-${keyB}`} className="grid grid-cols-2 gap-3">
-                    <FieldInput
-                      label={fieldLabel(keyA)}
-                      value={String(details[keyA] ?? '')}
-                      onChange={(value) => updateParty(party, keyA, value)}
-                    />
-                    <FieldInput
-                      label={fieldLabel(keyB)}
-                      value={String(details[keyB] ?? '')}
-                      onChange={(value) => updateParty(party, keyB, value)}
-                    />
-                  </div>
-                ))}
+                {/* 法定代表人/委托代理人两两配对 */}
+                <div className="grid grid-cols-2 gap-3">
+                  <FieldInput
+                    label={fieldLabel('legalRepresentative')}
+                    value={String(details.legalRepresentative ?? '')}
+                    onChange={(value) => updateParty(party, 'legalRepresentative', value)}
+                  />
+                  <FieldInput
+                    label={fieldLabel('agent')}
+                    value={String(details.agent ?? '')}
+                    onChange={(value) => updateParty(party, 'agent', value)}
+                  />
+                </div>
+                {/* 电话单独一行（原与传真配对，传真已从页面/PDF移除） */}
+                <FieldInput
+                  label={fieldLabel('phone')}
+                  value={String(details.phone ?? '')}
+                  onChange={(value) => updateParty(party, 'phone', value)}
+                />
+                {/* 开户行/帐号两两配对 */}
+                <div className="grid grid-cols-2 gap-3">
+                  <FieldInput
+                    label={fieldLabel('bankName')}
+                    value={String(details.bankName ?? '')}
+                    onChange={(value) => updateParty(party, 'bankName', value)}
+                  />
+                  <FieldInput
+                    label={fieldLabel('bankAccount')}
+                    value={String(details.bankAccount ?? '')}
+                    onChange={(value) => updateParty(party, 'bankAccount', value)}
+                  />
+                </div>
               </div>
             )}
             {!isContract && (
