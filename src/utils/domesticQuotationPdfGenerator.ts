@@ -220,9 +220,11 @@ function drawClauses(
   const lineHeight = isContract ? 4.8 : 4.2;
   const clauseGap = isContract ? 1.5 : 1;
   clauses.forEach((note, index) => {
+    // 产品购销合同用中文数字+顿号（与"一、产品名称..."标题的编号风格一致）；报价单用阿拉伯数字+句点
     const number = isContract ? getDomesticClauseNumber(index) : String(index + 1);
+    const numberPunctuation = isContract ? '、' : '.';
     const { title, body } = splitClause(note.content ?? '');
-    const text = `${number}.${title}${body}`;
+    const text = `${number}${numberPunctuation}${title}${body}`;
     const lines = doc.splitTextToSize(text, contentWidth);
     y = checkPage(doc, y, lines.length * lineHeight + clauseGap + 2, margin, pageHeight);
 
