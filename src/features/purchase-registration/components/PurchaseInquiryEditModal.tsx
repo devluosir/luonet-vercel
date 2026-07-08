@@ -35,9 +35,11 @@ interface PurchaseInquiryEditModalProps {
   record: InquiryRecord | null;
   onClose: () => void;
   onSave: (id: string, patch: Partial<InquiryRecord>) => void;
+  /** 采购部登记自己已用过的供应商简称列表（来自 purchaseSupplierStatuses），与询报价登记的客户管理供应商库分开 */
+  supplierOptions?: string[];
 }
 
-export function PurchaseInquiryEditModal({ record, onClose, onSave }: PurchaseInquiryEditModalProps) {
+export function PurchaseInquiryEditModal({ record, onClose, onSave, supplierOptions }: PurchaseInquiryEditModalProps) {
   const [localSuppliers, setLocalSuppliers] = useState<SupplierQuoteStatus[]>([]);
   const [localQuoted, setLocalQuoted] = useState<CustomerQuoteStatus[]>([]);
   const [localDescription, setLocalDescription] = useState('');
@@ -137,6 +139,7 @@ export function PurchaseInquiryEditModal({ record, onClose, onSave }: PurchaseIn
               record={shimRecord}
               onSuppliersChange={setLocalSuppliers}
               onQuotedChange={setLocalQuoted}
+              supplierOptions={supplierOptions ?? []}
             />
           </div>
 

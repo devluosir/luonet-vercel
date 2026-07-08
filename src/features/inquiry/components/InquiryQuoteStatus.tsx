@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Save, X } from 'lucide-react';
 import type { CustomerQuoteStatus, InquiryRecord, SupplierQuoteStatus, SupplierStatus } from '../types';
 import {
@@ -15,11 +15,25 @@ import { SupplierStatusTag } from './SupplierStatusTag';
 import { QuotedStatusList } from './QuotedStatusList';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Button } from '@/components/ui/Button';
+import { getCachedCustomers } from '@/features/customer/services/customerService';
+import { supplierService } from '@/features/customer/services/supplierService';
+
+function toSupplierOptions(list: { shortName?: string; name: string }[]): string[] {
+  return Array.from(
+    new Set(list.map((s) => (s.shortName || s.name).trim()).filter(Boolean))
+  ).sort();
+}
 
 interface InquiryQuoteStatusProps {
   record: InquiryRecord;
   onSuppliersChange: (suppliers: SupplierQuoteStatus[]) => void;
   onQuotedChange: (quoted: CustomerQuoteStatus[]) => void;
+  /**
+   * 供应商简称候选列表（配合 <datalist>）。不传时默认从客户管理的供应商库拉取——询报价登记场景；
+   * 采购部登记场景范围不同，应传入采购部自己已用过的供应商简称列表（见 PurchaseRegistrationPage），
+   * 传入后不再去拉客户管理供应商库，两边候选来源要分开，不互相混用。
+   */
+  supplierOptions?: string[];
 }
 
 type ActiveForm =
@@ -54,7 +68,12 @@ const INPUT_CLS =
 
 const ROW_LABEL = 'mt-1 w-12 shrink-0 text-xs text-gray-400 dark:text-gray-500';
 
-export function InquiryQuoteStatus({ record, onSuppliersChange, onQuotedChange }: InquiryQuoteStatusProps) {
+export function InquiryQuoteStatus({
+  record,
+  onSuppliersChange,
+  onQuotedChange,
+  supplierOptions: supplierOptionsProp,
+}: InquiryQuoteStatusProps) {
   const confirm = useConfirm();
   const [activeForm, setActiveForm] = useState<ActiveForm>(null);
   const [supplierForm, setSupplierForm] = useState<SupplierFormState>({
@@ -67,6 +86,31 @@ export function InquiryQuoteStatus({ record, onSuppliersChange, onQuotedChange }
     supplierShortName: '',
     version: '',
   });
+
+  // 供应商简称候选列表（配合 <datalist>）：外部传入 supplierOptionsProp 时（采购部登记场景，
+  // 用的是采购部自己已用过的供应商简称，与客户管理供应商库无关）直接用它，不再拉取客户库；
+  // 未传入时（询报价登记场景）从客户管理 > 供应商库拉取。两个来源不互相混用。
+  const [customerSupplierOptions, setCustomerSupplierOptions] = useState<string[]>(() =>
+    supplierOptionsProp ? [] : toSupplierOptions(getCachedCustomers('supplier'))
+  );
+
+  useEffect(() => {
+    if (supplierOptionsProp) return;
+    let cancelled = false;
+    supplierService
+      .getAllSuppliers()
+      .then((list) => {
+        if (!cancelled) setCustomerSupplierOptions(toSupplierOptions(list));
+      })
+      .catch(() => {
+        // 供应商库加载失败时保留缓存/已有候选，不影响自由输入
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supplierOptionsProp]);
+
+  const supplierOptions = supplierOptionsProp ?? customerSupplierOptions;
 
   // ── 派生数据 ──────────────────────────────────────────
   const unavailableStatus = record.quotedStatuses.find((s) => s.type === 'unavailable');
@@ -306,12 +350,19 @@ export function InquiryQuoteStatus({ record, onSuppliersChange, onQuotedChange }
         <div className="ml-14 flex flex-wrap items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800/60">
           <input
             autoFocus
+            list={`supplier-options-${record.id}`}
             value={supplierForm.supplierShortName}
             onChange={(e) => setSupplierForm((p) => ({ ...p, supplierShortName: e.target.value }))}
             onKeyDown={onKeySupplier}
             className={`${INPUT_CLS} w-20`}
             placeholder="供应商"
+            autoComplete="off"
           />
+          <datalist id={`supplier-options-${record.id}`}>
+            {supplierOptions.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
           <input
             value={supplierForm.quoteDate}
             disabled={supplierForm.status === 'pending'}

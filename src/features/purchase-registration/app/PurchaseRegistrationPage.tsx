@@ -160,6 +160,7 @@ export function PurchaseRegistrationPage() {
         record={editingRecord}
         onClose={() => setEditingRecord(null)}
         onSave={(id, patch) => patchRecordForView(id, patch)}
+        supplierOptions={supplierOptions}
       />
     </AppLayout>
   );
