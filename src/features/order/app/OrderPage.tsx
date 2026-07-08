@@ -168,7 +168,8 @@ export function OrderPage() {
 
   const customerOptions = useMemo(
     () =>
-      Array.from(new Set(allOrderRecords.map((r) => r.inquirer.trim()).filter(Boolean)))
+      // 防御性兜底：受限视图/异常数据可能缺失 inquirer 字段
+      Array.from(new Set(allOrderRecords.map((r) => (r.inquirer ?? '').trim()).filter(Boolean)))
         .sort((a, b) => a.localeCompare(b, 'zh-CN')),
     [allOrderRecords]
   );
@@ -184,7 +185,7 @@ export function OrderPage() {
     () =>
       timeFiltered.filter((r) =>
         matchesKeyword(r, keyword) &&
-        (!customerFilter || r.inquirer.trim() === customerFilter)
+        (!customerFilter || (r.inquirer ?? '').trim() === customerFilter)
       ),
     [timeFiltered, keyword, customerFilter]
   );
