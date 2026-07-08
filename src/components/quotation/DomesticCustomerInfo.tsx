@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DomesticPartyDetails, QuotationData } from '@/types/quotation';
 import type { Customer } from '@/features/customer/types';
 import { findCustomerByName, getAllCustomers, getCachedCustomers, upsertDomesticCustomerInfo } from '@/features/customer/services/customerService';
+import { Field } from '@/components/BaseInfoCompact';
 
 interface DomesticCustomerInfoProps {
   data: QuotationData;
@@ -27,7 +28,8 @@ const fieldLabel = (key: PartyField): string => partyFields.find((f) => f.key ==
 
 const BUYER_CUSTOMER_LIST_ID = 'domestic-buyer-customer-options';
 
-function FieldInput({
+// 与外贸报价合同页面（BaseInfoCompact.tsx）同一套浮动标签输入框样式：.fi + placeholder=' '
+function TextField({
   label,
   value,
   onChange,
@@ -41,25 +43,23 @@ function FieldInput({
   listId?: string;
 }) {
   return (
-    <label className="block">
-      <span className="mb-0.5 block text-xs font-medium text-[#86868B] dark:text-[#98989D]">
-        {label}
-      </span>
+    <Field label={label}>
       <input
         type="text"
+        placeholder=" "
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         list={listId}
-        className="h-7 w-full rounded-lg border border-[#E5E5EA] bg-white px-2 text-sm text-[#1D1D1F] outline-none transition-colors focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF]/25 dark:border-[#3A3A3C] dark:bg-[#1C1C1E] dark:text-[#F5F5F7]"
+        className="fi"
       />
-    </label>
+    </Field>
   );
 }
 
 // 单位地址内容通常较长（自贸区/门牌号等），用可自动增高的多行文本框展示，
 // 避免像单行 input 那样把后半段内容裁掉看不见
-function FieldTextarea({
+function TextAreaField({
   label,
   value,
   onChange,
@@ -71,8 +71,8 @@ function FieldTextarea({
   const ref = useRef<HTMLTextAreaElement | null>(null);
 
   const adjust = useCallback((el: HTMLTextAreaElement) => {
-    el.style.height = '28px';
-    el.style.height = `${Math.max(28, Math.min(el.scrollHeight, 120))}px`;
+    el.style.height = '36px';
+    el.style.height = `${Math.max(36, Math.min(el.scrollHeight, 120))}px`;
   }, []);
 
   useEffect(() => {
@@ -80,21 +80,19 @@ function FieldTextarea({
   }, [value, adjust]);
 
   return (
-    <label className="block">
-      <span className="mb-0.5 block text-xs font-medium text-[#86868B] dark:text-[#98989D]">
-        {label}
-      </span>
+    <Field label={label}>
       <textarea
         ref={ref}
         value={value}
         rows={1}
+        placeholder=" "
         onChange={(e) => {
           onChange(e.target.value);
           adjust(e.target);
         }}
-        className="w-full resize-none overflow-hidden rounded-lg border border-[#E5E5EA] bg-white px-2 py-1 text-sm leading-5 text-[#1D1D1F] outline-none transition-colors focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF]/25 dark:border-[#3A3A3C] dark:bg-[#1C1C1E] dark:text-[#F5F5F7]"
+        className="fi-multiline resize-none overflow-hidden"
       />
-    </label>
+    </Field>
   );
 }
 
@@ -197,18 +195,18 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-2 rounded-xl border border-[#E5E5EA] bg-white/70 p-2.5 dark:border-[#3A3A3C] dark:bg-[#1C1C1E]/60 md:grid-cols-3">
-        <FieldInput
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+        <TextField
           label={isContract ? '合同编号' : '报价单编号'}
           value={data.quotationNo || ''}
           onChange={(value) => onChange({ quotationNo: value })}
         />
-        <FieldInput
+        <TextField
           label={isContract ? '签订时间' : '报价日期'}
           value={data.date || ''}
           onChange={(value) => onChange({ date: value })}
         />
-        <FieldInput
+        <TextField
           label="询价编号"
           value={data.inquiryNo || ''}
           onChange={(value) => onChange({ inquiryNo: value })}
@@ -248,7 +246,7 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
             {/* 报价单模式下 PDF 只显示单位名称，法定代表人/税号/开户行等详情表仅产品购销合同模式才输出，
                 这里也只保留"单位名称"字段，避免用户填了却用不上 */}
             {!isContract ? (
-              <FieldInput
+              <TextField
                 label={fieldLabel('name')}
                 value={String(details.name ?? '')}
                 onChange={(value) => updateParty(party, 'name', value)}
@@ -257,51 +255,51 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
               />
             ) : (
               <div className="space-y-2">
-                {/* 长字段各占一行：名称、地址（多行文本框）、税号，避免单行输入框把后半段内容裁掉 */}
-                <FieldInput
+                {/* 长字段各占一行：名称、地址（多行文本框），避免单行输入框把后半段内容裁掉 */}
+                <TextField
                   label={fieldLabel('name')}
                   value={String(details.name ?? '')}
                   onChange={(value) => updateParty(party, 'name', value)}
                   onBlur={party === 'domesticBuyer' ? handleBuyerNameBlur : undefined}
                   listId={party === 'domesticBuyer' ? BUYER_CUSTOMER_LIST_ID : undefined}
                 />
-                <FieldTextarea
+                <TextAreaField
                   label={fieldLabel('address')}
                   value={String(details.address ?? '')}
                   onChange={(value) => updateParty(party, 'address', value)}
                 />
-                <FieldInput
-                  label={fieldLabel('taxNo')}
-                  value={String(details.taxNo ?? '')}
-                  onChange={(value) => updateParty(party, 'taxNo', value)}
-                />
-                {/* 法定代表人/委托代理人两两配对 */}
+                {/* 纳税人识别号/电话两两配对，法定代表人/委托代理人、开户行/帐号同理，进一步收紧行数 */}
                 <div className="grid grid-cols-2 gap-2">
-                  <FieldInput
+                  <TextField
+                    label={fieldLabel('taxNo')}
+                    value={String(details.taxNo ?? '')}
+                    onChange={(value) => updateParty(party, 'taxNo', value)}
+                  />
+                  <TextField
+                    label={fieldLabel('phone')}
+                    value={String(details.phone ?? '')}
+                    onChange={(value) => updateParty(party, 'phone', value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <TextField
                     label={fieldLabel('legalRepresentative')}
                     value={String(details.legalRepresentative ?? '')}
                     onChange={(value) => updateParty(party, 'legalRepresentative', value)}
                   />
-                  <FieldInput
+                  <TextField
                     label={fieldLabel('agent')}
                     value={String(details.agent ?? '')}
                     onChange={(value) => updateParty(party, 'agent', value)}
                   />
                 </div>
-                {/* 电话单独一行（原与传真配对，传真已从页面/PDF移除） */}
-                <FieldInput
-                  label={fieldLabel('phone')}
-                  value={String(details.phone ?? '')}
-                  onChange={(value) => updateParty(party, 'phone', value)}
-                />
-                {/* 开户行/帐号两两配对 */}
                 <div className="grid grid-cols-2 gap-2">
-                  <FieldInput
+                  <TextField
                     label={fieldLabel('bankName')}
                     value={String(details.bankName ?? '')}
                     onChange={(value) => updateParty(party, 'bankName', value)}
                   />
-                  <FieldInput
+                  <TextField
                     label={fieldLabel('bankAccount')}
                     value={String(details.bankAccount ?? '')}
                     onChange={(value) => updateParty(party, 'bankAccount', value)}

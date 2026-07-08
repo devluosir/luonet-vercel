@@ -571,7 +571,7 @@ function CustomerField({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="group block relative">
       {children}
