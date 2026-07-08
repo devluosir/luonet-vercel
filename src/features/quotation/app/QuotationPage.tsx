@@ -655,7 +655,9 @@ export default function QuotationPage() {
               <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-100 dark:border-[#3A3A3C]">
                 <div className="flex items-center gap-3">
                   <h1 className="text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]">
-                    {isDomesticQuotation ? '报价单 | 产品购销合同' : `Generate ${activeTab === 'confirmation' ? 'Order' : 'Quotation'}`}
+                    {isDomesticQuotation
+                      ? (data.domesticDocType ?? 'contract') === 'contract' ? '产品购销合同' : '报价单'
+                      : `Generate ${activeTab === 'confirmation' ? 'Order' : 'Quotation'}`}
                   </h1>
                   <button
                     type="button"

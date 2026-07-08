@@ -175,8 +175,8 @@ export const useHistoryStore = create<HistoryState>()(
 // 标签页配置
 export const getAvailableTabs = (): TabConfig[] => {
   return [
-    { id: 'quotation', name: '报价单', shortName: '报价', icon: FileText },
-    { id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText },
+    { id: 'quotation', name: '外贸报价', shortName: '外贸报价', icon: FileText },
+    { id: 'confirmation', name: '外贸合同', shortName: '外贸合同', icon: FileText },
     { id: 'domestic', name: '内销报价', shortName: '内销报价', icon: FileSignature },
     { id: 'domestic-contract', name: '内销合同', shortName: '内销合同', icon: FileSignature },
     { id: 'packing', name: '装箱单', shortName: '装箱', icon: Package },
