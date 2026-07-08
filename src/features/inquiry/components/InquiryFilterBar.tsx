@@ -9,6 +9,13 @@ import type {
   QuoteStatusFilter,
 } from '../hooks/useInquiryFilter';
 
+interface SecondarySelectConfig {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}
+
 interface InquiryFilterBarProps {
   id?: string;
   filter: InquiryFilterState;
@@ -19,6 +26,8 @@ interface InquiryFilterBarProps {
   onClearAssociation?: () => void;
   records: InquiryRecord[];
   filteredCount?: number;
+  /** 搜索框旁的第二个下拉筛选，默认是"询价人"；传入后可替换为其它维度（如采购部登记的"供应商"） */
+  secondarySelect?: SecondarySelectConfig;
 }
 
 // ── 状态角标计数 ──────────────────────────────────────────
@@ -67,10 +76,18 @@ export function InquiryFilterBar({
   onClearAssociation,
   records,
   filteredCount,
+  secondarySelect,
 }: InquiryFilterBarProps) {
   const unlinkedCount = records.filter((record) => !record.customerId).length;
   const shouldShowUnlinkedFilter = unlinkedCount > 0;
   const divider = <span className="select-none text-gray-200 dark:text-gray-700">·</span>;
+
+  const secondary: SecondarySelectConfig = secondarySelect ?? {
+    label: '询价人',
+    value: filter.inquirer,
+    options: inquirers,
+    onChange: (value: string) => setFilter({ ...filter, inquirer: value }),
+  };
 
   useEffect(() => {
     if (filter.linkStatus === 'unlinked' && unlinkedCount === 0) {
@@ -176,12 +193,12 @@ export function InquiryFilterBar({
           }
         />
         <select
-          value={filter.inquirer}
-          onChange={(e) => setFilter({ ...filter, inquirer: e.target.value })}
+          value={secondary.value}
+          onChange={(e) => secondary.onChange(e.target.value)}
           className="h-7 shrink-0 rounded-lg border border-gray-200 bg-white px-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
         >
-          <option value="">询价人</option>
-          {inquirers.map((name) => (
+          <option value="">{secondary.label}</option>
+          {secondary.options.map((name) => (
             <option key={name} value={name}>{name}</option>
           ))}
         </select>

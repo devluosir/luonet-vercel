@@ -31,6 +31,7 @@ export function PurchaseRegistrationPage() {
   });
 
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
+  const [supplier, setSupplier] = useState('');
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -46,8 +47,55 @@ export function PurchaseRegistrationPage() {
     [records]
   );
 
-  const { filter, setFilter, filteredAndSorted, baseFiltered, inquirers, activeCount, reset } =
-    useInquiryFilter(activeRecords);
+  // 筛选栏的"报价状态"等维度基于询报价登记的 record.quotedStatuses 设计，但采购部登记
+  // 用的是自己专属的 purchaseQuotedStatuses（与 PurchaseRegistrationRow 的预览逻辑一致）。
+  // 受限权限（仅有 purchaseRegistration、无 inquiry 权限）的用户，接口会整段裁剪掉
+  // quotedStatuses 字段（sanitizeRestrictedRecord），此处用 purchaseQuotedStatuses 顶替，
+  // 既保证语义正确，也避免该字段为 undefined 时筛选栏读取 .length/.some 报错。
+  const filterableRecords = useMemo(
+    () =>
+      activeRecords.map((record) => ({
+        ...record,
+        quotedStatuses: record.purchaseQuotedStatuses ?? [],
+      })),
+    [activeRecords]
+  );
+
+  const { filter, setFilter, filteredAndSorted, baseFiltered, activeCount, reset } =
+    useInquiryFilter(filterableRecords);
+
+  // 采购部登记按"供应商"筛选（对应编辑弹窗里的采购部专属供应商列表），而不是询价人
+  const supplierOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          activeRecords.flatMap((record) =>
+            (record.purchaseSupplierStatuses ?? []).map((s) => s.supplierShortName).filter(Boolean)
+          )
+        )
+      ).sort(),
+    [activeRecords]
+  );
+
+  const matchesSupplier = (record: InquiryRecord) =>
+    !supplier || (record.purchaseSupplierStatuses ?? []).some((s) => s.supplierShortName === supplier);
+
+  const supplierFilteredBase = useMemo(
+    () => baseFiltered.filter(matchesSupplier),
+    [baseFiltered, supplier]
+  );
+
+  const finalRecords = useMemo(
+    () => filteredAndSorted.filter(matchesSupplier),
+    [filteredAndSorted, supplier]
+  );
+
+  const totalActiveCount = activeCount + (supplier ? 1 : 0);
+
+  const handleReset = () => {
+    reset();
+    setSupplier('');
+  };
 
   if (status === 'loading' || !user || !permissionUser) {
     return <FullScreenSpinner />;
@@ -88,15 +136,21 @@ export function PurchaseRegistrationPage() {
             id="purchase-registration-filter-panel"
             filter={filter}
             setFilter={setFilter}
-            inquirers={inquirers}
-            activeCount={activeCount}
-            onReset={reset}
-            records={baseFiltered}
-            filteredCount={filteredAndSorted.length}
+            inquirers={[]}
+            activeCount={totalActiveCount}
+            onReset={handleReset}
+            records={supplierFilteredBase}
+            filteredCount={finalRecords.length}
+            secondarySelect={{
+              label: '供应商',
+              value: supplier,
+              options: supplierOptions,
+              onChange: setSupplier,
+            }}
           />
         </div>
         <PurchaseRegistrationTable
-          records={filteredAndSorted}
+          records={finalRecords}
           onUpdate={(id, patch) => patchRecordForView(id, patch)}
           onEditRecord={setEditingRecord}
         />
