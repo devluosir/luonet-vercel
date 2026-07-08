@@ -103,6 +103,22 @@ export const PAYMENT_TERMS_OPTIONS = [
     { id: 'progress_payment', chinese: '分阶段付款', english: 'Payment Term: Progress payment.', remark: '按里程碑/节点付款' }
   ];
 
+/** 判断一份 notesConfig 是否已经是"内销条款"（报价单简版或购销合同正式版任一种），用于避免误判成外贸 Notes 而被覆盖 */
+export function isDomesticNotesConfig(config: NoteConfig[]): boolean {
+  return config.some(
+    (note) => note.id.startsWith('domestic_clause_') || note.id.startsWith('domestic_quote_clause_')
+  );
+}
+
+/** 判断当前条款内容是否仍是某个默认模板的原始状态（未被用户编辑过）；用于切换内销单据类型时判断是否需要二次确认覆盖 */
+export function isNotesConfigUnedited(config: NoteConfig[], defaults: NoteConfig[]): boolean {
+  if (config.length !== defaults.length) return false;
+  return config.every((note, i) => {
+    const d = defaults[i];
+    return !!d && note.id === d.id && note.visible === d.visible && (note.content ?? '') === (d.content ?? '');
+  });
+}
+
 // 提取英文内容的工具函数
 export const extractEnglishContent = (bilingualText: string): string => {
   const parts = bilingualText.split(' / ');

@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
 import type { NoteConfig } from '../types/notes';
-import { DEFAULT_NOTES_CONFIG, DOMESTIC_NOTES_CONFIG } from '../types/notes';
+import {
+  DEFAULT_NOTES_CONFIG,
+  DOMESTIC_NOTES_CONFIG,
+  DOMESTIC_QUOTATION_NOTES_CONFIG,
+  isDomesticNotesConfig,
+} from '../types/notes';
 import { getInitialQuotationData } from '@/utils/quotationInitialData';
 import { OUR_COMPANY_PROFILE } from '@/utils/domesticCompanyProfile';
 import { getDefaultNotes } from '@/utils/getDefaultNotes';
@@ -194,21 +199,28 @@ export const useQuotationStore = create<QuotationState>((set, _get) => ({
     }
     if (tab === 'domestic') {
       const shouldCaptureSnapshot = state.tab !== 'domestic';
+      // 内销单据默认按"报价单"（简版条款）处理，与新建内销单据的默认值（quotationInitialData.ts）保持一致；
+      // 只有明确已经是"产品购销合同"的既有数据才走合同条款
+      const domesticDocType = state.data.domesticDocType ?? 'quotation';
+      const defaultDomesticNotes =
+        domesticDocType === 'contract' ? DOMESTIC_NOTES_CONFIG : DOMESTIC_QUOTATION_NOTES_CONFIG;
       return {
         tab,
         data: {
           ...state.data,
           mode: 'domestic',
           currency: 'CNY',
+          domesticDocType,
           // 供方默认用我方公司真实资料；需方独立留空，不从外贸单/销售确认的 to 字段带入，
           // 避免内销与外贸客户资料互相污染（两者往往是完全不同的交易对象）
           domesticSeller: state.data.domesticSeller ?? { ...OUR_COMPANY_PROFILE },
           domesticBuyer: state.data.domesticBuyer ?? {},
           domesticTotalRemark: state.data.domesticTotalRemark ?? '价格含13个点专票及运费',
         },
-        notesConfig: state.notesConfig.some((note) => note.id.startsWith('domestic_clause_'))
-          ? state.notesConfig
-          : DOMESTIC_NOTES_CONFIG,
+        // 只有当前 notesConfig 已经是内销条款（报价单简版或合同正式版任一种）时才保留，
+        // 避免从外贸/销售确认切进来时把外贸 Notes 误当内销条款留着，也避免不管 domesticDocType
+        // 是哪种都写死用合同条款（此前的 bug：新建报价单类型的内销单据切进来会显示购销合同条款）
+        notesConfig: isDomesticNotesConfig(state.notesConfig) ? state.notesConfig : defaultDomesticNotes,
         preDomesticSnapshot: shouldCaptureSnapshot
           ? {
               currency: state.data.currency,

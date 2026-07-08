@@ -19,6 +19,8 @@ import { useToast } from '@/components/ui/Toast';
 import { numberToWords } from '@/utils/quotationCalculations';
 import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
 import { getHistoryTypeFromTab, saveOrUpdate, type QuotationTab } from '../services/quotation.service';
+import { DOMESTIC_NOTES_CONFIG, DOMESTIC_QUOTATION_NOTES_CONFIG, isNotesConfigUnedited } from '../types/notes';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useGenerateService } from '../services/generate.service';
 import { downloadPdf } from '../services/generate.service';
 import { buildPreviewPayload } from '../services/preview.service';
@@ -73,6 +75,7 @@ export default function QuotationPage() {
   const pathname = usePathname();
   const { user, handleLogout } = useAppUser();
   const { showToast } = useToast();
+  const confirm = useConfirm();
 
   // 性能调试开关（开发模式）
   if (process.env.NODE_ENV === 'development') {
@@ -94,6 +97,7 @@ export default function QuotationPage() {
   const isPasteDialogOpen = useQuotationStore(sel.isPasteDialogOpen);
   const previewItem = useQuotationStore(sel.previewItem);
   const notesConfig = useQuotationStore(sel.notesConfig);
+  const setNotesConfig = useQuotationStore(sel.setNotesConfig);
 
   // 原子字段 selectors（用于优化依赖）
   const from = useQuotationStore(sel.from);
@@ -177,6 +181,39 @@ export default function QuotationPage() {
 
     _updateData(filtered);
   }, [_updateData, PAGE_ALLOWED_KEYS]);
+
+  // 内销单据类型切换：报价单（简版条款）⇄ 产品购销合同（正式法律条款），两者条款内容本就不同，
+  // 切换时把条款列表换成目标类型的默认模板；若当前条款已被用户手动编辑过（不再是原始默认值），
+  // 切换前先弹窗二次确认，避免静默丢失编辑内容
+  const handleDomesticDocTypeChange = useCallback(
+    async (nextType: 'quotation' | 'contract') => {
+      const currentType = data.domesticDocType ?? 'contract';
+      if (nextType === currentType) return;
+
+      const currentDefaults = currentType === 'quotation' ? DOMESTIC_QUOTATION_NOTES_CONFIG : DOMESTIC_NOTES_CONFIG;
+      const nextDefaults = nextType === 'quotation' ? DOMESTIC_QUOTATION_NOTES_CONFIG : DOMESTIC_NOTES_CONFIG;
+
+      const applySwap = () => {
+        updateData({ domesticDocType: nextType });
+        setNotesConfig(nextDefaults);
+      };
+
+      if (isNotesConfigUnedited(notesConfig, currentDefaults)) {
+        applySwap();
+        return;
+      }
+
+      const confirmed = await confirm({
+        title: '切换单据类型',
+        description: `切换到"${nextType === 'quotation' ? '报价单' : '产品购销合同'}"会把当前的合同条款替换为该类型的默认条款，你已编辑过的条款内容将会丢失。确定切换吗？`,
+        confirmLabel: '切换并替换',
+        variant: 'danger',
+      });
+      if (!confirmed) return;
+      applySwap();
+    },
+    [confirm, data.domesticDocType, notesConfig, setNotesConfig, updateData]
+  );
 
   // Items表格专用适配器：拒绝整包，只写items字段
   const handleItemsChange = useCallback((
@@ -681,7 +718,7 @@ export default function QuotationPage() {
                         <button
                           key={option.value}
                           type="button"
-                          onClick={() => updateData({ domesticDocType: option.value as 'quotation' | 'contract' })}
+                          onClick={() => handleDomesticDocTypeChange(option.value as 'quotation' | 'contract')}
                           className={`rounded px-2 py-1 text-[11px] font-medium transition-all ${
                             (data.domesticDocType ?? 'contract') === option.value
                               ? 'bg-[#007AFF] text-white shadow-sm'

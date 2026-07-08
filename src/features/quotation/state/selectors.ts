@@ -27,6 +27,7 @@ export const sel = {
   isPasteDialogOpen: (s: QuotationState) => s.isPasteDialogOpen,
   previewItem: (s: QuotationState) => s.previewItem,
   notesConfig: (s: QuotationState) => s.notesConfig,
+  setNotesConfig: (s: QuotationState) => s.setNotesConfig,
   compactMode: (s: QuotationState) => s.compactMode,
   
   // 数据子字段选择器（优先使用这些而不是整块data）

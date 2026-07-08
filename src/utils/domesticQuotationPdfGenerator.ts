@@ -197,8 +197,9 @@ function drawClauses(
     .sort((a, b) => a.order - b.order);
 
   doc.setFontSize(9);
-  const lineHeight = 5.5; // 单条条款内换行的行距，比之前(5)更舒展
-  const clauseGap = 2.5; // 条款与条款之间的额外间距，避免挤在一起
+  // 报价单（非合同）条款：行距更紧凑、不加粗；产品购销合同保持原有更舒展的行距+首行加粗
+  const lineHeight = isContract ? 5.5 : 4.2;
+  const clauseGap = isContract ? 2.5 : 1;
   clauses.forEach((note, index) => {
     const number = isContract ? getDomesticClauseNumber(index) : String(index + 1);
     const { title, body } = splitClause(note.content ?? '');
@@ -207,7 +208,7 @@ function drawClauses(
     y = checkPage(doc, y, lines.length * lineHeight + clauseGap + 2, margin, pageHeight);
 
     lines.forEach((line: string, lineIndex: number) => {
-      setCnFont(doc, lineIndex === 0 ? 'bold' : 'normal');
+      setCnFont(doc, isContract && lineIndex === 0 ? 'bold' : 'normal');
       doc.text(line, margin, y);
       y += lineHeight;
     });
@@ -405,6 +406,15 @@ export async function generateDomesticQuotationPDF(
     doc.text(line, margin, y);
   });
   y += 7;
+
+  // 报价单（非合同）条款前加"备注："起头，与产品购销合同的正式编号条款区分开
+  if (!isContract) {
+    y = checkPage(doc, y, 8, margin, pageHeight);
+    doc.setFontSize(9);
+    setCnFont(doc, 'normal');
+    doc.text('备注：', margin, y);
+    y += 5;
+  }
 
   y = drawClauses(doc, notesConfig, margin, pageWidth, pageHeight, y, isContract);
 
