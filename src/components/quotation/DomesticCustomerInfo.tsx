@@ -42,7 +42,7 @@ function FieldInput({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-[#86868B] dark:text-[#98989D]">
+      <span className="mb-0.5 block text-xs font-medium text-[#86868B] dark:text-[#98989D]">
         {label}
       </span>
       <input
@@ -51,7 +51,7 @@ function FieldInput({
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         list={listId}
-        className="h-8 w-full rounded-lg border border-[#E5E5EA] bg-white px-2 text-sm text-[#1D1D1F] outline-none transition-colors focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF]/25 dark:border-[#3A3A3C] dark:bg-[#1C1C1E] dark:text-[#F5F5F7]"
+        className="h-7 w-full rounded-lg border border-[#E5E5EA] bg-white px-2 text-sm text-[#1D1D1F] outline-none transition-colors focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF]/25 dark:border-[#3A3A3C] dark:bg-[#1C1C1E] dark:text-[#F5F5F7]"
       />
     </label>
   );
@@ -71,8 +71,8 @@ function FieldTextarea({
   const ref = useRef<HTMLTextAreaElement | null>(null);
 
   const adjust = useCallback((el: HTMLTextAreaElement) => {
-    el.style.height = '32px';
-    el.style.height = `${Math.max(32, Math.min(el.scrollHeight, 120))}px`;
+    el.style.height = '28px';
+    el.style.height = `${Math.max(28, Math.min(el.scrollHeight, 120))}px`;
   }, []);
 
   useEffect(() => {
@@ -81,7 +81,7 @@ function FieldTextarea({
 
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-[#86868B] dark:text-[#98989D]">
+      <span className="mb-0.5 block text-xs font-medium text-[#86868B] dark:text-[#98989D]">
         {label}
       </span>
       <textarea
@@ -92,7 +92,7 @@ function FieldTextarea({
           onChange(e.target.value);
           adjust(e.target);
         }}
-        className="w-full resize-none overflow-hidden rounded-lg border border-[#E5E5EA] bg-white px-2 py-1.5 text-sm leading-5 text-[#1D1D1F] outline-none transition-colors focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF]/25 dark:border-[#3A3A3C] dark:bg-[#1C1C1E] dark:text-[#F5F5F7]"
+        className="w-full resize-none overflow-hidden rounded-lg border border-[#E5E5EA] bg-white px-2 py-1 text-sm leading-5 text-[#1D1D1F] outline-none transition-colors focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF]/25 dark:border-[#3A3A3C] dark:bg-[#1C1C1E] dark:text-[#F5F5F7]"
       />
     </label>
   );
@@ -196,8 +196,8 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
   }, [buyer]);
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 rounded-xl border border-[#E5E5EA] bg-white/70 p-3 dark:border-[#3A3A3C] dark:bg-[#1C1C1E]/60 md:grid-cols-3">
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-2 rounded-xl border border-[#E5E5EA] bg-white/70 p-2.5 dark:border-[#3A3A3C] dark:bg-[#1C1C1E]/60 md:grid-cols-3">
         <FieldInput
           label={isContract ? '合同编号' : '报价单编号'}
           value={data.quotationNo || ''}
@@ -221,16 +221,16 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
         ))}
       </datalist>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {([
           ['domesticSeller', '供方', seller],
           ['domesticBuyer', '需方', buyer],
         ] as const).map(([party, title, details]) => (
           <section
             key={party}
-            className="rounded-xl border border-[#E5E5EA] bg-white/70 p-3 dark:border-[#3A3A3C] dark:bg-[#1C1C1E]/60"
+            className="rounded-xl border border-[#E5E5EA] bg-white/70 p-2.5 dark:border-[#3A3A3C] dark:bg-[#1C1C1E]/60"
           >
-            <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="mb-2 flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {title}
               </h3>
@@ -256,7 +256,7 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
                 listId={party === 'domesticBuyer' ? BUYER_CUSTOMER_LIST_ID : undefined}
               />
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {/* 长字段各占一行：名称、地址（多行文本框）、税号，避免单行输入框把后半段内容裁掉 */}
                 <FieldInput
                   label={fieldLabel('name')}
@@ -276,7 +276,7 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
                   onChange={(value) => updateParty(party, 'taxNo', value)}
                 />
                 {/* 法定代表人/委托代理人两两配对 */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <FieldInput
                     label={fieldLabel('legalRepresentative')}
                     value={String(details.legalRepresentative ?? '')}
@@ -295,7 +295,7 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
                   onChange={(value) => updateParty(party, 'phone', value)}
                 />
                 {/* 开户行/帐号两两配对 */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <FieldInput
                     label={fieldLabel('bankName')}
                     value={String(details.bankName ?? '')}
