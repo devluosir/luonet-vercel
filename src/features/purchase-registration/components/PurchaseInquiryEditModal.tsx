@@ -40,11 +40,13 @@ interface PurchaseInquiryEditModalProps {
 export function PurchaseInquiryEditModal({ record, onClose, onSave }: PurchaseInquiryEditModalProps) {
   const [localSuppliers, setLocalSuppliers] = useState<SupplierQuoteStatus[]>([]);
   const [localQuoted, setLocalQuoted] = useState<CustomerQuoteStatus[]>([]);
+  const [localDescription, setLocalDescription] = useState('');
 
   useEffect(() => {
     if (!record) return;
     setLocalSuppliers(record.purchaseSupplierStatuses ?? []);
     setLocalQuoted(record.purchaseQuotedStatuses ?? []);
+    setLocalDescription(record.description ?? '');
   }, [record]);
 
   // 借用询报价登记的供应商/已报价编辑器：该组件只读写 record.supplierStatuses / record.quotedStatuses，
@@ -59,6 +61,7 @@ export function PurchaseInquiryEditModal({ record, onClose, onSave }: PurchaseIn
 
   const handleSave = () => {
     const patch: Partial<InquiryRecord> = {
+      description: localDescription.trim(),
       purchaseSupplierStatuses: localSuppliers,
       purchaseQuotedStatuses: localQuoted,
     };
@@ -112,15 +115,23 @@ export function PurchaseInquiryEditModal({ record, onClose, onSave }: PurchaseIn
         <div className="h-px bg-gray-100 dark:bg-gray-700" />
 
         <div className="px-6 py-5">
-          {record.description && (
-            <p className="mb-4 truncate text-sm text-gray-500 dark:text-gray-400" title={record.description}>
-              {record.description}
-            </p>
-          )}
+          <div className="mb-4 space-y-1">
+            <label className="block text-xs font-medium text-gray-400 dark:text-gray-500">内容描述</label>
+            <input
+              value={localDescription}
+              onChange={(e) => setLocalDescription(e.target.value)}
+              placeholder="产品名称、规格、数量…（选填）"
+              className={
+                'h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none ' +
+                'focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 ' +
+                'dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:border-blue-400'
+              }
+            />
+          </div>
 
           <div className="mb-4 rounded-xl bg-gray-50 p-4 ring-1 ring-gray-100 dark:bg-gray-800/50 dark:ring-gray-700">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-              询报价状态（采购部专属，不影响询报价登记）
+              询报价状态（更新为已报价后，报价状态会同步到销售部“飞罗已报价”）
             </p>
             <InquiryQuoteStatus
               record={shimRecord}
