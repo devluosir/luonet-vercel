@@ -32,6 +32,7 @@ export function PurchaseRegistrationPage() {
 
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
   const [supplier, setSupplier] = useState('');
+  const [supplierLinkFilter, setSupplierLinkFilter] = useState<'all' | 'unlinked'>('all');
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -80,21 +81,37 @@ export function PurchaseRegistrationPage() {
   const matchesSupplier = (record: InquiryRecord) =>
     !supplier || (record.purchaseSupplierStatuses ?? []).some((s) => s.supplierShortName === supplier);
 
+  // "待关联供应商"：采购部登记自己的供应商列表（purchaseSupplierStatuses）还没有任何一条，
+  // 替代原本复用询报价登记"待关联客户"（record.customerId，那是销售侧概念，采购部登记用不上）
+  const matchesSupplierLink = (record: InquiryRecord) =>
+    supplierLinkFilter !== 'unlinked' || (record.purchaseSupplierStatuses ?? []).length === 0;
+
   const supplierFilteredBase = useMemo(
     () => baseFiltered.filter(matchesSupplier),
     [baseFiltered, supplier]
   );
 
-  const finalRecords = useMemo(
-    () => filteredAndSorted.filter(matchesSupplier),
-    [filteredAndSorted, supplier]
+  const linkFilteredBase = useMemo(
+    () => supplierFilteredBase.filter(matchesSupplierLink),
+    [supplierFilteredBase, supplierLinkFilter]
   );
 
-  const totalActiveCount = activeCount + (supplier ? 1 : 0);
+  const unlinkedSupplierCount = useMemo(
+    () => linkFilteredBase.filter((record) => (record.purchaseSupplierStatuses ?? []).length === 0).length,
+    [linkFilteredBase]
+  );
+
+  const finalRecords = useMemo(
+    () => filteredAndSorted.filter(matchesSupplier).filter(matchesSupplierLink),
+    [filteredAndSorted, supplier, supplierLinkFilter]
+  );
+
+  const totalActiveCount = activeCount + (supplier ? 1 : 0) + (supplierLinkFilter === 'unlinked' ? 1 : 0);
 
   const handleReset = () => {
     reset();
     setSupplier('');
+    setSupplierLinkFilter('all');
   };
 
   if (status === 'loading' || !user || !permissionUser) {
@@ -139,13 +156,19 @@ export function PurchaseRegistrationPage() {
             inquirers={[]}
             activeCount={totalActiveCount}
             onReset={handleReset}
-            records={supplierFilteredBase}
+            records={linkFilteredBase}
             filteredCount={finalRecords.length}
             secondarySelect={{
               label: '供应商',
               value: supplier,
               options: supplierOptions,
               onChange: setSupplier,
+            }}
+            linkFilter={{
+              label: '待关联供应商',
+              active: supplierLinkFilter === 'unlinked',
+              count: unlinkedSupplierCount,
+              onToggle: () => setSupplierLinkFilter((prev) => (prev === 'unlinked' ? 'all' : 'unlinked')),
             }}
           />
         </div>

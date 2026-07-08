@@ -16,6 +16,13 @@ interface SecondarySelectConfig {
   onChange: (value: string) => void;
 }
 
+interface LinkFilterConfig {
+  label: string;
+  active: boolean;
+  count: number;
+  onToggle: () => void;
+}
+
 interface InquiryFilterBarProps {
   id?: string;
   filter: InquiryFilterState;
@@ -28,6 +35,8 @@ interface InquiryFilterBarProps {
   filteredCount?: number;
   /** 搜索框旁的第二个下拉筛选，默认是"询价人"；传入后可替换为其它维度（如采购部登记的"供应商"） */
   secondarySelect?: SecondarySelectConfig;
+  /** "待关联客户"筛选芯片，默认按 record.customerId 判断；传入后可替换为其它维度（如采购部登记的"待关联供应商"） */
+  linkFilter?: LinkFilterConfig;
 }
 
 // ── 状态角标计数 ──────────────────────────────────────────
@@ -77,9 +86,9 @@ export function InquiryFilterBar({
   records,
   filteredCount,
   secondarySelect,
+  linkFilter,
 }: InquiryFilterBarProps) {
-  const unlinkedCount = records.filter((record) => !record.customerId).length;
-  const shouldShowUnlinkedFilter = unlinkedCount > 0;
+  const defaultUnlinkedCount = records.filter((record) => !record.customerId).length;
   const divider = <span className="select-none text-gray-200 dark:text-gray-700">·</span>;
 
   const secondary: SecondarySelectConfig = secondarySelect ?? {
@@ -89,11 +98,23 @@ export function InquiryFilterBar({
     onChange: (value: string) => setFilter({ ...filter, inquirer: value }),
   };
 
+  const link: LinkFilterConfig = linkFilter ?? {
+    label: '待关联客户',
+    active: filter.linkStatus === 'unlinked',
+    count: defaultUnlinkedCount,
+    onToggle: () =>
+      setFilter({
+        ...filter,
+        linkStatus: filter.linkStatus === 'unlinked' ? 'all' : 'unlinked',
+      }),
+  };
+  const shouldShowLinkFilter = link.count > 0;
+
   useEffect(() => {
-    if (filter.linkStatus === 'unlinked' && unlinkedCount === 0) {
+    if (!linkFilter && filter.linkStatus === 'unlinked' && defaultUnlinkedCount === 0) {
       setFilter({ ...filter, linkStatus: 'all' });
     }
-  }, [filter, setFilter, unlinkedCount]);
+  }, [filter, setFilter, defaultUnlinkedCount, linkFilter]);
 
   return (
     <div
@@ -127,20 +148,15 @@ export function InquiryFilterBar({
 
         {divider}
 
-        {shouldShowUnlinkedFilter && (
+        {shouldShowLinkFilter && (
           <>
             <FilterChip
-              label="待关联客户"
-              active={filter.linkStatus === 'unlinked'}
+              label={link.label}
+              active={link.active}
               activeColor="bg-slate-700 text-white"
-              badge={unlinkedCount}
+              badge={link.count}
               badgeColor="bg-slate-700"
-              onClick={() =>
-                setFilter({
-                  ...filter,
-                  linkStatus: filter.linkStatus === 'unlinked' ? 'all' : 'unlinked',
-                })
-              }
+              onClick={link.onToggle}
             />
 
             {divider}
