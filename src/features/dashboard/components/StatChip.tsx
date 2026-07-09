@@ -1,10 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import type { LucideIcon } from 'lucide-react';
 
 interface StatChipProps {
-  icon: LucideIcon;
+  /** 大部分统计项用 lucide-react 图标，报价/合同 4 项用 TradeDocIcons 自定义组件，类型放宽兼容两者 */
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   label: string;
   value: number;
   colorClass: string;

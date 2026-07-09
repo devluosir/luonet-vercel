@@ -29,7 +29,7 @@ export function UserCard({ user, onEdit }: UserCardProps) {
       tabIndex={0}
       onClick={() => onEdit(user)}
       onKeyDown={(e) => e.key === 'Enter' && onEdit(user)}
-      className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+      className="flex items-center gap-3 px-4 py-3.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
     >
       {/* Avatar + 在线点 */}
       <div className="relative shrink-0">

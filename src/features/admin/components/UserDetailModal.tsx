@@ -122,11 +122,11 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[90dvh] w-full max-w-sm flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-[#1c1c1e]">
+      <div className="flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-[#1c1c1e]">
 
         {/* ── 用户信息头 ── */}
-        <div className="flex shrink-0 items-center gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${
+        <div className="flex shrink-0 items-center gap-3 border-b border-gray-100 px-6 py-4 dark:border-gray-700">
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-semibold text-white ${
             user.isAdmin ? 'bg-blue-500' : 'bg-gray-400 dark:bg-gray-500'
           }`}>
             {initial}
@@ -147,7 +147,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
         </div>
 
         {/* ── 可滚动内容区 ── */}
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
 
           {/* 错误提示 */}
           {error && (
@@ -158,29 +158,29 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
 
           {/* ── 账户设置 ── */}
           <section>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
               账户设置
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               {/* 管理员开关 */}
-              <div className="flex items-center justify-between rounded-lg border border-gray-200 px-2.5 py-2 dark:border-gray-700">
-                <div className="flex min-w-0 items-center gap-2">
-                  <Shield className="h-3.5 w-3.5 shrink-0 text-blue-400" />
+              <div className="flex items-center justify-between rounded-xl border border-gray-200 px-3.5 py-3 dark:border-gray-700">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <Shield className="h-4 w-4 shrink-0 text-blue-400" />
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-gray-900 dark:text-white">管理员</p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{isAdmin ? '是' : '否'}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">管理员</p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500">{isAdmin ? '是' : '否'}</p>
                   </div>
                 </div>
                 <Toggle on={isAdmin} onChange={toggleAdmin} color="bg-blue-600" disabled={isBusy} />
               </div>
 
               {/* 账户状态开关 */}
-              <div className="flex items-center justify-between rounded-lg border border-gray-200 px-2.5 py-2 dark:border-gray-700">
-                <div className="flex min-w-0 items-center gap-2">
-                  <Power className="h-3.5 w-3.5 shrink-0 text-green-400" />
+              <div className="flex items-center justify-between rounded-xl border border-gray-200 px-3.5 py-3 dark:border-gray-700">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <Power className="h-4 w-4 shrink-0 text-green-400" />
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-gray-900 dark:text-white">账户</p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{isActive ? '启用' : '禁用'}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">账户</p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500">{isActive ? '启用' : '禁用'}</p>
                   </div>
                 </div>
                 <Toggle on={isActive} onChange={toggleActive} color="bg-green-600" disabled={isBusy} />
@@ -190,7 +190,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
 
           {/* ── 模块权限 ── */}
           <section>
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-2.5 flex items-center justify-between">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                 模块权限
               </p>
@@ -206,28 +206,31 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
               )}
             </div>
             {isAdmin && (
-              <p className="mb-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
+              <p className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
                 管理员身份只控制后台管理入口，业务模块仍按以下开关授权
               </p>
             )}
-            <div className="space-y-3">
+            <div className="space-y-4">
               {CATEGORY_ORDER.map((category) => {
                 const categoryModules = PERMISSION_MODULES.filter((module) => module.category === category);
                 if (categoryModules.length === 0) return null;
 
                 return (
-                  <div key={category}>
-                    <p className="mb-1 px-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <div
+                    key={category}
+                    className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 dark:border-gray-800 dark:bg-gray-900/30"
+                  >
+                    <p className="mb-2 px-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                       {CATEGORY_LABELS[category]}
                     </p>
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {categoryModules.map((module) => {
                         const perm = permissions.find((p) => p.moduleId === module.moduleId);
                         const parentEnabled = perm?.canAccess ?? false;
                         const hasAdvanced = !!module.advancedFeatures?.length;
 
                         return (
-                          <div key={module.moduleId} className={hasAdvanced ? 'col-span-2' : undefined}>
+                          <div key={module.moduleId} className={hasAdvanced ? 'col-span-2 sm:col-span-3' : undefined}>
                             <PermissionToggle
                               moduleId={module.moduleId}
                               name={module.label}
@@ -237,7 +240,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                               disabled={isBusy}
                             />
                             {hasAdvanced && (
-                              <div className="mt-1 space-y-1 border-l-2 border-gray-100 pl-3 dark:border-gray-800">
+                              <div className="mt-1.5 grid grid-cols-1 gap-1.5 border-l-2 border-gray-200 pl-3 dark:border-gray-700 sm:grid-cols-2">
                                 {module.advancedFeatures!.map((feature) => {
                                   const featurePerm = permissions.find((p) => p.moduleId === feature.moduleId);
                                   return (
@@ -266,7 +269,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
         </div>
 
         {/* ── 底部操作 ── */}
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-gray-100 px-6 py-4 dark:border-gray-700">
           <button
             onClick={handleDelete}
             disabled={isBusy || isCurrentUser}

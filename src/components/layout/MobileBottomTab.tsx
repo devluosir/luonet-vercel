@@ -67,8 +67,8 @@ interface MobileBottomTabProps {
 const QUICK_CREATE_MODULE_ID: Record<string, string> = {
   quotation: 'quotation',
   confirmation: 'quotation',
-  'quotation-domestic': 'quotation',
-  'quotation-domestic-contract': 'quotation',
+  'quotation-domestic': 'domesticQuotation',
+  'quotation-domestic-contract': 'domesticQuotation',
   packing: 'packing',
   invoice: 'invoice',
   purchase: 'purchase',
@@ -87,7 +87,7 @@ const REGISTER_LINKS: MobileMenuLink[] = [
   { id: 'inquiry', label: '询报价登记', path: '/inquiry', icon: Search, moduleId: 'inquiry' },
   { id: 'order', label: '订单状态表', path: '/order', icon: ClipboardCheck, moduleId: 'inquiry' },
   { id: 'purchase-registration', label: '采购部登记', path: '/purchase-registration', icon: ClipboardCheck, moduleId: 'purchaseRegistration' },
-  { id: 'purchase-order-table', label: '采购订单表', path: '/purchase-order-table', icon: ShoppingCart, moduleId: 'purchaseOrderTable' },
+  { id: 'purchase-order-table', label: '采购订单表', path: '/purchase-order-table', icon: ShoppingCart, moduleId: 'purchaseRegistration' },
 ];
 
 const MANAGE_LINKS: MobileMenuLink[] = [

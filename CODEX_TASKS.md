@@ -485,6 +485,200 @@ function isItemActive(item: SidebarItem, pathname: string, tab: string | null, d
 
 **Status:** not started
 
+## TASK-111：内销报价合同独立权限开关 + 采购部登记/采购订单表合并权限开关 + 管理后台界面重排
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+
+**执行记录**：
+- `permissionModules.ts` 新增 `domesticQuotation`（内销报价合同），删除 `purchaseOrderTable`，`purchaseRegistration` label 改为"采购部登记 / 采购订单表"。
+- `mapPermissions.ts`、`types/permissions.ts` 同步增删字段；`domestic-quotation`/`domestic-contract` 的 `documentTypePermissions`/`hasDocumentTypePermission` 改读 `domesticQuotation`。
+- `AppSidebar.tsx`（`NAV_ITEMS` + `PERMISSION_MODULE_MAP`）、`MobileBottomTab.tsx`（`QUICK_CREATE_MODULE_ID` + `REGISTER_LINKS`）、`PurchaseOrderRegistrationPage.tsx` 的 `hasPermission` 调用同步改用新/合并后的 moduleId。
+- 额外发现并修正：`src/app/api/inquiry/[[...path]]/route.ts`（受限视图的服务端字段级访问控制，未在原 spec 文件清单里列出）也硬编码读取了 `purchaseOrderTable` moduleId，用于区分"采购部登记"和"采购订单表"两组可读写字段。已改成合并后的单一 `purchaseRegistration` 权限判断，`restrictToPurchaseOrderTable` 现在恒等于 `restrictToPurchaseRegistration`，两组受限字段（`PURCHASE_REGISTRATION_WRITE_FIELDS`/`PURCHASE_ORDER_TABLE_WRITE_FIELDS`）合并权限后一并放行。这处如果漏改，会导致合并权限后用户在采购订单表页面读写字段被服务端拒绝，属于本次实现中发现的必要修正，不是范围外改动。
+- 新建 `migrations/009_split_domestic_quotation_permission.sql`、`migrations/010_merge_purchase_registration_permissions.sql`，均未在沙箱执行（无 D1 remote 访问），命令写在文件头注释里，需要用户手动 `npx wrangler d1 execute ... --remote` 执行。
+- 管理后台重排：`AdminPage.tsx` 页头改用 `UserStats`（原来已有但未接入的组件）替代内联统计文字，容器改 `max-w-5xl` 更居中舒展；`UserStats.tsx` 加卡片外壳+分隔线；`UserDetailModal.tsx` 从 `max-w-sm` 加宽到 `max-w-2xl`，权限开关按分类包一层浅色卡片（`rounded-xl bg-gray-50/60`），网格从固定 2 列改成 `grid-cols-2 sm:grid-cols-3`；`UserCard.tsx` 行内边距微调。`CreateUserModal.tsx` 未改（本身没有拥挤问题，只有账号信息 + 管理员开关）。
+
+**未做**：未改权限检查机制本身、D1 `Permission` 表结构、`/api/admin/[...path]` 的 API 形状；未删除 D1 里历史的 `purchaseOrderTable` 权限行。
+
+**验证**：`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`npm run build` 沙箱 45s 超时内跑到 Next.js 编译阶段未见报错，未等到完全结束（同 TASK-109/110 沙箱前科）。**未做**：两份迁移 SQL 未在真实 D1 上执行验证，未用老账号实测迁移后的权限延续；管理后台视觉走查沙箱无可视浏览器，未截图。以上建议用户上线前自行验证。
+
+### 背景
+
+当前 `src/constants/permissionModules.ts` 里 `quotation`（外贸报价合同）这一个权限模块同时控制 4 个入口：外贸报价、外贸合同、内销报价、内销合同——`domestic-quotation`/`domestic-contract` 没有独立权限位，`src/utils/mapPermissions.ts`、`AppSidebar.tsx` 的 `PERMISSION_MODULE_MAP`、`MobileBottomTab.tsx` 的 `QUICK_CREATE_MODULE_ID` 里都是硬编码把这两项 fallback 到 `quotation` moduleId（见 TASK-109 背景："不新增权限维度，4 条入口继续共用 canCreateQuotation/'quotation' moduleId"）。用户现在明确要求内销报价合同要能单独开关，不再跟外贸报价合同绑在一起。
+
+同时，`purchaseRegistration`（采购部登记）和 `purchaseOrderTable`（采购订单表）目前是两个独立权限模块，用户要求合并成一个开关（跟 `inquiry` 模块"询报价登记表 / 订单状态表"合二为一的模式一致）。
+
+管理后台（`/admin`，`features/admin/`）目前功能齐全但比较拥挤：`UserDetailModal.tsx` 用 `max-w-sm` 的小弹窗塞下账户设置 + 4 个分类、每类 `grid-cols-2` 的权限开关网格，模块变多会越来越挤；`AdminPage.tsx` 顶部只有用户数统计+"添加用户"按钮，`UserList.tsx`/`UserCard.tsx` 排布也偏简陋。用户要求整体重新设计得"更舒展、精致、简洁明了"。
+
+### Files in scope
+
+- `src/constants/permissionModules.ts` — `PERMISSION_MODULES` 新增 `domesticQuotation`（label 内销报价合同，category `document`，放在 `quotation` 后面）；删除 `purchaseOrderTable`，`purchaseRegistration` 的 label 改为"采购部登记 / 采购订单表"（与 `inquiry` 一致的命名风格）
+- `src/utils/mapPermissions.ts` — `permissionsResult`/`documentTypePermissions`/`hasDocumentTypePermission` 里 `domestic-quotation`/`domestic-contract` 改读 `domesticQuotation`；移除 `purchaseOrderTable` 字段，所有原本读它的地方改读 `purchaseRegistration`；空权限默认对象（第 36～65 行附近）同步调整
+- `src/components/layout/AppSidebar.tsx` — `NAV_ITEMS` 里 `quotation-domestic`/`quotation-domestic-contract` 的 `permissionKey` 改成新增的 `canCreateDomesticQuotation`；`purchase-order-table` 的 `permissionKey` 改成 `canViewPurchaseRegistration`；`PERMISSION_MODULE_MAP` 同步增删
+- `src/components/layout/MobileBottomTab.tsx` — `QUICK_CREATE_MODULE_ID` 里两个内销条目的 moduleId 改成 `domesticQuotation`；`REGISTER_LINKS` 里 `purchase-order-table` 的 moduleId 改成 `purchaseRegistration`
+- `src/features/purchase-order-registration/app/PurchaseOrderRegistrationPage.tsx` 第 87 行 `hasPermission('purchaseOrderTable')` 改成 `hasPermission('purchaseRegistration')`
+- 新建 `migrations/0XX_split_domestic_quotation_permission.sql` — 给所有已有 `quotation=1` 的用户批量插入 `domesticQuotation=1`（参考 `migrations/007_grant_default_impa_permission.sql` 的写法：`INSERT ... SELECT ... WHERE NOT EXISTS`），保证老用户升级后不会突然失去内销报价/合同的访问权限
+- 新建 `migrations/0XX_merge_purchase_permissions.sql` — 把 `purchaseOrderTable=1` 但 `purchaseRegistration` 缺失/为 0 的用户，`purchaseRegistration` 置为 1（两者取"或"，不能让原本只有采购订单表权限的用户合并后失去访问）；旧的 `purchaseOrderTable` 行可以保留不删（不再被代码读取，属于死数据，不强制清理）
+- `src/features/admin/app/AdminPage.tsx`、`src/features/admin/components/UserList.tsx`、`UserCard.tsx`、`UserDetailModal.tsx`、`UserStats.tsx`、`CreateUserModal.tsx` — 界面重新排布（见验收标准）
+
+### Acceptance criteria
+
+- 管理后台权限开关列表里，"内销报价合同"是一个独立开关，不再和"外贸报价合同"共用；关掉"外贸报价合同"、只留"内销报价合同"开启时，侧边栏/移动端底部导航/首页统计只显示内销报价、内销合同两项，外贸报价、外贸合同两项消失，反之亦然
+- "采购部登记"和"采购订单表"合并成一个开关，勾选后 `/purchase-registration` 和 `/purchase-order-table` 两个页面都能访问，取消后两个页面都变成 `PermissionDenied`
+- 两个迁移 SQL 文件写好（不强制在沙箱里执行 remote，参照现有 migrations 目录下文件头注释格式写清楚 `npx wrangler d1 execute <db-name> --file=... --remote` 执行命令），并在验收步骤里提醒用户上线前手动跑一遍
+- 管理后台整体视觉重新设计，具体范围由实现者判断，但至少要解决：`UserDetailModal.tsx` 当前 `max-w-sm` 弹窗在权限项变多后拥挤的问题（可以考虑加宽、改用更清晰的分组/间距，不强制具体断点数值）；`AdminPage.tsx`/`UserList.tsx` 页头和列表的视觉密度可以更舒展。改动前后各截一张管理后台首屏 + 权限编辑弹窗的图，供用户对比
+- 保留所有现有功能：添加用户、编辑权限、管理员/启用开关、删除用户、重置未保存改动，一个都不能少
+
+### Non-goals / 红线
+
+- 不改权限检查的整体机制（`usePermissionStore.hasPermission` 的实现、D1 `Permission` 表结构、`/api/admin/[...path]` 的 API 形状），只新增/合并"模块"这一层数据
+- 不改 `inquiry` 模块本身（它已经是"询报价登记表 / 订单状态表"合并权限的先例，不用动）
+- 不删除 `purchaseOrderTable` 这个 moduleId 在 D1 里的历史数据行，只是代码不再读它
+- 管理后台重新设计不能砍掉任何现有可操作项（增删改用户、权限开关、管理员/启用状态、删除确认），纯视觉/布局层面的调整
+
+### Verification steps
+
+- `npx tsc --noEmit`
+- `npx eslint`（改动文件）
+- `npm run build`（沙箱 45s 超时前科，跑到编译阶段不报错即可）
+- 用一个原本只有 `quotation=1`（无 `domesticQuotation`）的老账号，确认迁移脚本跑过之后依然能看到内销报价/合同入口
+- 用一个原本只有 `purchaseOrderTable=1`、无 `purchaseRegistration` 的老账号，确认迁移脚本跑过之后 `/purchase-registration` 和 `/purchase-order-table` 都能访问
+- 管理后台页面截图走查（沙箱无可视浏览器，建议用户本地过一遍）
+
+**Status:** completed
+
+## TASK-112：首页去掉大按钮模块区 + 报价/合同图标复用到统计徽标与各处菜单
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+
+**执行记录**：
+- `DashboardPage.tsx` 删除了 `<DashboardModules>` 渲染及配套的 `availableQuickCreateModules`/`availableToolModules`/`availableToolsModules`、`handleModuleClick`/`handleModuleHover`、相关 import；`useDashboardDocuments()` 解构里也去掉了只服务这块区域的 `documentCounts`（hook 本身未改，仍会计算，只是页面不再取用）。
+- **偏离 spec 的一点**：`DashboardModules.tsx`、`components/dashboard/ModuleButton.tsx`、`features/dashboard/utils/moduleFilters.ts` 三个文件按 spec 本应在确认无其它引用后整个删除，但沙箱挂载这个项目文件夹的方式不支持删除/重命名已写入的文件（`rm`/`mv` 全部返回 `Operation not permitted`，只能覆盖内容）。已确认 `grep -r` 全仓库范围内这三个文件不再被任何地方引用（除了它们互相之间、以及原来的 `features/dashboard/index.ts` barrel 导出，barrel 里对应的 `DashboardModules`/`filterQuickCreateModules` 等导出也已经删掉），所以现在是**孤立但无害**的死文件，不影响 `tsc`/`eslint`/`build`。**需要用户在本地手动删除这三个文件**：`src/features/dashboard/components/DashboardModules.tsx`、`src/components/dashboard/ModuleButton.tsx`、`src/features/dashboard/utils/moduleFilters.ts`。
+- `StatsCards.tsx`（`STAT_ITEMS`）、`components/dashboard/RecentDocumentsList.tsx`（`getDocumentTypeInfo`）、`features/history/state/history.store.ts`（`getAvailableTabs`）三处的报价/合同 4 个类型图标都换成了 `ForeignQuotationIcon`/`ForeignContractIcon`/`DomesticQuotationIcon`/`DomesticContractIcon`。`StatChip.tsx` 的 `icon` prop 类型从 `LucideIcon` 放宽为 `React.ComponentType<React.SVGProps<SVGSVGElement>>`（同 TASK-109 对 `AppSidebar`/`MobileBottomTab` 的处理方式）；`features/history/types/index.ts` 的 `TabConfig.icon` 本来就是 `React.ComponentType<{ className?: string }>`，兼容 TradeDocIcons，未改。
+
+**未做**：`app/history/ExportModal.tsx`/`ImportModal.tsx` 里的通用 `FileText` 图标（跟单据类型选择器无关，是导出/导入面板的静态说明图标）未改；未触碰 `AppSidebar.tsx`/`MobileBottomTab.tsx`/`dashboardModules.ts` 里 TASK-109 已经换好的图标。
+
+**验证**：`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`npm run build` 沙箱 45s 超时内跑到 Next.js 编译阶段未见报错。`grep -r` 确认 `DashboardModules`/`ModuleButton`/`moduleFilters` 除孤立文件自身外无其它引用方。**未做**：无可视浏览器，未做首页/`/history` 页截图走查，未做多权限组合的交叉验证（依赖 TASK-111 的权限拆分，逻辑上应该正确但未实测）。
+
+### 背景
+
+首页 (`src/features/dashboard/app/DashboardPage.tsx`) 目前在统计区下面还保留一大块 `<DashboardModules>` 按钮网格（`quotation`/`confirmation`/`domestic-quotation`/`domestic-contract`/`packing`/`invoice`/`purchase`/`ai-email`/`history`/`customer` 共 10 个大按钮卡片，`components/dashboard/ModuleButton.tsx`，每个 `h-24`）。这些入口在 TASK-109/103 之后已经全部能通过桌面侧边栏 `AppSidebar.tsx`（新单据/登记表/管理/工具 四个分组）和移动端底部导航 `MobileBottomTab.tsx`（新建/登记/管理/工具 四个分类菜单）到达，首页大按钮区变成了冗余的"第二套入口"。用户要求去掉这块区域。
+
+TASK-109 已经做了 `ForeignQuotationIcon`/`ForeignContractIcon`/`DomesticQuotationIcon`/`DomesticContractIcon` 四个自定义图标（`src/components/icons/TradeDocIcons.tsx`），并接到了 `AppSidebar.tsx`/`MobileBottomTab.tsx`/`dashboardModules.ts` 的 `QUICK_CREATE_MODULES`。但还有几处展示"报价单/销售确认/内销报价/内销合同"四种单据类型的地方，仍然用通用的 `FileText`/`FileSignature` lucide 图标（报价 vs 合同不分主体形状，外贸 vs 内销不分角标），跟侧边栏已经不一致：
+
+1. `src/features/dashboard/components/StatsCards.tsx` 第 3～11、39～42 行，首页"今日新增"统计徽标（`StatChip`）
+2. `src/components/dashboard/RecentDocumentsList.tsx` 第 4、307～326 行，首页"最近单据"卡片列表的类型图标（`getDocumentTypeInfo`）
+3. `src/features/history/state/history.store.ts` 第 178～181 行，单据历史页 (`/history`) 顶部 4 个 tab 的图标
+
+### Files in scope
+
+- `src/features/dashboard/app/DashboardPage.tsx` — 删除 `<DashboardModules>` 渲染及其相关的 `availableQuickCreateModules`/`availableToolModules`/`availableToolsModules`（`useMemo` + `filterQuickCreateModules`/`filterToolModules`/`filterToolsModules` 调用）、`handleModuleClick`/`handleModuleHover`，以及只服务这块区域的 import
+- `src/features/dashboard/components/DashboardModules.tsx`、`src/components/dashboard/ModuleButton.tsx`、`src/features/dashboard/utils/moduleFilters.ts` — 先用 `grep -r` 确认删除首页引用后是否还有其它调用方（预期没有），没有就整个删除；有其它调用方就保留组件本身，只去掉首页这一处引用，并在实现记录里写清楚保留原因。`moduleFilters.ts` 里的 `filterQuickCreateModules` 目前对 `quotation-domestic`/`quotation-domestic-contract` 落到 `default: return true` 分支、完全没做权限过滤，是随手发现的既有缺口，不需要专门修——反正整个文件都要跟着一起下线，不必为它单独补权限判断逻辑
+- `src/features/dashboard/components/StatsCards.tsx` — `STAT_ITEMS` 的 `icon` 字段：`quotation`→`ForeignQuotationIcon`、`confirmation`→`ForeignContractIcon`、`domestic-quotation`→`DomesticQuotationIcon`、`domestic-contract`→`DomesticContractIcon`（从 `@/components/icons/TradeDocIcons` 导入）；`StatItem.icon`/相关类型目前是 lucide 专属的 `LucideIcon`，需要放宽成 `React.ComponentType<React.SVGProps<SVGSVGElement>>`（同 TASK-109 对 `AppSidebar`/`MobileBottomTab` 的处理方式）
+- `src/features/dashboard/components/StatChip.tsx` — 同步放宽 `icon` prop 类型
+- `src/components/dashboard/RecentDocumentsList.tsx` — `getDocumentTypeInfo` 里 4 个类型换成对应的 TradeDocIcons；相关类型标注同步放宽
+- `src/features/history/state/history.store.ts` — `getAvailableTabs()` 里 4 个 tab 的 `icon` 换成对应的 TradeDocIcons；`HistoryTabs.tsx` 或相关类型如果对 `icon` 字段有 `LucideIcon` 类型标注，同步放宽
+
+### Acceptance criteria
+
+- 首页不再出现原来的大按钮网格区域（10 个 `h-24` 卡片全部消失），页面从上到下变成：统计徽标区（今日单据 + 询价/已报价/订单）→ 询价/订单趋势图（TASK-110，TASK-113 会改动）→ 最近单据列表
+- 首页"今日新增"统计徽标里，报价单/销售确认/内销报价/内销合同 4 项分别显示 `ForeignQuotationIcon`/`ForeignContractIcon`/`DomesticQuotationIcon`/`DomesticContractIcon`，肉眼可辨认外贸用船/地球角标、内销用房屋角标（跟侧边栏已有的一致）
+- 首页"最近单据"卡片列表里，同 4 种类型的卡片图标同步换成一致的 TradeDocIcons
+- `/history` 单据历史页顶部 tab 的图标同步换成一致的 TradeDocIcons
+- 不影响任何权限过滤/跳转逻辑，只换图标组件和删除多余的按钮区域
+
+### Non-goals / 红线
+
+- 不改 `AppSidebar.tsx`/`MobileBottomTab.tsx`/`dashboardModules.ts` 里已经在 TASK-109 换好的图标（它们已经是对的，不用动）
+- 不改 `TradeDocIcons.tsx` 本身的图标形状/角标设计
+- 不改 `StatsCards`/`InquiryOrderStats` 的整体布局结构（徽标行、分隔线等，TASK-110 追加调整已经定好），只换图标
+- 不改权限判断逻辑本身（`documentTypePermissions`、`hasPermission` 等），只是删除一处冗余 UI 和换图标
+
+### Verification steps
+
+- `npx tsc --noEmit`
+- `npx eslint`（改动文件）
+- `npm run build`
+- `grep -r` 确认 `DashboardModules`/`ModuleButton`/`moduleFilters` 删除前没有遗漏的引用方
+- 桌面 + 移动端首页截图走查：大按钮区消失、统计徽标图标变化；`/history` 页 tab 图标变化
+- 权限账号交叉验证：只开外贸报价合同 / 只开内销报价合同（依赖 TASK-111 落地）时，首页统计徽标对应项目正确显示/隐藏
+
+**Status:** completed
+
+## TASK-113：首页趋势图按权限双表切换 + 增加"已报价"数据线
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+
+**执行记录**：
+- `inquiryStats.ts`：`isRecordQuoted`/`getQuotedOnDate` 加了第三个可选参数 `field: QuotedStatusField = 'quotedStatuses'`（不传等价于原行为，未破坏既有调用方）；新增 `getQuotedStatusList` 内部辅助函数和新导出函数 `getLatestQuotedDate(record, field)`——筛出 `type` 为 `quoted`/未定义的条目，各自解析出完整日期后取最晚的一个，找不到则 `null`。`TrendPoint` 加了 `quotedCount: number` 字段；`buildTrendData` 新增第三个参数 `quotedStatusField`（第四个参数改为 `bucketCount`，仍有默认值），用 `getLatestQuotedDate` 分桶产出已报价这条线。
+- `useInquiryOrderStats.ts` 加了第三个参数 `source: TrendSource = 'inquiry'`（新导出类型 `'inquiry' | 'purchase'`），只影响 `trend`（趋势图数据）里已报价线读哪个字段；`today`/`month`（"今日/本月"统计徽标）按 spec 要求保持不变，固定读 `quotedStatuses`，不受 `source` 影响。
+- `InquiryOrderTrendChart.tsx` 加了 `title`/`titleSlot`/`quotedLineLabel` 三个可选 prop（都有默认值，向后兼容），`LineChart` 新增第三条线（`dataKey="quotedCount"`，蓝色 `#3b82f6`，避免跟询价粉色/订单绿色冲突）。
+- 新建 `DashboardTrendSection.tsx`：只有一个权限时直接渲染对应图表（无 tab）；两个权限都有时渲染一个 tab 切换条（复用跟粒度切换按钮同样的视觉语言）作为 `titleSlot` 传入，`useState` 内部管理当前选中的 tab（默认 `'inquiry'`）；两个权限都没有时返回 `null`。**粒度选择（天/周/月/季/年度）两个 tab 共用同一份状态**（由 `DashboardPage.tsx` 的 `trendGranularity` 统一管理，不是每个 tab 各自独立记忆）——这是 spec 里明确留给实现者决定的两选一，已在这里写清楚选了"共用"。
+- `DashboardPage.tsx`：`useInquiryOrderStats` 现在按 `hasInquiryAccess`/`hasPurchaseAccess`（`permissionMap.permissions.purchaseRegistration`，TASK-111 合并后的权限）各调用一次（分别传 `'inquiry'`/`'purchase'` source），两组结果传给 `DashboardTrendSection`。
+
+**验证**：
+- `npx tsc --noEmit`、`npx eslint`（改动 + 新增文件）均无输出。
+- `npm run build` 沙箱 45s 超时内跑到 Next.js 编译阶段未见报错。
+- 用沙箱 `npx tsx` 跑了一遍独立断言脚本（写完即删——但沙箱这个项目挂载不支持删除文件，脚本已清空成 0 字节文件 `verify_task113_tmp.ts` 留在仓库里，**需要用户手动删除**）验证：① 同一条记录两个不同日期的 `quoted` 状态，`getLatestQuotedDate` 正确返回较晚的日期，不是较早或求和；② 只有 `unavailable` 类型的记录返回 `null`；③ `quotedStatuses` 为空但 `purchaseQuotedStatuses` 有值时，两个字段读取互不干扰；④ 跨年推算（询价 2025-12-20 + 报价 `[1.5]`）正确算成 2026-01-05；⑤ `buildTrendData` 输出的每个桶都带 `quotedCount` 字段。全部通过。
+- **未做**：4 种权限组合（只 inquiry / 只 purchaseRegistration / 两者都有 / 两者都无）未用真实账号登录人工核对；5 个粒度切换未在浏览器里实测出图；已报价线未抽真实记录核对分桶结果；询价订单趋势图和采购询价订单趋势图的询价/订单两条线"数值应相同"这一推论未用真实数据验证（逻辑上必然相同，因为读的是同一个 `getInquiryCreatedDate`/`getOrderConfirmDate`，但沙箱没有真实业务数据可比对）。以上建议用户在真实环境验证。
+
+### 背景
+
+TASK-110 已经做了首页"询价 / 订单趋势"折线图（`InquiryOrderTrendChart.tsx` + `useInquiryOrderStats.ts` + `inquiryStats.ts`），数据源是 `useInquiryStore` 里的 `InquiryRecord[]`，画询价数量、订单数量两条线，仅在用户有 `inquiry` 权限时显示。
+
+用户现在要求：
+1. 有 `inquiry` 权限（询报价登记表/订单状态表）的用户，首页默认能看到这张"询价订单趋势图"（现状已经是这样，不用改）。
+2. 有采购部登记权限（TASK-111 合并后的 `purchaseRegistration`，覆盖原 `purchaseRegistration`+`purchaseOrderTable`）的用户，首页默认能看到"另一个表"——采购询价订单趋势图。
+3. 同时有两个权限的用户，能用选项卡在两张图之间切换。
+4. 两张图都要新增一条"已报价"数据线，数据来自各自表专属的已报价状态字段。
+
+### 关键背景（已经确认过、不要重新猜的口径）
+
+`src/features/purchase-registration/app/PurchaseRegistrationPage.tsx` 和 `src/features/purchase-order-registration/app/PurchaseOrderRegistrationPage.tsx` 都是直接读同一个 `useInquiryStore` 的 `InquiryRecord[]`（不是独立的数据源），只是用了记录上专属于采购视角的字段：`purchaseQuotedStatuses`（结构与 `quotedStatuses` 相同，见 `src/features/inquiry/types/index.ts` 第 61～64 行）、`purchaseSupplierStatuses`。采购订单表页面本身用的"已成单"过滤条件（`orderNo` 有值）跟销售侧"订单状态表"完全一致（`PurchaseOrderRegistrationPage.tsx` 第 23～26 行注释也写明"与订单状态表的过滤条件一致"）。
+
+**这意味着**：采购询价订单趋势图的"询价数量"和"订单数量"两条线，用跟 `inquiryStats.ts` 里 `getInquiryCreatedDate`/`getOrderConfirmDate` 完全一样的口径计算，数值会跟询价订单趋势图的对应两条线**完全相同**——这是预期行为，不是 bug，因为两张表本来就是同一批询价/订单记录的不同视角。两张图**唯一的差异只在"已报价"这条线**：询价订单趋势图的"已报价"读 `record.quotedStatuses`（客户报价，销售视角），采购询价订单趋势图的"已报价"读 `record.purchaseQuotedStatuses`（供应商报价，采购视角）。实现前如果发现这个推论有问题（比如采购视角应该有自己独立的"询价"范围界定），先跟用户确认，不要自己改口径。
+
+**"已报价"新数据线的计算规则**（用户原话："已报价的数据取自每条询价记录的状态中已报价的日期，同一条询价如有多个版本ab报价也只记数量1，日期取最新的报价日期"）：跟 TASK-110 里给"今日新增"统计徽标用的 `isRecordQuoted`/`getQuotedOnDate`（判定"今天是否已报价"，一条记录可能在多个不同日期的 bucket 里各命中一次）不是同一个函数——那个是为单日统计设计的，不满足"整条记录只算一次、取最新日期"的要求。需要新增一个函数，语义类似 `getInquiryCreatedDate`/`getOrderConfirmDate`：给一条记录返回**唯一一个"最新已报价日期"**（或 `null`），用于趋势图按此日期分桶时，每条记录只会落进一个 bucket。
+
+### Files in scope
+
+- `src/features/dashboard/utils/inquiryStats.ts` —
+  - 把 `isRecordQuoted`/`getQuotedOnDate` 涉及的 `quotedStatuses` 读取改成可配置参数（比如加一个 `statusField: 'quotedStatuses' | 'purchaseQuotedStatuses'` 参数，或者接受一个 `(record) => CustomerQuoteStatus[]` 的 accessor），避免复制一份几乎一样的采购版函数
+  - 新增 `getLatestQuotedDate(record, statusField): Date | null`——筛出 `type` 为 `'quoted'`/未定义的条目，各自按 `resolveYearForShortDate` 解析出完整日期，取其中最晚的一个；不存在则 `null`
+  - `buildTrendData` 增加已报价这条线的桶数据（复用 `bucketByGranularity`，`dateGetter` 传 `getLatestQuotedDate` 的 partial），`TrendPoint` 类型加 `quotedCount: number`；询价数量、订单数量两条线两边共用同一套计算，不用参数化，只有已报价这条线需要区分数据来源
+- `src/features/dashboard/hooks/useInquiryOrderStats.ts` — 支持传入"表来源"（`'inquiry' | 'purchase'`）参数，已报价相关计算按来源选字段；不改询价/订单两条线的计算
+- `src/features/dashboard/components/InquiryOrderTrendChart.tsx` — `LineChart` 增加第三条"已报价"线（配色跟 `InquiryOrderStats.tsx` 里已经用的 `text-blue-600` 已报价配色呼应，比如 `#3b82f6`，避免跟询价的粉色 `#ec4899`、订单的绿色 `#10b981` 冲突）
+- 新建 `src/features/dashboard/components/DashboardTrendSection.tsx`（文件名实现者可自定）——包一层选项卡切换逻辑：只有 `inquiry` 权限→只显示询价订单趋势图（不显示 tab）；只有 `purchaseRegistration` 权限→只显示采购询价订单趋势图（不显示 tab）；两个都有→显示 tab 切换；两个都没有→整块不渲染，不留空白
+- `src/features/dashboard/app/DashboardPage.tsx` — 把现有的 `<InquiryOrderTrendChart visible={hasInquiryAccess} .../>` 替换成新的 `<DashboardTrendSection>`，同时基于 `permissionMap.permissions.purchaseRegistration`（TASK-111 落地后的合并权限）判断采购趋势图的可见性
+
+### Acceptance criteria
+
+- 只有 `inquiry` 权限：首页显示"询价订单趋势图"，无 tab，图上询价/已报价（客户视角）/订单三条线
+- 只有 `purchaseRegistration` 权限：首页显示"采购询价订单趋势图"，无 tab，图上询价/已报价（供应商视角）/订单三条线
+- 两个权限都有：显示 tab（比如"询价订单趋势"/"采购询价订单趋势"），默认展示询价订单趋势图，点击可切换；粒度选择（天/周/月/季/年度）两张图各自独立记忆还是共用一份状态，实现者自行决定，但要在实现记录里写清楚选了哪种
+- 两个权限都没有：整块趋势图区域不渲染，不留空白占位（跟现有 `visible` 语义一致）
+- "已报价"这条线：同一条记录不管有几条 `quoted` 类型的报价状态，在同一个粒度的分桶统计里只贡献 1 次，落在其"最新报价日期"对应的桶里
+- 询价订单趋势图和采购询价订单趋势图的"询价数量"、"订单数量"两条线数值应该完全相同（因为是同一批记录），这是预期行为——验收时不要因为两张图这两条线数值一样而误判成 bug
+
+### Non-goals / 红线
+
+- 不改 `InquiryOrderStats.tsx`（"今日/本月"统计徽标行）——用户这次只要求趋势图加线、加 tab，没有要求把统计徽标也拆成两套，`isRecordQuoted`/`getQuotedOnDate` 这两个原有函数保持不动，只是新增 `getLatestQuotedDate`，不要复用/篡改前者的语义
+- 不改 `PurchaseRegistrationPage.tsx`/`PurchaseOrderRegistrationPage.tsx` 页面本身的筛选/展示逻辑，趋势图直接读 `useInquiryStore` 的全量 records 现算，不做服务端聚合（同 TASK-110 非目标）
+- 不新增 D1 接口，不改 `InquiryRecord` 数据结构
+- 不用假设"采购询价"是跟"销售询价"不同的记录范围——按上面确认的口径，两条线数值理应相同，不要为了"让两张图看起来不一样"而擅自加额外过滤条件（比如只统计有 `purchaseSupplierStatuses` 的记录）
+- 依赖 TASK-111：`purchaseRegistration` 权限的合并要先落地，这里才能用它同时代表"采购部登记"和"采购订单表"两个页面的访问权；如果 TASK-111 还没做，先按现状的两个独立权限（`purchaseRegistration` 或 `purchaseOrderTable` 任一为真）判断采购趋势图可见性，并在实现记录里写清楚用的是过渡方案
+
+### Verification steps
+
+- `npx tsc --noEmit`
+- `npx eslint`（改动 + 新增文件）
+- `npm run build`
+- 独立断言脚本验证 `getLatestQuotedDate`：构造一条记录，`quotedStatuses` 里有两条不同日期的 `quoted` 类型条目，确认返回的是较晚的那个日期；构造一条只有 `unavailable` 类型的记录，确认返回 `null`
+- 4 种权限组合（只 inquiry / 只 purchaseRegistration / 两者都有 / 两者都无）分别登录首页人工核对趋势图显示/隐藏/tab 是否符合预期
+- 5 个粒度切换在两张图上分别看一次不报错
+- 已报价线抽 1～2 条真实记录，手工核对分桶结果是否落在"最新报价日期"对应的桶
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

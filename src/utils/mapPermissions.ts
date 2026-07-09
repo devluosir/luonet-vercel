@@ -37,6 +37,7 @@ export const buildPermissionMap = (
       permissions: {
         quotation: false,
         confirmation: false,
+        domesticQuotation: false,
         packing: false,
         invoice: false,
         purchase: false,
@@ -46,7 +47,6 @@ export const buildPermissionMap = (
         impa: false,
         inquiry: false,
         purchaseRegistration: false,
-        purchaseOrderTable: false,
         clock: false,
         holidays: false,
         rmb: false,
@@ -71,6 +71,7 @@ export const buildPermissionMap = (
   const permissionsResult = {
     quotation: permissionMap.get('quotation') === true,
     confirmation: permissionMap.get('quotation') === true, // 销售确认也属于报价模块
+    domesticQuotation: permissionMap.get('domesticQuotation') === true,
     packing: permissionMap.get('packing') === true,
     invoice: permissionMap.get('invoice') === true,
     purchase: permissionMap.get('purchase') === true,
@@ -80,7 +81,6 @@ export const buildPermissionMap = (
     impa: permissionMap.get('impa') === true,
     inquiry: permissionMap.get('inquiry') === true,
     purchaseRegistration: permissionMap.get('purchaseRegistration') === true,
-    purchaseOrderTable: permissionMap.get('purchaseOrderTable') === true,
     clock: permissionMap.get('clock') === true,
     holidays: permissionMap.get('holidays') === true,
     rmb: permissionMap.get('rmb') === true,
@@ -89,8 +89,8 @@ export const buildPermissionMap = (
   const documentTypePermissions = {
     quotation: permissionMap.get('quotation') === true,
     confirmation: permissionMap.get('quotation') === true, // 销售确认也属于报价模块
-    'domestic-quotation': permissionMap.get('quotation') === true, // 内销报价单也属于报价模块
-    'domestic-contract': permissionMap.get('quotation') === true, // 内销合同也属于报价模块
+    'domestic-quotation': permissionMap.get('domesticQuotation') === true,
+    'domestic-contract': permissionMap.get('domesticQuotation') === true,
     packing: permissionMap.get('packing') === true,
     invoice: permissionMap.get('invoice') === true,
     purchase: permissionMap.get('purchase') === true
@@ -127,9 +127,10 @@ export const hasDocumentTypePermission = (
   switch (documentType) {
     case 'quotation':
     case 'confirmation':
+      return permissionMap.get('quotation') === true;
     case 'domestic-quotation':
     case 'domestic-contract':
-      return permissionMap.get('quotation') === true;
+      return permissionMap.get('domesticQuotation') === true;
     case 'packing':
       return permissionMap.get('packing') === true;
     case 'invoice':

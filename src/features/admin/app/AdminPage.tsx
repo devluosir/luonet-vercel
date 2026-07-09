@@ -8,6 +8,7 @@ import { AppLayout } from '@/components/layout';
 import { useAppUser } from '@/hooks/useAppUser';
 import { useUsers } from '../hooks/useUsers';
 import { UserList } from '../components/UserList';
+import { UserStats } from '../components/UserStats';
 import { CreateUserModal } from '../components/CreateUserModal';
 import { UserDetailModal } from '../components/UserDetailModal';
 import { Button } from '@/components/ui/Button';
@@ -77,11 +78,6 @@ export default function AdminPage() {
     );
   }
 
-  // ── 统计数字 ──────────────────────────────────────────
-  const total = users.length;
-  const active = users.filter((u) => u.status).length;
-  const admins = users.filter((u) => u.isAdmin).length;
-
   return (
     <AppLayout
       breadcrumbs={[
@@ -91,25 +87,26 @@ export default function AdminPage() {
       user={user}
       onLogout={handleLogout}
     >
-      <div className="w-full max-w-none px-3 py-4 sm:px-5 lg:px-6">
+      <div className="w-full max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
 
         {/* ── 页头 ── */}
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-base font-semibold text-gray-900 dark:text-white">用户管理</h1>
-            {!loading && (
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                共 {total} 位 · {active} 位启用 · {admins} 位管理员
-              </p>
-            )}
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">用户管理</h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              管理团队成员账号、模块权限与登录状态
+            </p>
           </div>
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            size="sm"
-          >
-            <UserPlus className="h-4 w-4" />
-            添加用户
-          </Button>
+          <div className="flex items-center gap-4">
+            {!loading && <UserStats users={users} />}
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              size="sm"
+            >
+              <UserPlus className="h-4 w-4" />
+              添加用户
+            </Button>
+          </div>
         </div>
 
         {/* ── 错误提示 ── */}

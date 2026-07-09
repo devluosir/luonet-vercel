@@ -1,36 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { AppLayout } from '@/components/layout';
 import { usePermissionStore } from '@/lib/permissions';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
 import { usePermissionRefresh } from '@/hooks/usePermissionRefresh';
-import {
-  QUICK_CREATE_MODULES,
-  TOOL_MODULES,
-  TOOLS_MODULES
-} from '@/constants/dashboardModules';
 
 // 导入新的模块化组件
-import { DashboardModules } from '@/features/dashboard/components/DashboardModules';
 import { DashboardDocuments } from '@/features/dashboard/components/DashboardDocuments';
 import { DashboardSuccessMessage } from '@/features/dashboard/components/DashboardSuccessMessage';
 import { StatsCards } from '@/features/dashboard/components/StatsCards';
 import { InquiryOrderStats } from '@/features/dashboard/components/InquiryOrderStats';
-import { InquiryOrderTrendChart } from '@/features/dashboard/components/InquiryOrderTrendChart';
+import { DashboardTrendSection } from '@/features/dashboard/components/DashboardTrendSection';
 import { useDashboardState } from '@/features/dashboard/hooks/useDashboardState';
 import { useDashboardPermissions } from '@/features/dashboard/hooks/useDashboardPermissions';
 import { useDashboardDocuments } from '@/features/dashboard/hooks/useDashboardDocuments';
 import { useInquiryOrderStats } from '@/features/dashboard/hooks/useInquiryOrderStats';
 import type { Granularity } from '@/features/dashboard/utils/inquiryStats';
-import {
-  filterQuickCreateModules,
-  filterToolModules,
-  filterToolsModules
-} from '@/features/dashboard/utils/moduleFilters';
-import type { DashboardModule } from '@/features/dashboard/types';
 // 调试组件已移除
 
 
@@ -61,7 +49,6 @@ export default function DashboardPage() {
     setTypeFilter,
     showAllFilters,
     setShowAllFilters,
-    documentCounts,
     todayCounts,
     updateDocumentCounts: _updateDocumentCounts
   } = useDashboardDocuments(permissionMap, mounted);
@@ -69,45 +56,18 @@ export default function DashboardPage() {
   // 使用权限刷新Hook
   const { refresh: _refreshPermissions } = usePermissionRefresh();
 
-  // 询价/订单统计 + 趋势图（仅有 inquiry 权限的用户可见）
+  // 询价/订单统计 + 趋势图（inquiry 权限→询价订单趋势；purchaseRegistration 权限→采购询价订单趋势；
+  // 两者都有时首页趋势图区域会显示 tab 切换，见 DashboardTrendSection，TASK-113）
   const [trendGranularity, setTrendGranularity] = useState<Granularity>('month');
   const hasInquiryAccess = permissionMap.permissions.inquiry;
-  const inquiryOrderStats = useInquiryOrderStats(hasInquiryAccess, trendGranularity);
+  const hasPurchaseAccess = permissionMap.permissions.purchaseRegistration;
+  const inquiryOrderStats = useInquiryOrderStats(hasInquiryAccess, trendGranularity, 'inquiry');
+  const purchaseOrderStats = useInquiryOrderStats(hasPurchaseAccess, trendGranularity, 'purchase');
 
   // 初始化逻辑
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // 优化的模块点击处理
-  const handleModuleClick = useCallback((module: DashboardModule) => {
-    // 对于confirmation模块，设置全局变量并跳转到报价单页面
-    if (module.id === 'confirmation') {
-      if (typeof window !== 'undefined') {
-        (window as { __QUOTATION_TYPE__?: string }).__QUOTATION_TYPE__ = 'confirmation';
-      }
-    }
-
-    router.push(module.path);
-  }, [router]);
-
-  // 智能预加载
-  const handleModuleHover = useCallback((module: DashboardModule) => {
-    router.prefetch(module.path);
-  }, [router]);
-
-  // 动态模块过滤，根据权限显示模块
-  const availableQuickCreateModules = useMemo(() => {
-    return filterQuickCreateModules(QUICK_CREATE_MODULES, permissionMap);
-  }, [permissionMap]);
-
-  const availableToolModules = useMemo(() => {
-    return filterToolModules(TOOL_MODULES, permissionMap);
-  }, [permissionMap]);
-
-  const availableToolsModules = useMemo(() => {
-    return filterToolsModules(TOOLS_MODULES, permissionMap);
-  }, [permissionMap]);
 
   // 优化的退出逻辑
   const handleLogout = useCallback(async () => {
@@ -173,20 +133,13 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <DashboardModules
-          quickCreateModules={availableQuickCreateModules}
-          toolModules={availableToolModules}
-          toolsModules={availableToolsModules}
-          documentCounts={documentCounts}
-          onModuleClick={handleModuleClick}
-          onModuleHover={handleModuleHover}
-        />
-
-        <InquiryOrderTrendChart
-          visible={hasInquiryAccess}
+        <DashboardTrendSection
+          inquiryVisible={hasInquiryAccess}
+          purchaseVisible={hasPurchaseAccess}
           granularity={trendGranularity}
           onGranularityChange={setTrendGranularity}
-          data={inquiryOrderStats.trend}
+          inquiryData={inquiryOrderStats.trend}
+          purchaseData={purchaseOrderStats.trend}
         />
 
         <DashboardDocuments

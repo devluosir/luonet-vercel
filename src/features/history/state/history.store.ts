@@ -8,12 +8,16 @@ import type {
   TabConfig
 } from '../types';
 import {
-  FileText,
   Receipt,
   ShoppingCart,
   Package,
-  FileSignature,
 } from 'lucide-react';
+import {
+  ForeignQuotationIcon,
+  ForeignContractIcon,
+  DomesticQuotationIcon,
+  DomesticContractIcon,
+} from '@/components/icons/TradeDocIcons';
 
 // 状态接口
 interface HistoryState {
@@ -175,10 +179,10 @@ export const useHistoryStore = create<HistoryState>()(
 // 标签页配置
 export const getAvailableTabs = (): TabConfig[] => {
   return [
-    { id: 'quotation', name: '外贸报价', shortName: '外贸报价', icon: FileText },
-    { id: 'confirmation', name: '外贸合同', shortName: '外贸合同', icon: FileText },
-    { id: 'domestic', name: '内销报价', shortName: '内销报价', icon: FileSignature },
-    { id: 'domestic-contract', name: '内销合同', shortName: '内销合同', icon: FileSignature },
+    { id: 'quotation', name: '外贸报价', shortName: '外贸报价', icon: ForeignQuotationIcon },
+    { id: 'confirmation', name: '外贸合同', shortName: '外贸合同', icon: ForeignContractIcon },
+    { id: 'domestic', name: '内销报价', shortName: '内销报价', icon: DomesticQuotationIcon },
+    { id: 'domestic-contract', name: '内销合同', shortName: '内销合同', icon: DomesticContractIcon },
     { id: 'packing', name: '装箱单', shortName: '装箱', icon: Package },
     { id: 'invoice', name: '发票', shortName: '发票', icon: Receipt },
     { id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart },

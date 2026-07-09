@@ -19,6 +19,7 @@ export interface PermissionMap {
   permissions: {
     quotation: boolean;
     confirmation: boolean;
+    domesticQuotation: boolean;
     packing: boolean;
     invoice: boolean;
     purchase: boolean;
@@ -28,7 +29,6 @@ export interface PermissionMap {
     impa: boolean;
     inquiry: boolean;
     purchaseRegistration: boolean;
-    purchaseOrderTable: boolean;
     clock: boolean;
     holidays: boolean;
     rmb: boolean;

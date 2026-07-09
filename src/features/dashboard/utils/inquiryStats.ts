@@ -1,4 +1,4 @@
-import type { InquiryRecord } from '@/features/inquiry';
+import type { CustomerQuoteStatus, InquiryRecord } from '@/features/inquiry';
 import {
   getDateInputValueFromInquiryNo,
   dateInputToDate,
@@ -6,10 +6,12 @@ import {
 } from '@/features/inquiry/utils/inquiryUtils';
 
 /**
- * 首页「询价 / 已报价 / 订单」统计口径（见 CODEX_TASKS.md TASK-110）：
+ * 首页「询价 / 已报价 / 订单」统计口径（见 CODEX_TASKS.md TASK-110、TASK-113）：
  *
  * - 询价创建日期：从 inquiryNo（含年份）解析，权威来源。
  * - 已报价：复用询报价登记表 customer_quoted 的判定（没有 unavailable/closed 且至少有一条 quoted/未标类型）。
+ *   询价订单趋势图读 quotedStatuses（客户视角）；采购询价订单趋势图读 purchaseQuotedStatuses（供应商视角，
+ *   TASK-113），两者结构相同，字段来源通过 QuotedStatusField 参数区分。
  * - 订单确认日期：orderConfirmDate 只存 [m.D]，没有年份——按询价单年份推算：
  *   若确认月份 < 询价月份，说明跨年，年份 = 询价年份 + 1；否则同询价年份。这是推算，不是精确值。
  * - 订单数量不按 orderSubStatus（辙销/悬挂/善后）过滤，统计"历史上曾确认过的订单数"。
@@ -17,9 +19,13 @@ import {
 
 export type Granularity = 'day' | 'week' | 'month' | 'quarter' | 'year';
 
+/** 已报价状态取自哪个字段：quotedStatuses=客户视角（询报价登记表），purchaseQuotedStatuses=供应商视角（采购部登记） */
+export type QuotedStatusField = 'quotedStatuses' | 'purchaseQuotedStatuses';
+
 export interface TrendPoint {
   label: string;
   inquiryCount: number;
+  quotedCount: number;
   orderCount: number;
 }
 
@@ -76,9 +82,13 @@ function resolveYearForShortDate(
   return new Date(year, shortDate.month - 1, shortDate.day);
 }
 
-/** 是否处于"已报价"状态：与询报价登记表 customer_quoted 判定一致 */
-export function isRecordQuoted(record: InquiryRecord): boolean {
-  const quotedStatuses = record.quotedStatuses ?? [];
+function getQuotedStatusList(record: InquiryRecord, field: QuotedStatusField): CustomerQuoteStatus[] {
+  return record[field] ?? [];
+}
+
+/** 是否处于"已报价"状态：与询报价登记表 customer_quoted 判定一致；field 指定读客户视角还是供应商视角 */
+export function isRecordQuoted(record: InquiryRecord, field: QuotedStatusField = 'quotedStatuses'): boolean {
+  const quotedStatuses = getQuotedStatusList(record, field);
   return (
     !quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed') &&
     quotedStatuses.some((s) => !s.type || s.type === 'quoted')
@@ -86,10 +96,10 @@ export function isRecordQuoted(record: InquiryRecord): boolean {
 }
 
 /** 该记录当前是"已报价"状态，且存在一条 quoted/未标类型的报价，其推算日期落在指定日期 */
-export function getQuotedOnDate(record: InquiryRecord, date: Date): boolean {
-  if (!isRecordQuoted(record)) return false;
+export function getQuotedOnDate(record: InquiryRecord, date: Date, field: QuotedStatusField = 'quotedStatuses'): boolean {
+  if (!isRecordQuoted(record, field)) return false;
   const inquiryDate = getInquiryCreatedDate(record);
-  const quotedStatuses = record.quotedStatuses ?? [];
+  const quotedStatuses = getQuotedStatusList(record, field);
   return quotedStatuses.some((s) => {
     if (s.type && s.type !== 'quoted') return false;
     const parsed = parseShortDate(s.quoteDate);
@@ -97,6 +107,29 @@ export function getQuotedOnDate(record: InquiryRecord, date: Date): boolean {
     const resolved = resolveYearForShortDate(parsed, inquiryDate);
     return isSameDay(resolved, date);
   });
+}
+
+/**
+ * 记录的"最新已报价日期"（TASK-113）：不管这条记录有几条 quoted 类型的报价状态（比如 A/B 版本报价），
+ * 只取其中最晚的一个日期，用于趋势图分桶时一条记录只贡献 1 次。与 getQuotedOnDate（按天精确匹配，
+ * 一条记录可能在多个不同日期的 bucket 里各命中一次，服务于"今日新增"这类单日统计）语义不同，不要混用。
+ * 记录未处于"已报价"状态，或没有可解析的报价日期，返回 null。
+ */
+export function getLatestQuotedDate(record: InquiryRecord, field: QuotedStatusField = 'quotedStatuses'): Date | null {
+  if (!isRecordQuoted(record, field)) return null;
+  const inquiryDate = getInquiryCreatedDate(record);
+  const quotedStatuses = getQuotedStatusList(record, field);
+  let latest: Date | null = null;
+  quotedStatuses.forEach((s) => {
+    if (s.type && s.type !== 'quoted') return;
+    const parsed = parseShortDate(s.quoteDate);
+    if (!parsed) return;
+    const resolved = resolveYearForShortDate(parsed, inquiryDate);
+    if (!latest || resolved.getTime() > latest.getTime()) {
+      latest = resolved;
+    }
+  });
+  return latest;
 }
 
 /**
@@ -228,18 +261,30 @@ export function bucketByGranularity<T>(
   return result;
 }
 
-/** 组装趋势图需要的「询价 + 订单」双系列数据 */
+/**
+ * 组装趋势图需要的「询价 + 已报价 + 订单」三系列数据。
+ * 询价、订单两条线口径固定（同一批记录，两张表数值理应相同，见 TASK-113 背景）；
+ * 已报价这条线按 quotedStatusField 区分客户视角（询价订单趋势图）还是供应商视角（采购询价订单趋势图）。
+ */
 export function buildTrendData(
   records: InquiryRecord[],
   granularity: Granularity,
+  quotedStatusField: QuotedStatusField = 'quotedStatuses',
   bucketCount: number = DEFAULT_BUCKET_COUNT[granularity]
 ): TrendPoint[] {
   const inquiryBuckets = bucketByGranularity(records, granularity, getInquiryCreatedDate, bucketCount);
   const orderBuckets = bucketByGranularity(records, granularity, getOrderConfirmDate, bucketCount);
+  const quotedBuckets = bucketByGranularity(
+    records,
+    granularity,
+    (record) => getLatestQuotedDate(record, quotedStatusField),
+    bucketCount
+  );
 
   return inquiryBuckets.map((bucket, index) => ({
     label: bucket.label,
     inquiryCount: bucket.value,
+    quotedCount: quotedBuckets[index]?.value ?? 0,
     orderCount: orderBuckets[index]?.value ?? 0,
   }));
 }

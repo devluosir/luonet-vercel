@@ -1,21 +1,23 @@
 'use client';
 
 import {
-  FileCheck,
-  FileText,
-  FileSignature,
   Package,
   Receipt,
   ShoppingCart,
-  type LucideIcon,
 } from 'lucide-react';
+import {
+  ForeignQuotationIcon,
+  ForeignContractIcon,
+  DomesticQuotationIcon,
+  DomesticContractIcon,
+} from '@/components/icons/TradeDocIcons';
 import { StatChip } from './StatChip';
 import type { PermissionMap } from '../types';
 
 interface StatItem {
   type: 'quotation' | 'confirmation' | 'domestic-quotation' | 'domestic-contract' | 'invoice' | 'packing' | 'purchase';
   label: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   textColorClass: string;
 }
 
@@ -36,10 +38,10 @@ interface StatsCardsProps {
 }
 
 const STAT_ITEMS: StatItem[] = [
-  { type: 'quotation', label: '报价单', icon: FileText, textColorClass: 'text-blue-600 dark:text-blue-400' },
-  { type: 'confirmation', label: '销售确认', icon: FileCheck, textColorClass: 'text-green-600 dark:text-green-400' },
-  { type: 'domestic-quotation', label: '内销报价', icon: FileSignature, textColorClass: 'text-blue-600 dark:text-blue-400' },
-  { type: 'domestic-contract', label: '内销合同', icon: FileSignature, textColorClass: 'text-green-600 dark:text-green-400' },
+  { type: 'quotation', label: '报价单', icon: ForeignQuotationIcon, textColorClass: 'text-blue-600 dark:text-blue-400' },
+  { type: 'confirmation', label: '销售确认', icon: ForeignContractIcon, textColorClass: 'text-green-600 dark:text-green-400' },
+  { type: 'domestic-quotation', label: '内销报价', icon: DomesticQuotationIcon, textColorClass: 'text-blue-600 dark:text-blue-400' },
+  { type: 'domestic-contract', label: '内销合同', icon: DomesticContractIcon, textColorClass: 'text-green-600 dark:text-green-400' },
   { type: 'invoice', label: '财务发票', icon: Receipt, textColorClass: 'text-purple-600 dark:text-purple-400' },
   { type: 'packing', label: '箱单发票', icon: Package, textColorClass: 'text-teal-600 dark:text-teal-400' },
   { type: 'purchase', label: '采购订单', icon: ShoppingCart, textColorClass: 'text-orange-600 dark:text-orange-400' },

@@ -1,7 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, ChevronDown, ChevronUp, Archive } from 'lucide-react';
-import { FileText, FileSignature, Package, Receipt, ShoppingCart } from 'lucide-react';
+import { Package, Receipt, ShoppingCart } from 'lucide-react';
+import {
+  ForeignQuotationIcon,
+  ForeignContractIcon,
+  DomesticQuotationIcon,
+  DomesticContractIcon,
+} from '@/components/icons/TradeDocIcons';
 import { DocumentWithType } from '@/utils/dashboardUtils';
 
 type DocumentTypeFilter = 'quotation' | 'confirmation' | 'domestic-quotation' | 'domestic-contract' | 'packing' | 'invoice' | 'purchase';
@@ -307,13 +313,13 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
   const getDocumentTypeInfo = (type: string) => {
     switch (type) {
       case 'quotation':
-        return { Icon: FileText, bgColor: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-700 dark:text-blue-300' };
+        return { Icon: ForeignQuotationIcon, bgColor: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-700 dark:text-blue-300' };
       case 'confirmation':
-        return { Icon: FileText, bgColor: 'bg-green-100 dark:bg-green-900/30', textColor: 'text-green-700 dark:text-green-300' };
+        return { Icon: ForeignContractIcon, bgColor: 'bg-green-100 dark:bg-green-900/30', textColor: 'text-green-700 dark:text-green-300' };
       case 'domestic-quotation':
-        return { Icon: FileSignature, bgColor: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-700 dark:text-blue-300' };
+        return { Icon: DomesticQuotationIcon, bgColor: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-700 dark:text-blue-300' };
       case 'domestic-contract':
-        return { Icon: FileSignature, bgColor: 'bg-green-100 dark:bg-green-900/30', textColor: 'text-green-700 dark:text-green-300' };
+        return { Icon: DomesticContractIcon, bgColor: 'bg-green-100 dark:bg-green-900/30', textColor: 'text-green-700 dark:text-green-300' };
       case 'packing':
         return { Icon: Package, bgColor: 'bg-teal-100 dark:bg-teal-900/30', textColor: 'text-teal-700 dark:text-teal-300' };
       case 'invoice':
@@ -321,7 +327,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       case 'purchase':
         return { Icon: ShoppingCart, bgColor: 'bg-orange-100 dark:bg-orange-900/30', textColor: 'text-orange-700 dark:text-orange-300' };
       default:
-        return { Icon: FileText, bgColor: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-700 dark:text-blue-300' };
+        return { Icon: ForeignQuotationIcon, bgColor: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-700 dark:text-blue-300' };
     }
   };
 

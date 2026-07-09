@@ -16,7 +16,8 @@ const PURCHASE_REGISTRATION_WRITE_FIELDS = [
   'supplierStatuses',
 ] as const;
 
-// 采购订单表（purchaseOrderTable 权限，无 inquiry 权限时）可读写的字段
+// 采购订单表可读写的字段（TASK-111 起，purchaseOrderTable 权限已并入 purchaseRegistration，
+// 持有 purchaseRegistration 即同时拥有采购部登记 + 采购订单表两个页面的访问权，两组字段一并放行）
 // 注意：orderConfirmDate / orderCustomerNo 不在这里——这两个字段"来自订单状态表"，
 // 采购订单表这边只读展示，不允许写入；orderDeliveryDate / orderDeliveryStatus /
 // orderDeliveryConsignee 是双向共享字段，订单状态表和采购订单表都能编辑。
@@ -108,19 +109,19 @@ async function proxyInquiryRequest(
   const permissions = session.user.permissions ?? [];
   const inquiryPermission = permissions.find((permission) => permission.moduleId === 'inquiry');
   const hasInquiryPermission = inquiryPermission?.canAccess ?? isAdmin;
+  // TASK-111 起，purchaseRegistration 权限同时覆盖"采购部登记"+"采购订单表"两个页面
+  // （原 purchaseOrderTable 权限已合并进来），不再单独判断
   const purchaseRegistrationPermission = permissions.find((permission) => permission.moduleId === 'purchaseRegistration');
   const hasPurchaseRegistrationPermission = purchaseRegistrationPermission?.canAccess ?? isAdmin;
-  const purchaseOrderTablePermission = permissions.find((permission) => permission.moduleId === 'purchaseOrderTable');
-  const hasPurchaseOrderTablePermission = purchaseOrderTablePermission?.canAccess ?? isAdmin;
 
-  if (!hasInquiryPermission && !hasPurchaseRegistrationPermission && !hasPurchaseOrderTablePermission) {
+  if (!hasInquiryPermission && !hasPurchaseRegistrationPermission) {
     return NextResponse.json({ error: '无询报价权限' }, { status: 403 });
   }
 
-  // 有 inquiry 权限即为完整访问，不受限；否则按持有的受限权限（可能同时持有两种）取并集
+  // 有 inquiry 权限即为完整访问，不受限；否则按合并后的受限权限，两组受限字段一并放行
   const restrictToPurchaseRegistration = !hasInquiryPermission && hasPurchaseRegistrationPermission;
-  const restrictToPurchaseOrderTable = !hasInquiryPermission && hasPurchaseOrderTablePermission;
-  const isRestrictedView = restrictToPurchaseRegistration || restrictToPurchaseOrderTable;
+  const restrictToPurchaseOrderTable = restrictToPurchaseRegistration;
+  const isRestrictedView = restrictToPurchaseRegistration;
 
   if (isRestrictedView && (request.method === 'POST' || request.method === 'DELETE')) {
     return NextResponse.json({ error: '无新增或删除询报价记录权限' }, { status: 403 });
