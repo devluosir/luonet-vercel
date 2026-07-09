@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { MonthTimeRange } from '@/components/MonthRangeNav';
+import { todayMonth } from '@/components/MonthPickerPopover';
 import type { InquiryRecord } from '../types';
 import { getDateInputValueFromInquiryNo } from '../utils/inquiryUtils';
 
@@ -30,8 +31,9 @@ export interface InquiryFilterState {
   keyword: string;
 }
 
-const DEFAULT_FILTER: InquiryFilterState = {
-  timeRange: '3months', // 默认显示近3个月
+// 除 timeRange 外的默认值；timeRange 默认取"当月"，需要在每次挂载/重置时动态计算
+// （不能写成模块级常量，否则跨月不刷新页面时会一直停留在旧月份），见 getDefaultFilter()
+const DEFAULT_FILTER_BASE: Omit<InquiryFilterState, 'timeRange'> = {
   customerNo: '',
   inquirer: '',
   customerId: '',
@@ -42,6 +44,11 @@ const DEFAULT_FILTER: InquiryFilterState = {
   sortDir: 'desc',
   keyword: '',
 };
+
+/** 默认筛选：当月（与月份导航器 MonthRangeNav 的 `month:YYYY-MM` 格式一致） */
+function getDefaultFilter(): InquiryFilterState {
+  return { ...DEFAULT_FILTER_BASE, timeRange: `month:${todayMonth()}` };
+}
 
 /** 判断记录是否落在指定时间范围内（月维度比较） */
 function matchesTimeRange(record: InquiryRecord, timeRange: TimeRange, now: Date): boolean {
@@ -78,7 +85,7 @@ function matchesTimeRange(record: InquiryRecord, timeRange: TimeRange, now: Date
 }
 
 export function useInquiryFilter(records: InquiryRecord[]) {
-  const [filter, setFilter] = useState<InquiryFilterState>(DEFAULT_FILTER);
+  const [filter, setFilter] = useState<InquiryFilterState>(getDefaultFilter);
 
   const customers = useMemo(
     () => Array.from(new Set(records.map((r) => r.customerNo).filter(Boolean))).sort(),
@@ -168,9 +175,9 @@ export function useInquiryFilter(records: InquiryRecord[]) {
       );
   }, [baseFiltered, filter.quoteStatus, filter.sortDir]);
 
-  // '3months' 是默认值，不计入 activeCount
+  // "当月"（`month:${todayMonth()}`）是默认值，不计入 activeCount
   const activeCount = [
-    filter.timeRange !== '3months',
+    filter.timeRange !== `month:${todayMonth()}`,
     Boolean(filter.keyword.trim()),
     Boolean(filter.customerNo),
     Boolean(filter.inquirer),
@@ -179,7 +186,7 @@ export function useInquiryFilter(records: InquiryRecord[]) {
     filter.linkStatus !== 'all',
   ].filter(Boolean).length;
 
-  const reset = () => setFilter(DEFAULT_FILTER);
+  const reset = () => setFilter(getDefaultFilter());
 
   return {
     filter,

@@ -97,13 +97,14 @@ export function OrderPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const [timeRange, setTimeRange] = useState<TimeRange>('3months');
-  const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>('all');
+  // 默认进入时选中"进行中"：进行中订单通常跨越较长周期，时间范围和排序一并采用
+  // 与手动点击"进行中"筛选芯片相同的组合（见下方 FilterChip onClick），保持行为一致
+  const [timeRange, setTimeRange] = useState<TimeRange>('all');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>('inProgress');
   const [keyword, setKeyword] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [consigneeOptions, setConsigneeOptions] = useState<string[]>([]);
-  // 默认按交货日期降序排列
-  const [sortField, setSortField] = useState<SortField>('deliveryDate');
+  const [sortField, setSortField] = useState<SortField>('orderNo');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const { lastSyncedAt, syncStatus } = useInquirySync({
     enabled: status === 'authenticated' && hasOrderAccess,
@@ -203,16 +204,19 @@ export function OrderPage() {
     [baseFiltered]
   );
 
+  // 与默认进入态（timeRange='all' + orderStatusFilter='inProgress'）对比，判断是否有筛选被用户改动过
   const activeCount = [
-    timeRange !== '3months',
+    timeRange !== 'all',
     keyword.trim() !== '',
     customerFilter !== '',
-    orderStatusFilter !== 'all',
+    orderStatusFilter !== 'inProgress',
   ].filter(Boolean).length;
 
   const resetFilters = () => {
-    setTimeRange('3months');
-    setOrderStatusFilter('all');
+    setTimeRange('all');
+    setOrderStatusFilter('inProgress');
+    setSortField('orderNo');
+    setSortDir('desc');
     setKeyword('');
     setCustomerFilter('');
   };

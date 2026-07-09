@@ -89,9 +89,11 @@ export function PurchaseOrderRegistrationPage() {
     mergeLocal: false,
   });
 
+  // 默认进入时选中"进行中"：与手动点击"进行中"筛选芯片相同的组合（时间范围放宽到"全部"），
+  // 保持行为一致，见下方 onOrderStatusChange
   const [keyword, setKeyword] = useState('');
-  const [timeRange, setTimeRange] = useState<MonthTimeRange>('3months');
-  const [orderStatusFilter, setOrderStatusFilter] = useState<PurchaseOrderStatusFilter>('all');
+  const [timeRange, setTimeRange] = useState<MonthTimeRange>('all');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<PurchaseOrderStatusFilter>('inProgress');
   const [supplierFilter, setSupplierFilter] = useState('');
   const [consigneeOptions, setConsigneeOptions] = useState<string[]>([]);
 
@@ -176,11 +178,12 @@ export function PurchaseOrderRegistrationPage() {
     [baseFiltered, orderStatusFilter]
   );
 
+  // 与默认进入态（timeRange='all' + orderStatusFilter='inProgress'）对比，判断是否有筛选被用户改动过
   const activeCount = [
-    timeRange !== '3months',
+    timeRange !== 'all',
     keyword.trim() !== '',
     supplierFilter !== '',
-    orderStatusFilter !== 'all',
+    orderStatusFilter !== 'inProgress',
   ].filter(Boolean).length;
 
   if (status === 'loading' || !user || !permissionUser) {
@@ -238,8 +241,8 @@ export function PurchaseOrderRegistrationPage() {
           onSupplierFilterChange={setSupplierFilter}
           onReset={() => {
             setKeyword('');
-            setTimeRange('3months');
-            setOrderStatusFilter('all');
+            setTimeRange('all');
+            setOrderStatusFilter('inProgress');
             setSupplierFilter('');
           }}
         />

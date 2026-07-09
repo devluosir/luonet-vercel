@@ -192,7 +192,9 @@ theme-config
 - 询价 Excel 导入导出包含 `订单标记`、`订单备注` 两列；D1 仍通过 `Document.data` JSON 透传，无需 schema 迁移。
 - 新增询价要求选择客户/联络人；旧记录可保留文本继续编辑。
 - 批量关联客户会写入 `customerId`、`contactId` 和规范化 `inquirer`。
-- 订单状态表可通过 `quoteStatus=has_order` 从客户详情跳转到“已成单”筛选。
+- 订单状态表可通过 `quoteStatus=has_order` 从客户详情跳转到”已成单”筛选。
+- 询报价登记 `/inquiry`、采购部登记 `/purchase-registration`（两者共用 `useInquiryFilter.ts`）默认进入时时间范围筛选选中”当月”（`` `month:${todayMonth()}` ``，即月份导航器 `MonthRangeNav` 的当月挡位），而非此前的”近3月”；该默认值在每次挂载/点击”重置”时用 `todayMonth()` 动态计算，不会因跨月不刷新页面而停留在旧月份。
+- 订单状态表 `/order`、采购订单表 `/purchase-order-table` 默认进入时状态筛选选中”进行中”，时间范围一并放宽到”全部”（订单状态表排序同时默认按订单号降序），与手动点击”进行中”筛选芯片的效果一致；两页的”重置筛选”也回到这个组合，而不是回到”全部状态 + 近3个月”。
 - 订单状态表会在客户订单号下方显示 C/P/S 情况备注，并按辙销红色、悬挂绿色、善后蓝色着色。
 - 订单状态表的执行情况支持 `orderDeliveryConsignee` 收货人关联。收货人只在「交货」编辑态下选择，但关联属于订单本身；后续把执行情况改为「发票」或「备货」不会自动清空收货人。
 - 只有点击执行情况「清除」按钮，或在「交货」编辑态下把收货人下拉框选回空白，才会解除 `orderDeliveryConsignee` 关联。
