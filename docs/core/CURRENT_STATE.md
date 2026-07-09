@@ -213,6 +213,6 @@ theme-config
 
 1. 权限刷新链路仍复杂（store / hook / API 多处联动），改动需谨慎；页面级守卫已覆盖主要业务页，middleware 仍不做 moduleId 拦截。
 2. 业务历史仍以 `localStorage` 为主；跨设备依赖双写 + 登录拉取 + 本地补推（不做 TASK-14 旧历史批量迁移）。配额写入已接入 `persistHistoryToStorage`，极端大数据量仍可能裁剪旧记录。
-3. `src/components` 与 `src/features` 仍有迁移中的重复边界（quotation/purchase/packing），修改前必须确认实际 import 路径。
+3. `src/components` 与 `src/features` 仍有迁移中的重复边界：报价第一批 leaf 组件已迁入 features（旧路径 re-export）；`ItemsTable` 集群与 `SettingsPanel` 仍在 `components/quotation`。packing/purchase 仍双轨。
 
 > 已关闭（勿再当作待办）：Worker `X-User-*` 伪造（已改 Bearer）、`wrangler.toml` 明文 token（已迁 secret）、`validatePassword` bcrypt bug（已修复）、`updatePassword` 明文写入（已改 bcrypt）、登录无限流（已加 IP 限流）、NEXTAUTH 硬编码 secret（生产必填）、AI 邮件仅验登录（已验 `ai-email`）、业务页无页面级守卫（P1 已补）、`storageQuotaManager` 零引用（P1 已接入历史写入）。

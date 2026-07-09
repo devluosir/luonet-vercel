@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **历史写入配额统一入口**：`persistHistoryToStorage`；报价/发票/装箱/采购历史与 `d1Pull.mergeIntoStorage` 主写入路径接入，超限时智能清理/裁剪。
 - **PermissionMap 补全**：`inquiry`、`purchaseRegistration`、`purchaseOrderTable`、`clock`、`holidays`、`rmb`；dashboard 类型改为复用 `@/types/permissions`。
 
+#### P3 测试与结构（第一批）
+- **E2E**：新增 `e2e/permission-guard.spec.ts`（已登录访问守卫路由不回登录页；未登录直链回登录）、`e2e/document-pages.spec.ts`（装箱/发票/采购页可达）。
+- **报价双轨迁移 PR-1**：`PasteDialog`、`CustomerInfoCompact`、`PaymentTermsSection`、`DomesticCustomerInfo` 迁入 `features/quotation/components/`；旧路径保留 re-export；删除孤儿 `TabButton` / `NotesSection` / `CustomerInfoSection`。
+
 ### Changed
 
 #### 文档对齐
@@ -35,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 - `npx tsc --noEmit`
 - 手动建议：无模块权限直链对应路由应见权限不足；历史保存超配额时控制台有裁剪/清理日志
+- E2E：`E2E_USERNAME=... E2E_PASSWORD=... npm run test:e2e`（含 permission-guard / document-pages）
 
 ## [Unreleased] - 2026-07-07
 

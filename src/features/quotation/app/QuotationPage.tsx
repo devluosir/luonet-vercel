@@ -55,21 +55,21 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
   suspense: false
 });
 
-// 动态导入PaymentTermsSection
-const DynamicPaymentTermsSection = dynamic(() => import('@/components/quotation/PaymentTermsSection').then(mod => ({ default: mod.PaymentTermsSection })), {
+// 动态导入PaymentTermsSection（已迁入 features）
+const DynamicPaymentTermsSection = dynamic(() => import('../components/PaymentTermsSection').then(mod => ({ default: mod.PaymentTermsSection })), {
   ssr: false,
   loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg h-8"></div>,
   suspense: false
 });
 
-// 导入现有组件
-import { CustomerInfoCompact } from '@/components/quotation/CustomerInfoCompact';
-import { DomesticCustomerInfo } from '@/components/quotation/DomesticCustomerInfo';
+// 导入现有组件（第一批已迁入 features；ItemsTable/SettingsPanel/ImportDataButton 仍在 components）
+import { CustomerInfoCompact } from '../components/CustomerInfoCompact';
+import { DomesticCustomerInfo } from '../components/DomesticCustomerInfo';
 import { ItemsTable } from '@/components/quotation/ItemsTable';
 import { NotesSection } from '../components/NotesSection';
 import { SettingsPanel } from '@/components/quotation/SettingsPanel';
 import { ImportDataButton } from '@/components/quotation/ImportDataButton';
-import { PasteDialog } from '@/components/quotation/PasteDialog';
+import { PasteDialog } from '../components/PasteDialog';
 import { Clipboard, History, Save, Settings, Download, Eye, FileSpreadsheet } from 'lucide-react';
 
 

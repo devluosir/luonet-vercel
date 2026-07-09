@@ -267,16 +267,16 @@ GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git f
 2. **PDF 字体、头图、表格分页和合并单元格**：调试成本高
 3. **`quotation_history` 报价与销售确认共存结构**：按 `type` 字段区分，迁移时要保持兼容
 4. **本地存储配额**：5MB 上限；历史主写入已走 `persistHistoryToStorage`，极端情况会裁剪旧记录
-5. **旧组件与 feature 模块重复代码**：改前先确认实际 import 路径（quotation/purchase/packing 仍双轨）
+5. **旧组件与 feature 模块重复代码**：报价 leaf 组件已迁 features（旧路径 shim）；`ItemsTable`/`SettingsPanel` 与 packing/purchase 仍双轨，改前确认 import 路径
 6. **主题系统和 Tailwind safelist**：动态类名容易被 purge
 7. **单据双写 / 登录拉取**：`d1Sync` + `d1Pull` + `useD1Sync`；换账号必须先 `prepareD1DocumentSyncForUser`，避免串数据
 
 ## 推荐优化路线（优先级排序）
 
-1. **跨设备同步（轻量）**：保留新建双写 + 登录拉取 + 本地补推；不做旧历史批量迁移（TASK-14 取消）；不做 D1 primary 读路径切换。
-2. **测试覆盖**：补 Playwright 关键路径集成测试（登录、权限、创建单据、PDF 生成、导入导出）。
-3. **代码清理**：分批消除 `src/components` 与 `src/features` 的重复实现，让每个业务模块自包含。
-4. **文档治理**：以 `docs/core/CURRENT_STATE.md` 为事实源，同步 README/AGENTS/PROJECT_SUMMARY；归档过时 SUMMARY/FIX。
+1. **报价双轨续迁**：ItemsTable 集群（含 ImportDataButton/ColumnToggle/QuickImport）→ SettingsPanel → 删除 re-export shim。
+2. **packing / purchase 双轨迁移**：同样分批，勿大爆炸。
+3. **测试覆盖**：本地/CI 跑通新增 E2E；补无权限账号的 PermissionDenied 断言（需专用测试账号）。
+4. **文档治理**：归档过时 SUMMARY/FIX；CODEX_TASKS 瘦身。
 5. **权限刷新简化（可选）**：`fetchPermissions` 与 `usePermissionRefresh` 仍有重叠，可继续收敛。
 
 ## 文档索引
