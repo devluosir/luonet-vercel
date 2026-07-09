@@ -7,7 +7,7 @@ import { PackingFormProps } from '../types';
 import { BasicInfoSection } from './BasicInfoSection';
 import { ItemsTableSection } from './ItemsTableSection';
 import { RemarksSection } from './RemarksSection';
-import { SettingsPanel } from '../../../components/packinglist/SettingsPanel';
+import { SettingsPanel } from './SettingsPanel';
 import { PageCard } from '@/components/ui/PageCard';
 
 import { calculatePackingTotals } from '../utils/calculations';

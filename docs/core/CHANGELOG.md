@@ -27,6 +27,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **E2E**：新增 `e2e/permission-guard.spec.ts`（已登录访问守卫路由不回登录页；未登录直链回登录）、`e2e/document-pages.spec.ts`（装箱/发票/采购页可达）。
 - **报价双轨迁移 PR-1**：`PasteDialog`、`CustomerInfoCompact`、`PaymentTermsSection`、`DomesticCustomerInfo` 迁入 `features/quotation/components/`；旧路径保留 re-export；删除孤儿 `TabButton` / `NotesSection` / `CustomerInfoSection`。
 
+#### P3 报价双轨迁移（第二批）
+- **ItemsTable 集群**：`ItemsTable`、`ImportDataButton`、`ColumnToggle`、`QuickImport` 迁入 `features/quotation/components/`；旧路径 re-export。
+- **SettingsPanel**：迁入 features；`QuotationPage` 全部改为相对 features 导入，生产代码不再直接依赖 `@/components/quotation/*`。
+- **清理实验死代码**：删除未接入的 `UltimatePowerNotesSection`、`OptimizedNotesSection`、`MobileOptimizedNotes`、`AdvancedNotesFeatures`、`PerformantDragDrop`、`CustomerInfoSection`、`ItemsTableSection`。
+
+#### P3 packing / purchase 双轨迁移
+- **packing**：`SettingsPanel`、`OtherFeesTable` 迁入 `features/packing/components/`；删除孤儿 `ConsigneeSection`、`ShippingMarksModal`、旧 `ItemsTable`。
+- **purchase**：`SettingsPanel`、`PurchaseBaseInfo` 迁入 features；开票资料组件重命名为 `InvoiceCompanyInfo`（避免与 sections/BankInfoSection 冲突）；删除孤儿 `SupplierInfoSection`。
+- 旧路径保留 thin re-export shim。
+
 ### Changed
 
 #### 文档对齐

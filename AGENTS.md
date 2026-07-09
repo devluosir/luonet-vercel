@@ -267,17 +267,17 @@ GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git f
 2. **PDF 字体、头图、表格分页和合并单元格**：调试成本高
 3. **`quotation_history` 报价与销售确认共存结构**：按 `type` 字段区分，迁移时要保持兼容
 4. **本地存储配额**：5MB 上限；历史主写入已走 `persistHistoryToStorage`，极端情况会裁剪旧记录
-5. **旧组件与 feature 模块重复代码**：报价 leaf 组件已迁 features（旧路径 shim）；`ItemsTable`/`SettingsPanel` 与 packing/purchase 仍双轨，改前确认 import 路径
+5. **旧组件与 feature 模块重复代码**：quotation/packing/purchase 业务 UI 已迁 features（旧目录仅 shim）；改前仍确认实际 import 路径
 6. **主题系统和 Tailwind safelist**：动态类名容易被 purge
 7. **单据双写 / 登录拉取**：`d1Sync` + `d1Pull` + `useD1Sync`；换账号必须先 `prepareD1DocumentSyncForUser`，避免串数据
 
 ## 推荐优化路线（优先级排序）
 
-1. **报价双轨续迁**：ItemsTable 集群（含 ImportDataButton/ColumnToggle/QuickImport）→ SettingsPanel → 删除 re-export shim。
-2. **packing / purchase 双轨迁移**：同样分批，勿大爆炸。
-3. **测试覆盖**：本地/CI 跑通新增 E2E；补无权限账号的 PermissionDenied 断言（需专用测试账号）。
-4. **文档治理**：归档过时 SUMMARY/FIX；CODEX_TASKS 瘦身。
-5. **权限刷新简化（可选）**：`fetchPermissions` 与 `usePermissionRefresh` 仍有重叠，可继续收敛。
+1. **删除 re-export shim**：确认无外部引用后删除 `src/components/quotation|packinglist|purchase`。
+2. **测试覆盖**：本地/CI 跑通新增 E2E；补无权限账号的 PermissionDenied 断言（需专用测试账号）。
+3. **文档治理**：归档过时 SUMMARY/FIX；CODEX_TASKS 瘦身。
+4. **权限刷新简化（可选）**：`fetchPermissions` 与 `usePermissionRefresh` 仍有重叠，可继续收敛。
+5. **跨设备同步**：保持双写 + 登录拉取 + 本地补推（选 B）；不做 TASK-14。
 
 ## 文档索引
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTablePrefsHydrated } from '../state/useTablePrefs';
 import { ColumnToggle } from './ColumnToggle';
-import { OtherFeesTable } from '../../../components/packinglist/OtherFeesTable';
+import { OtherFeesTable } from './OtherFeesTable';
 import { ImportDataButton } from './ImportDataButton';
 import { QuickImport } from './QuickImport';
 import { Button } from '@/components/ui/Button';

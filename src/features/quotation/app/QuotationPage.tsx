@@ -62,13 +62,13 @@ const DynamicPaymentTermsSection = dynamic(() => import('../components/PaymentTe
   suspense: false
 });
 
-// 导入现有组件（第一批已迁入 features；ItemsTable/SettingsPanel/ImportDataButton 仍在 components）
+// 导入现有组件（报价 UI 已迁入 features；旧路径保留 re-export）
 import { CustomerInfoCompact } from '../components/CustomerInfoCompact';
 import { DomesticCustomerInfo } from '../components/DomesticCustomerInfo';
-import { ItemsTable } from '@/components/quotation/ItemsTable';
+import { ItemsTable } from '../components/ItemsTable';
 import { NotesSection } from '../components/NotesSection';
-import { SettingsPanel } from '@/components/quotation/SettingsPanel';
-import { ImportDataButton } from '@/components/quotation/ImportDataButton';
+import { SettingsPanel } from '../components/SettingsPanel';
+import { ImportDataButton } from '../components/ImportDataButton';
 import { PasteDialog } from '../components/PasteDialog';
 import { Clipboard, History, Save, Settings, Download, Eye, FileSpreadsheet } from 'lucide-react';
 

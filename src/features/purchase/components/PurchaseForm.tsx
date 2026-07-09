@@ -1,8 +1,8 @@
 'use client';
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { SettingsPanel } from '@/components/purchase/SettingsPanel';
-import { BankInfoSection } from '@/components/purchase/BankInfoSection';
-import PurchaseBaseInfo from '@/components/purchase/PurchaseBaseInfo';
+import { SettingsPanel } from './SettingsPanel';
+import { InvoiceCompanyInfo } from './InvoiceCompanyInfo';
+import PurchaseBaseInfo from './PurchaseBaseInfo';
 import { usePurchaseStore } from '../state/purchase.store';
 import { useAutoResizeTextareas } from '@/hooks/useAutoResizeTextareas';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
@@ -216,7 +216,7 @@ export default function PurchaseForm() {
                   placeholder="如前"
                 />
               </div>
-              <BankInfoSection showBank={data.showBank} />
+              <InvoiceCompanyInfo showBank={data.showBank} />
             </div>
           </div>
 
