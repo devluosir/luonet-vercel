@@ -21,12 +21,13 @@ function getRowBgClass(record: InquiryRecord): string {
   return 'hover:bg-gray-50/70 dark:hover:bg-gray-800/30';
 }
 
+// 执行情况是自由文本，不是三选一枚举：只有明确写"发票..."（已开票/基本完成）才算完成态，
+// 其余任何文字（含用户自己写的说明，比如"合同确认中"）都视同"备货"阶段，保持"进行中"的粉色
 function getRowTextClass(record: InquiryRecord): string {
   const status = record.orderDeliveryStatus?.trim() ?? '';
-  if (!status || status.startsWith('备货')) return 'text-pink-500 dark:text-pink-400';
   if (status.startsWith('交货')) return 'text-blue-600 dark:text-blue-400';
   if (status.startsWith('发票')) return 'text-gray-900 dark:text-gray-100';
-  return 'text-gray-700 dark:text-gray-300';
+  return 'text-pink-500 dark:text-pink-400';
 }
 
 function OrderNoText({ record, textClassName }: { record: InquiryRecord; textClassName: string }) {

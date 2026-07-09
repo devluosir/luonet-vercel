@@ -25,12 +25,17 @@ function hasOrder(record: InquiryRecord): boolean {
   return Boolean(record.orderNo?.trim());
 }
 
-/** 与订单状态表 OrderPage 完全一致的"进行中"判定，保证两个视图对同一批记录筛选出相同结果 */
+/**
+ * 与订单状态表 OrderPage 完全一致的"进行中"判定，保证两个视图对同一批记录筛选出相同结果。
+ * 执行情况是自由文本，不是三选一枚举——任何用户手写的说明文字（比如"合同确认中"）
+ * 只要不是明确的"发票"（代表已开票/基本完成），都应继续算"进行中"，不能反过来
+ * 白名单匹配 备货/交货 前缀（那样任何不认识的文字都会被误判成已完成）。
+ */
 function isInProgressOrder(record: InquiryRecord): boolean {
   if (record.orderSubStatus === 'cancelled') return false;
   if (record.orderSubStatus === 'suspended' || record.orderSubStatus === 'followup') return true;
   const deliveryStatus = record.orderDeliveryStatus?.trim() ?? '';
-  return !deliveryStatus || deliveryStatus.startsWith('备货') || deliveryStatus.startsWith('交货');
+  return !deliveryStatus.startsWith('发票');
 }
 
 /** 与订单状态表 OrderPage 完全一致的订单状态匹配逻辑 */

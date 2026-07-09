@@ -27,6 +27,24 @@ export interface InquirySyncStatus {
   lastFailedAt: string | null;
 }
 
+/**
+ * JSON.stringify 会静默丢弃值为 undefined 的 key（整个 key 都不出现在报文里），
+ * 服务端因此完全无法区分"这个字段没传"和"这个字段被清空了"。字段真正被清空时
+ * （比如执行情况的"清除"按钮 onSave(undefined, undefined)），会导致服务端保留旧值，
+ * 本地清空后一刷新/一同步又被旧值覆盖回来。这里在真正序列化前把 undefined 显式转成
+ * null——null 会被 JSON.stringify 保留，worker.ts 的 `{...existingData, ...body}` 合并
+ * 逻辑本来就会用 null 正确覆盖旧值，不需要改动服务端。
+ * 只转换payload 对象里"确实存在"的 key（Object.entries 只会枚举自身可枚举属性），
+ * 不会影响调用方根本没提及的字段——那些字段本就不在 payload 里，属于"partial patch
+ * 未提及=不动"，而不是"undefined=清空"。
+ */
+function normalizeSyncPayload(payload: Partial<InquiryRecord> | undefined): Record<string, unknown> {
+  if (!payload) return {};
+  return Object.fromEntries(
+    Object.entries(payload).map(([key, value]) => [key, value === undefined ? null : value])
+  );
+}
+
 function isRemoteNewer(remote: InquiryRecord, local: InquiryRecord): boolean {
   const remoteTime = new Date(remote.updatedAt).getTime();
   const localTime = new Date(local.updatedAt).getTime();
@@ -142,13 +160,13 @@ async function executeSyncOp(op: PendingSyncOp): Promise<void> {
     res = await fetch(API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(op.payload ?? {}),
+      body: JSON.stringify(normalizeSyncPayload(op.payload)),
     });
   } else {
     res = await fetch(`${API_BASE}/${encodeURIComponent(op.recordId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(op.payload ?? {}),
+      body: JSON.stringify(normalizeSyncPayload(op.payload)),
     });
   }
 

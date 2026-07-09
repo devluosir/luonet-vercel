@@ -195,6 +195,8 @@ theme-config
 - 订单状态表可通过 `quoteStatus=has_order` 从客户详情跳转到”已成单”筛选。
 - 询报价登记 `/inquiry`、采购部登记 `/purchase-registration`（两者共用 `useInquiryFilter.ts`）默认进入时时间范围筛选选中”当月”（`` `month:${todayMonth()}` ``，即月份导航器 `MonthRangeNav` 的当月挡位），而非此前的”近3月”；该默认值在每次挂载/点击”重置”时用 `todayMonth()` 动态计算，不会因跨月不刷新页面而停留在旧月份。
 - 订单状态表 `/order`、采购订单表 `/purchase-order-table` 默认进入时状态筛选选中”进行中”，时间范围一并放宽到”全部”（订单状态表排序同时默认按订单号降序），与手动点击”进行中”筛选芯片的效果一致；两页的”重置筛选”也回到这个组合，而不是回到”全部状态 + 近3个月”。
+- 修复：执行情况（`orderDeliveryStatus`）是自由文本框，此前 `isInProgressOrder`/行文字颜色逻辑（`OrderPage.tsx`/`PurchaseOrderRegistrationPage.tsx`/`OrderRow.tsx`/`PurchaseOrderRow.tsx`，四处重复实现）反过来”白名单”匹配 备货/交货 前缀，导致用户手写任何不是这两个前缀的说明文字（如”合同确认中”）就被误判成”已完成”、行也从粉色变灰。现改为：只有明确写”发票...”前缀才算完成态，其余任何文字（含空、备货、交货、自定义说明）都算”进行中”并保持粉色。
+- 修复：执行情况文本框的”清除”按钮此前不生效（清空后刷新/同步又被旧值覆盖）。根因是同步层 `executeSyncOp`（`inquiry.service.ts`）用 `JSON.stringify(op.payload)` 序列化请求体时，值为 `undefined` 的字段会被整个丢弃（key 都不出现在报文里），服务端因此收不到”清空”这个信号、只是简单地没看到这个字段，旧值原样保留；下次拉取又把旧值合并回本地。现在同步前统一用 `normalizeSyncPayload()` 把 payload 里的 `undefined` 转成显式 `null`（`null` 会被 `JSON.stringify` 保留），worker.ts 现有的 `{...existingData, ...body}` 合并逻辑本来就能正确处理显式 `null`，未改动服务端代码。
 - 订单状态表会在客户订单号下方显示 C/P/S 情况备注，并按辙销红色、悬挂绿色、善后蓝色着色。
 - 订单状态表的执行情况支持 `orderDeliveryConsignee` 收货人关联。收货人只在「交货」编辑态下选择，但关联属于订单本身；后续把执行情况改为「发票」或「备货」不会自动清空收货人。
 - 只有点击执行情况「清除」按钮，或在「交货」编辑态下把收货人下拉框选回空白，才会解除 `orderDeliveryConsignee` 关联。

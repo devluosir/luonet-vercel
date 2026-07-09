@@ -48,11 +48,14 @@ function matchesTimeRange(record: InquiryRecord, range: TimeRange, now: Date): b
 
 type OrderStatusFilter = 'all' | 'inProgress' | 'normal' | OrderSubStatus;
 
+// 执行情况是自由文本（见 DeliveryStatusCell），不是只能三选一的枚举。
+// 因此这里不能反过来"白名单"匹配 备货/交货 前缀——任何用户手写的说明文字
+// （比如"合同确认中"）只要不是明确的"发票"（代表已开票/基本完成），都应继续算"进行中"。
 function isInProgressOrder(record: InquiryRecord): boolean {
   if (record.orderSubStatus === 'cancelled') return false;
   if (record.orderSubStatus === 'suspended' || record.orderSubStatus === 'followup') return true;
   const deliveryStatus = record.orderDeliveryStatus?.trim() ?? '';
-  return !deliveryStatus || deliveryStatus.startsWith('备货') || deliveryStatus.startsWith('交货');
+  return !deliveryStatus.startsWith('发票');
 }
 
 function matchesOrderStatus(record: InquiryRecord, filter: OrderStatusFilter): boolean {
