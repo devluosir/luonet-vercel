@@ -274,10 +274,10 @@ GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git f
 ## 推荐优化路线（优先级排序）
 
 1. **测试覆盖**：本地/CI 跑通新增 E2E；补无权限账号的 PermissionDenied 断言（需专用测试账号）。
-2. **文档治理（单独排期）**：归档 docs 中同名 FIX/SUMMARY 到 `docs/archived/`，勿与代码改动同 commit。
-3. **权限刷新简化（可选）**：`fetchPermissions` 与 `usePermissionRefresh` 仍有重叠，可继续收敛。
-4. **跨设备同步**：保持双写 + 登录拉取 + 本地补推（选 B）；不做 TASK-14。
-5. **purchase-registration exhaustive-deps**：既有 lint warning，可择机修。
+2. **权限刷新简化（可选）**：`fetchPermissions` 与 `usePermissionRefresh` 仍有重叠，可继续收敛。
+3. **跨设备同步**：保持双写 + 登录拉取 + 本地补推（选 B）；不做 TASK-14。
+4. **purchase-registration exhaustive-deps**：既有 lint warning，可择机修。
+5. **CODEX_TASKS 瘦身（可选）**：已完成 TASK 可迁入 `docs/archived/`，根文件只留待办与最近摘要。
 
 ## 文档索引
 

@@ -78,9 +78,10 @@ ai-email, impa, clock, holidays, rmb
 - `docs/core/CURRENT_STATE.md`：最新事实源。
 - `docs/core/CHANGELOG.md`：变更历史。
 - `CODEX_TASKS.md`：任务执行记录。
-- `docs/features/`：模块文档。
-- `docs/technical/`：技术专题。
-- `docs/bugfixes/`：历史修复记录。
+- `docs/features/`：模块入口文档（过程文档已归档）。
+- `docs/technical/`：技术专题入口。
+- `docs/bugfixes/`：历史修复记录（canonical）。
+- `docs/archived/2026-07/`：2026-07 过程/重复文档归档。
 
 ## 已知风险
 

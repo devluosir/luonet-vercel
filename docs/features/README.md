@@ -1,51 +1,36 @@
 # 功能模块文档
 
-## 📦 模块列表
+最后更新：2026-07-09
 
-### [询报价登记模块](inquiry/)
-- [模块说明](inquiry/INQUIRY_MODULE.md) - 询报价登记、筛选、排序、表格样式与订单标记
+过程/修复/迁移类文档已归档至 [docs/archived/2026-07/](../archived/2026-07/README.md)。  
+当前行为以 [CURRENT_STATE.md](../core/CURRENT_STATE.md) 为准。
 
-### [订单状态表](order/)
-- [订单状态表说明](order/ORDER_STATUS_TABLE.md) - 订单追踪字段、筛选、行内编辑、行样式与表头样式
+## 有独立模块说明的入口
 
-### [报价模块](quotation/)
-- [模块化重构](quotation/quotation_modularization.md) - 完整的模块化重构总结
-- Notes自定义功能
-- 支付交付条款
+| 模块 | 文档 |
+|------|------|
+| 询报价登记 | [INQUIRY_MODULE.md](inquiry/INQUIRY_MODULE.md) · [导入导出](inquiry/INQUIRY_IMPORT_EXPORT.md) |
+| 订单状态表 | [ORDER_STATUS_TABLE.md](order/ORDER_STATUS_TABLE.md) |
+| 客户管理 | [README.md](customer/README.md) · [USER_GUIDE.md](customer/USER_GUIDE.md) |
+| 采购部登记 | [PURCHASE_REGISTRATION_MODULE.md](purchase-registration/PURCHASE_REGISTRATION_MODULE.md) |
+| 采购订单表 | [PURCHASE_ORDER_TABLE_MODULE.md](purchase-order-table/PURCHASE_ORDER_TABLE_MODULE.md) |
+| 内销报价 | [DOMESTIC_QUOTATION_MODULE.md](quotation-domestic/DOMESTIC_QUOTATION_MODULE.md) |
+| 预加载 | [PRELOAD_FEATURE.md](PRELOAD_FEATURE.md) |
 
-### [采购模块](purchase/)
-- [模块化重构](purchase/purchase_modularization.md) - 模块化重构和性能优化
-- 选择器优化
-- 最终打磨
+## 轻量入口（细节见 CURRENT_STATE）
 
-### [装箱单模块](packing/)
-- 移动端优化
-- PDF修复
-- 模块优化
-- 模块迁移
+以下模块代码在 `src/features/{module}`；文档入口仅作导航，避免再堆过程总结。
 
-### [邮件模块](mail/)
-- 模块化总结
-- 连接修复
-- 按钮修复
+| 模块 | 入口 | CURRENT_STATE 章节提示 |
+|------|------|------------------------|
+| 外贸报价 / 销售确认 | [quotation/README.md](quotation/README.md) | 路由与模块 · 数据存储 |
+| 装箱单 | [packing/README.md](packing/README.md) | 路由与模块 |
+| 采购订单（单据） | [purchase/README.md](purchase/README.md) | 路由与模块 |
+| 财务发票 | [invoice/README.md](invoice/README.md) | 路由与模块 |
+| AI 邮件 | [mail/README.md](mail/README.md) | 路由与模块 |
+| 管理后台 | [admin/README.md](admin/README.md) | 权限现状 |
 
-### [游戏功能](games/)
-- AI玩家功能
-- 状态同步
-- 随机移动
+## 已归档
 
-### [客户模块](customer/)
-- [模块说明](customer/README.md) - 客户/供应商/收货人、联络人、分类、详情活动
-- [用户指南](customer/USER_GUIDE.md) - 客户资料维护与询报价联动使用说明
-
-### [发票模块](invoice/)
-- 模块迁移
-- PDF显示修复
-- 数量输入样式统一
-
-### [管理模块](admin/)
-- 单元模块迁移指南
-
----
-
-*功能模块文档索引*
+- 游戏功能文档 → `docs/archived/2026-07/features/games/`
+- 各模块 `*_SUMMARY` / `*_FIX` / modularization 过程文档 → `docs/archived/2026-07/features/`

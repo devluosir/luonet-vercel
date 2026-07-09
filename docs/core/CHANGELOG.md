@@ -35,20 +35,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### P3 packing / purchase 双轨迁移
 - **packing**：`SettingsPanel`、`OtherFeesTable` 迁入 `features/packing/components/`；删除孤儿 `ConsigneeSection`、`ShippingMarksModal`、旧 `ItemsTable`。
 - **purchase**：`SettingsPanel`、`PurchaseBaseInfo` 迁入 features；开票资料组件重命名为 `InvoiceCompanyInfo`（避免与 sections/BankInfoSection 冲突）；删除孤儿 `SupplierInfoSection`。
-- 旧路径保留 thin re-export shim。
-
-#### P3 清理 shim + admin 约定对齐
-- **删除** `src/components/quotation`、`src/components/packinglist`、`src/components/purchase` 全部 re-export shim（全仓库无生产/测试引用）。
-- **CreateUserModal**：本体迁入 `features/admin/components/CreateUserModal.tsx`；`components/admin/CreateUserModal.tsx` 改为指向 features 的兼容 re-export。
-- 验证：`tsc --noEmit`、`next lint`、`npm run build` 均通过（purchase-registration 既有 exhaustive-deps warning 未引入）。
-
-> 文档归档（docs/bugfixes 与 features 同名 FIX 去重）另开一轮，不与本批代码混提。
+- 旧路径保留 thin re-export shim（随后已删除，见同日「清理 shim」条目）。
 
 ### Changed
 
 #### 文档对齐
 - 同步 `AGENTS.md` / `README.md` / `PROJECT_SUMMARY.md` / `CURRENT_STATE.md`：权限模块补全、路由补全、Bearer/secret 现状、客户 D1 主存表述；关闭已过时的「紧急安全」待办描述。
 - 跨设备策略确认：取消 TASK-14 旧历史批量迁移；保留双写 + 登录拉取 + 本地补推。
+
+#### 文档归档（2026-07-09）
+- 约 76 篇过程/重复 FIX·SUMMARY 迁入 `docs/archived/2026-07/`（features 与 bugfixes 同名副本、modularization、games 整夹、technical 一次性优化、core 字体/Logo 总结、testing 验收清单）。
+- `docs/bugfixes/` 原位保留为修复记录 canonical。
+- 根目录散落文档改路径：`INQUIRY_IMPORT_EXPORT` → `features/inquiry/`；`PDF_TABLE_RENDERER_GUIDE` → `technical/pdf/`。
+- 重写 `docs/README.md`、`features/README.md`、`technical/README.md`、`core/README.md`；为 quotation/packing/purchase/invoice/mail/admin 补轻量 README 入口。
 
 #### 权限刷新
 - 删除无 listener 的 `silentRefreshPermissions` 事件；改为派发带 `tokenNeedsRefresh` 的 `permissionsUpdated`。完整 session 刷新仍由 `usePermissionRefresh` 负责。
