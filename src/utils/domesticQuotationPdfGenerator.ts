@@ -18,6 +18,10 @@ interface ExtendedJsPDF extends jsPDF {
   restoreGraphicsState: () => jsPDF;
   setGState: (gState: GState) => jsPDF;
   getImageProperties: (image: string) => ImageProperties;
+  // @types/jspdf 这份类型定义比较旧，没收录这两个方法，但 jsPDF 运行时实际支持
+  // （见 node_modules/jspdf/types/index.d.ts），供方/需方信息表按可用空间动态调整行距要用到
+  getLineHeightFactor: () => number;
+  setLineHeightFactor: (value: number) => jsPDF;
 }
 
 function setCnFont(doc: jsPDF, style: 'normal' | 'bold' = 'normal') {
@@ -55,25 +59,6 @@ function checkPage(doc: jsPDF, y: number, needed: number, margin: number, pageHe
     return margin;
   }
   return y;
-}
-
-/** 从 baseFontSize 开始逐步缩小字号，直到文本能在 maxWidth 内单行显示（不超过 minFontSize），用于单位地址这类可能超长的单行字段 */
-function fitFontSizeToOneLine(
-  doc: jsPDF,
-  text: string,
-  maxWidth: number,
-  baseFontSize: number,
-  minFontSize = 6
-): number {
-  if (!text || maxWidth <= 0) return baseFontSize;
-  let size = baseFontSize;
-  while (size > minFontSize) {
-    doc.setFontSize(size);
-    if (doc.splitTextToSize(text, maxWidth).length <= 1) return size;
-    size -= 0.5;
-  }
-  doc.setFontSize(minFontSize);
-  return minFontSize;
 }
 
 async function getStampImage(stampType: 'none' | 'shanghai' | 'hongkong' | undefined): Promise<string> {
@@ -244,53 +229,95 @@ async function drawPartyTable(
   y: number
 ): Promise<number> {
   const partyRowsData = partyRows(data);
-  const rowCount = partyRowsData.length;
-  const headerRows = 1;
-  const rowsTotal = rowCount + headerRows;
 
-  // 基准尺寸：和原来的视觉效果一致（未压缩时）
+  // 首行（单位名称(章)）分别加上"供方”/“需方”前缀，替代原来单独一行的表头
+  const sellerText = partyRowsData
+    .map(([label, seller], index) => (index === 0 ? `供方 ${label}：${seller}` : `${label}：${seller}`))
+    .join('\n');
+  const buyerText = partyRowsData
+    .map(([label, , buyer], index) => (index === 0 ? `需方 ${label}：${buyer}` : `${label}：${buyer}`))
+    .join('\n');
+
+  const mmPerPt = 0.3528;
+  const comfortableLineHeightFactor = 1.45; // 空间充足时用的行距，比 jsPDF 默认 1.15 更舒展
+  const tightLineHeightFactor = 1.15; // 压缩到底也不再往下收的行距下限（jsPDF 默认值）
   const baseCellPadding = 2.2;
   const baseFontSize = 8.5;
-  const baseMinCellHeight = 7;
-  const baseNeededHeight = rowsTotal * baseMinCellHeight + 4;
+  const minFontSize = 7;
 
-  // 当前页剩余空间不够整张表按基准尺寸绘制时，优先适度压缩行高/内边距/字号，让表格精确贴合剩余
-  // 空间、和产品条款留在同一页，而不是整体挪到下一页、在当前页留下一大片空白
-  // （供方/需方签章应尽量与正文同页）。压缩到行高 5.2mm / 字号 7pt 这个下限仍放不下，才真正换页。
-  let cellPadding = baseCellPadding;
-  let bodyFontSize = baseFontSize;
-  let minCellHeight = baseMinCellHeight;
-  let neededHeight = baseNeededHeight;
-
-  const available = pageHeight - margin - 12 - y;
-  if (available < baseNeededHeight) {
-    const targetMinCellHeight = (available - 4) / rowsTotal;
-    minCellHeight = Math.min(baseMinCellHeight, Math.max(5.2, targetMinCellHeight));
-    const scale = minCellHeight / baseMinCellHeight;
-    cellPadding = Math.max(1.3, baseCellPadding * scale);
-    bodyFontSize = Math.max(7, baseFontSize * Math.max(scale, 0.85));
-    neededHeight = rowsTotal * minCellHeight + 4;
+  // 按实际渲染宽度精确量出每个字号下会换行成几行（单位地址等字段偏长时本来就会自动
+  // 换行成 2 行），比之前"按字段数假设每项 1 行"更准——旧算法没算上换行，容易低估表格
+  // 实际所需高度，导致明明放得下也被判定"放不下"而提前换页。
+  function measureHeight(fontSize: number, cellPadding: number, lineHeightFactor: number): number {
+    doc.setFontSize(fontSize);
+    const cellWidth = (pageWidth - margin * 2) / 2 - cellPadding * 2;
+    const lines = Math.max(
+      doc.splitTextToSize(sellerText, cellWidth).length,
+      doc.splitTextToSize(buyerText, cellWidth).length
+    );
+    return lines * fontSize * mmPerPt * lineHeightFactor + cellPadding * 2 + 2;
   }
 
-  y = checkPage(doc, y, neededHeight, margin, pageHeight);
+  // 共享的 checkPage() 底部预留是 margin + 12（比如 16+12=28mm），这是为"下面还有更多正文
+  // 内容要接着排"的场景设计的（条款、合计等中间内容）。但供需双方信息表是这一页最后一块
+  // 内容，后面只剩页码（所有内容画完后统一在 pageHeight-8 补画），不需要留出整块 margin
+  // 那么大的安全区——照抄 checkPage() 的口径实测发现会白白多留出约 20mm 没用上，明明还有
+  // 二三十毫米空白也会被判定放不下、提前跳页，所以这里单独按页码的实际位置算一个更贴近
+  // 真实可用空间的下边界，不复用 checkPage()。
+  const bottomReserve = 14; // 页码基线在 pageHeight-8，留出安全间距即可
+  const pageBottom = pageHeight - bottomReserve;
+  const available = pageBottom - y;
 
-  const rows = partyRowsData.map(([label, seller, buyer]) => [
-    `${label}：${seller}`,
-    `${label}：${buyer}`,
-  ]);
+  // 优先用基准字号 + 舒展行距；放不下时先收紧行距（对可读性的影响比缩字号小），
+  // 行距收到 1.15 下限还不够，再逐步缩字号/内边距，缩到 7pt 下限仍放不下才真正换页。
+  let bodyFontSize = baseFontSize;
+  let cellPadding = baseCellPadding;
+  let lineHeightFactor = comfortableLineHeightFactor;
+  let neededHeight = measureHeight(bodyFontSize, cellPadding, lineHeightFactor);
 
-  // "单位地址"行内容常常偏长（自贸区/门牌号等），字号按需缩小到能单行显示为止，避免自动换行撑高表格
-  const colWidth = (pageWidth - margin * 2) / 2 - cellPadding * 2;
-  const addressRowIndex = 1; // partyRows 固定顺序：0 单位名称，1 单位地址
-  const addressFontSizes = rows[addressRowIndex]?.map((text) =>
-    fitFontSizeToOneLine(doc, text, colWidth, bodyFontSize, 6)
-  ) ?? [bodyFontSize, bodyFontSize];
-  doc.setFontSize(bodyFontSize); // 恢复默认字号，避免测量时的 setFontSize 调用影响后续绘制
+  if (neededHeight > available) {
+    for (let factor = comfortableLineHeightFactor - 0.05; factor >= tightLineHeightFactor; factor -= 0.05) {
+      const height = measureHeight(bodyFontSize, cellPadding, factor);
+      lineHeightFactor = factor;
+      neededHeight = height;
+      if (height <= available) break;
+    }
+  }
+
+  if (neededHeight > available) {
+    for (let size = baseFontSize - 0.5; size >= minFontSize; size -= 0.5) {
+      const scale = size / baseFontSize;
+      const padding = Math.max(1.3, baseCellPadding * scale);
+      const height = measureHeight(size, padding, tightLineHeightFactor);
+      bodyFontSize = size;
+      cellPadding = padding;
+      lineHeightFactor = tightLineHeightFactor;
+      neededHeight = height;
+      if (height <= available) break;
+    }
+  }
+
+  const yBeforePageCheck = y;
+  if (y + neededHeight > pageBottom) {
+    doc.addPage();
+    y = margin;
+  }
+  if (y !== yBeforePageCheck) {
+    // 真的换页了：新的一页从顶部开始，空间充足，不需要沿用压缩后的字号/行距
+    bodyFontSize = baseFontSize;
+    cellPadding = baseCellPadding;
+    lineHeightFactor = comfortableLineHeightFactor;
+  }
+  doc.setFontSize(bodyFontSize); // 恢复，避免测量时的 setFontSize 影响后续绘制
+
+  // lineHeightFactor 是 doc 级别的全局设置（jspdf-autotable 内部按 doc.getLineHeightFactor()
+  // 计算单元格行距），画完这张表要恢复原值，避免影响后面画的页码等其它内容
+  const previousLineHeightFactor = doc.getLineHeightFactor();
+  doc.setLineHeightFactor(lineHeightFactor);
 
   doc.autoTable({
     startY: y,
-    head: [['供 方', '需 方']],
-    body: rows,
+    body: [[sellerText, buyerText]],
     theme: 'grid',
     margin: { left: margin, right: margin },
     styles: {
@@ -301,14 +328,7 @@ async function drawPartyTable(
       textColor: [20, 20, 20],
       lineColor: [90, 90, 90],
       lineWidth: 0.2,
-      minCellHeight,
-    },
-    headStyles: {
-      font: 'NotoSansSC',
-      fontStyle: 'bold',
-      halign: 'center',
-      fillColor: [245, 245, 245],
-      textColor: [20, 20, 20],
+      valign: 'top',
     },
     columnStyles: {
       0: { cellWidth: (pageWidth - margin * 2) / 2 },
@@ -316,11 +336,10 @@ async function drawPartyTable(
     },
     didParseCell: (hookData) => {
       hookData.cell.styles.font = 'NotoSansSC';
-      if (hookData.section === 'body' && hookData.row.index === addressRowIndex) {
-        hookData.cell.styles.fontSize = addressFontSizes[hookData.column.index] ?? bodyFontSize;
-      }
     },
   });
+
+  doc.setLineHeightFactor(previousLineHeightFactor);
 
   const finalY = doc.lastAutoTable.finalY;
 
