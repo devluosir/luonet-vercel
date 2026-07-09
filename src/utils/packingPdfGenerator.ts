@@ -7,6 +7,7 @@ import { safeSetCnFont } from '@/utils/pdf/ensureFont';
 import { validateFontRegistration } from '@/utils/pdfFontUtils';
 import { MergedCellInfo } from '@/features/packing/types';
 import { getUnitDisplay } from '@/utils/unitUtils';
+import { drawHeaderBlock } from '@/utils/pdfHeaderBlock';
 
 interface ExtendedJsPDF extends jsPDF {
   autoTable: (options: UserOptions) => unknown;
@@ -212,101 +213,15 @@ export async function generatePackingListPDF(
     const margin = isLandscape ? 20 : 25;
     let currentY = margin;
 
-    // 添加表头
-    if (data.templateConfig.headerType !== 'none') {
-      try {
-        // 根据headerType选择对应的表头图片
-        const headerImageBase64 = await getHeaderImage(data.templateConfig.headerType);
-
-        if (headerImageBase64) {
-          const headerFormat = getHeaderImageFormat(data.templateConfig.headerType);
-          const mimeType = headerFormat === 'JPEG' ? 'image/jpeg' : 'image/png';
-          const headerImage = `data:${mimeType};base64,${headerImageBase64}`;
-          const imgProperties = doc.getImageProperties(headerImage);
-
-          // 检查是否显示marks列（用于判断是否需要横向模式）
-          const showMarks = visibleCols ? visibleCols.includes('marks') : false;
-          const shouldUseCompactHeader = isLandscape && showMarks;
-
-          // 根据条件调整抬头大小和位置
-          let imgWidth, imgHeight, imgX, imgY, titleFontSize, titleSpacing, titleYSpacing;
-
-          // 计算图片的原始宽高比
-          const aspectRatio = imgProperties.width / imgProperties.height;
-
-          if (shouldUseCompactHeader) {
-            // 横向模式且显示marks列：保持与纵向模式相同的图片尺寸
-            // 使用纵向模式的标准尺寸，而不是根据横向纸张宽度缩放
-            const standardWidth = 210 - 30; // A4纵向模式的宽度减去30mm边距
-            const maxHeight = 40; // 与纵向模式保持一致的最大高度
-
-            // 使用纵向模式的标准宽度计算
-            imgWidth = standardWidth;
-            imgHeight = imgWidth / aspectRatio;
-
-            // 如果高度超出限制，则按高度计算宽度
-            if (imgHeight > maxHeight) {
-              imgHeight = maxHeight;
-              imgWidth = imgHeight * aspectRatio;
-            }
-
-            imgX = (pageWidth - imgWidth) / 2; // 水平居中
-            imgY = 15; // 与纵向模式保持相同的上边距
-            titleFontSize = 14; // 与纵向模式保持相同的字体大小
-            titleSpacing = 5; // 与纵向模式保持相同的间距
-            titleYSpacing = 10; // 与纵向模式保持相同的间距
-          } else {
-            // 纵向模式：保持图片比例，优化尺寸
-            const maxHeight = 40; // 纵向模式下允许更大的高度
-            const maxWidth = pageWidth - 30; // 左右各留15mm
-
-            // 先按宽度计算高度
-            imgWidth = maxWidth;
-            imgHeight = imgWidth / aspectRatio;
-
-            // 如果高度超出限制，则按高度计算宽度
-            if (imgHeight > maxHeight) {
-              imgHeight = maxHeight;
-              imgWidth = imgHeight * aspectRatio;
-            }
-
-            imgX = (pageWidth - imgWidth) / 2; // 水平居中
-            imgY = 15; // 上边距15mm
-            titleFontSize = 14;
-            titleSpacing = 5;
-            titleYSpacing = 10;
-          }
-
-          doc.addImage(
-            headerImage,
-            headerFormat,
-            imgX,
-            imgY,
-            imgWidth,
-            imgHeight,
-            undefined,
-            'FAST'  // 使用快速压缩
-          );
-
-          // 调整标题字体大小和位置
-          doc.setFontSize(titleFontSize);
-          safeSetCnFont(doc, 'bold', 'export');
-          const title = getPackingListTitle(data);
-          const titleWidth = doc.getTextWidth(title);
-          const titleY = imgY + imgHeight + titleSpacing; // 标题Y坐标
-          doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-          currentY = titleY + titleYSpacing;
-        } else {
-          // 如果没有找到对应的表头图片，使用无表头的处理方式
-          currentY = handleNoHeader(doc, data, margin, pageWidth);
-        }
-      } catch (error) {
-        console.error('Error processing header:', error);
-        currentY = handleHeaderError(doc, data, margin, pageWidth);
-      }
-    } else {
-      currentY = handleNoHeader(doc, data, margin, pageWidth);
-    }
+    // 添加表头（logo 图标 + 矢量文字，替代原先的整条横幅图片；纵向/横向排版统一，不再区分紧凑模式）
+    currentY = await drawHeaderBlock(doc, data.templateConfig.headerType, margin, pageWidth, currentY);
+    doc.setFontSize(14);
+    safeSetCnFont(doc, 'bold', 'export');
+    const title = getPackingListTitle(data);
+    const titleWidth = doc.getTextWidth(title);
+    const titleY = currentY + 5;
+    doc.text(title, (pageWidth - titleWidth) / 2, titleY);
+    currentY = titleY + 10;
 
     // 基本信息区域（包含 SHIP'S SPARES IN TRANSIT）
     currentY = renderBasicInfo(doc, data, currentY, pageWidth, margin);
@@ -332,24 +247,6 @@ export async function generatePackingListPDF(
     console.error('Error generating packing list PDF:', error);
     throw error;
   }
-}
-
-// 获取表头图片
-async function getHeaderImage(headerType: 'none' | 'bilingual' | 'english'): Promise<string> {
-  if (headerType === 'none') return '';
-  const { embeddedResources } = await import('@/lib/embedded-resources');
-  switch (headerType) {
-    case 'bilingual':
-      return embeddedResources.headerImage;
-    case 'english':
-      return embeddedResources.headerEnglish;
-    default:
-      return '';
-  }
-}
-
-function getHeaderImageFormat(headerType: 'none' | 'bilingual' | 'english'): 'JPEG' | 'PNG' {
-  return headerType === 'bilingual' ? 'JPEG' : 'PNG';
 }
 
 // 获取箱单标题
@@ -475,28 +372,6 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
     safeSetCnFont(doc, 'normal', 'export');
     doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
   }
-}
-
-// 处理表头错误的情况
-function handleHeaderError(doc: ExtendedJsPDF, data: PackingData, margin: number, pageWidth: number): number {
-  doc.setFontSize(14);
-  safeSetCnFont(doc, 'bold', 'export');
-  const title = getPackingListTitle(data);
-  const titleWidth = doc.getTextWidth(title);
-  const titleY = margin + 5;
-  doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-  return titleY + 10;
-}
-
-// 处理无表头的情况
-function handleNoHeader(doc: ExtendedJsPDF, data: PackingData, margin: number, pageWidth: number): number {
-  doc.setFontSize(14);
-  safeSetCnFont(doc, 'bold', 'export');
-  const title = getPackingListTitle(data);
-  const titleWidth = doc.getTextWidth(title);
-  const titleY = margin + 5;
-  doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-  return titleY + 10;
 }
 
 // 渲染商品表格

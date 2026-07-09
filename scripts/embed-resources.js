@@ -11,12 +11,12 @@ const resources = [
     path: path.join(__dirname, '../public/fonts/NotoSansSC-Bold.ttf'),
   },
   {
-    name: 'headerImage',
-    path: path.join(__dirname, '../public/images/header-bilingual.jpg'),
-  },
-  {
-    name: 'headerEnglish',
-    path: path.join(__dirname, '../public/images/header-english.png'),
+    // 小尺寸 LC 菱形 logo（160x160，~13KB），用于 PDF 表头"logo+矢量文字"排版。
+    // 原先的整条表头横幅图（header-bilingual.jpg ~92KB / header-english.png ~24KB）已经
+    // 从全部 6 个 PDF 生成器里替换下来（TASK-106/TASK-107），源图片文件和这两条资源项也已删除。
+    // 见 pdfHeaderBlock.ts 的 drawHeaderBlock()。
+    name: 'logoIcon',
+    path: path.join(__dirname, '../public/images/header-logo-icon.png'),
   },
   {
     name: 'shanghaiStamp',

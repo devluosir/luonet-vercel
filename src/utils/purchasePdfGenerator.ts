@@ -4,6 +4,7 @@ import { PurchaseOrderData } from '@/types/purchase';
 import { getBankInfo } from '@/utils/bankInfo';
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { safeSetCnFont } from './pdf/ensureFont';
+import { drawHeaderBlock } from './pdfHeaderBlock';
 
 /** ------------ 基础类型定义 ------------ */
 type _RGB = [number, number, number];
@@ -43,16 +44,6 @@ async function getStampImage(stampType: string): Promise<string> {
     return embeddedResources.hongkongStamp;
   }
   return '';
-}
-
-// 获取表头图片
-async function getHeaderImage(): Promise<string> {
-  const { embeddedResources } = await import('@/lib/embedded-resources');
-  return embeddedResources.headerImage;
-}
-
-function getHeaderImageFormat(): 'JPEG' | 'PNG' {
-  return 'JPEG';
 }
 
 /**
@@ -98,40 +89,15 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
   };
 
   try {
-    // 添加表头
-    try {
-      const headerFormat = getHeaderImageFormat();
-      const mimeType = headerFormat === 'JPEG' ? 'image/jpeg' : 'image/png';
-      const headerImage = `data:${mimeType};base64,${await getHeaderImage()}`;
-      const imgProperties = doc.getImageProperties(headerImage);
-      const imgWidth = pageWidth - 30;  // 左右各留15mm
-      const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
-      doc.addImage(
-        headerImage,
-        headerFormat,
-        15,  // 左边距15mm
-        15,  // 上边距15mm
-        imgWidth,
-        imgHeight
-      );
-      doc.setFontSize(14);
-      setCnFont(doc, 'bold');
-      const title = 'PURCHASE ORDER';
-      const titleWidth = doc.getTextWidth(title);
-      const titleY = margin + imgHeight + 5;  // 标题Y坐标
-      doc.text(title, (pageWidth - titleWidth) / 2, titleY);  // 标题位置
-      startY = titleY + 10;  // 主体内容从标题下方开始
-    } catch (error) {
-      console.error('Error processing header:', error);
-      // 使用默认布局
-      doc.setFontSize(14);
-      setCnFont(doc, 'bold');
-      const title = 'PURCHASE ORDER';
-      const titleWidth = doc.getTextWidth(title);
-      const titleY = margin + 5;  // 标题Y坐标
-      doc.text(title, (pageWidth - titleWidth) / 2, titleY);  // 标题位置
-      startY = titleY + 10;  // 主体内容从标题下方开始
-    }
+    // 添加表头（logo 图标 + 矢量文字，替代原先的整条横幅图片；采购单固定双语表头，无 headerType 配置项）
+    startY = await drawHeaderBlock(doc, 'bilingual', margin, pageWidth, startY);
+    doc.setFontSize(14);
+    setCnFont(doc, 'bold');
+    const title = 'PURCHASE ORDER';
+    const titleWidth = doc.getTextWidth(title);
+    const titleY = startY + 5;  // 标题Y坐标
+    doc.text(title, (pageWidth - titleWidth) / 2, titleY);  // 标题位置
+    startY = titleY + 10;  // 主体内容从标题下方开始
 
     // 设置字体和样式
     doc.setFontSize(9);

@@ -3,10 +3,10 @@ import 'jspdf-autotable';
 import { UserOptions } from 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
 import { fastRegisterFonts } from './globalFontRegistry';
-import { getHeaderImage, getHeaderImageFormat } from './imageLoader';
 import { startTimer, endTimer } from './performanceMonitor';
 import { safeSetCnFont } from './pdf/ensureFont';
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
+import { drawHeaderBlock } from './pdfHeaderBlock';
 
 // 使用统一的安全字体工具，原有setCnFont函数已移至 pdf/ensureFont.ts
 
@@ -110,37 +110,11 @@ export const generateQuotationPDF = async (
 
     let yPosition = margin;
 
-    // 添加头部图片
+    // 添加头部（logo 图标 + 矢量文字，替代原先的整条横幅图片）
     const headerType = data.templateConfig?.headerType || 'bilingual';
-    if (headerType !== 'none') {
-      const headerLoadingId = startTimer('header-loading');
-      try {
-        const normalizedHeaderType = headerType as 'bilingual' | 'english';
-        const headerImage = await getHeaderImage(normalizedHeaderType);
-        const headerFormat = getHeaderImageFormat(normalizedHeaderType);
-
-        // 直接使用base64数据，不创建Image对象避免HTTP请求
-        const imgProperties = doc.getImageProperties(headerImage);
-        const aspectRatio = imgProperties.width / imgProperties.height;
-        const maxWidth = contentWidth;
-        const maxHeight = 40;
-        let imgWidth = maxWidth;
-        let imgHeight = imgWidth / aspectRatio;
-
-        if (imgHeight > maxHeight) {
-          imgHeight = maxHeight;
-          imgWidth = imgHeight * aspectRatio;
-        }
-
-        const xPosition = margin + (contentWidth - imgWidth) / 2;
-        doc.addImage(headerImage, headerFormat, xPosition, yPosition, imgWidth, imgHeight);
-        yPosition += imgHeight + 10;
-        endTimer(headerLoadingId, 'header-loading');
-      } catch (error) {
-        console.error('头部图片加载失败，跳过:', error);
-        endTimer(headerLoadingId, 'header-loading');
-      }
-    }
+    const headerLoadingId = startTimer('header-loading');
+    yPosition = await drawHeaderBlock(doc, headerType, margin, pageWidth, yPosition);
+    endTimer(headerLoadingId, 'header-loading');
 
     // 添加标题
     const titleSetupId = startTimer('title-setup');

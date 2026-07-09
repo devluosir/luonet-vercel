@@ -4,8 +4,8 @@ import { QuotationData } from '@/types/quotation';
 import { UserOptions } from 'jspdf-autotable';
 import { generateTableConfig } from './pdfTableGenerator';
 import { ensurePdfFont } from './pdfFontRegistry';
-import { getHeaderImage, getHeaderImageFormat } from './imageLoader';
 import { safeSetCnFont } from './pdf/ensureFont';
+import { drawHeaderBlock } from './pdfHeaderBlock';
 
 // 扩展jsPDF类型
 type ExtendedJsPDF = jsPDF & {
@@ -133,34 +133,9 @@ export const generateOrderConfirmationPDF = async (
       }
     }
 
-    // 添加头部图片
+    // 添加头部（logo 图标 + 矢量文字，替代原先的整条横幅图片）
     const headerType = data.templateConfig?.headerType || 'bilingual';
-    if (headerType !== 'none') {
-      try {
-        const normalizedHeaderType = headerType as 'bilingual' | 'english';
-        const headerImage = await getHeaderImage(normalizedHeaderType);
-        const headerFormat = getHeaderImageFormat(normalizedHeaderType);
-
-        // 使用jsPDF的getImageProperties方法获取图片尺寸，避免创建Image对象
-        const imgProperties = doc.getImageProperties(headerImage);
-        const aspectRatio = imgProperties.width / imgProperties.height;
-        const maxWidth = pageWidth - (margin * 2);
-        const maxHeight = 40;
-        let imgWidth = maxWidth;
-        let imgHeight = imgWidth / aspectRatio;
-
-        if (imgHeight > maxHeight) {
-          imgHeight = maxHeight;
-          imgWidth = imgHeight * aspectRatio;
-        }
-
-        const xPosition = margin + (maxWidth - imgWidth) / 2;
-        doc.addImage(headerImage, headerFormat, xPosition, startY, imgWidth, imgHeight);
-        startY += imgHeight + 10;
-      } catch (error) {
-        console.error('头部图片加载失败，跳过:', error);
-      }
-    }
+    startY = await drawHeaderBlock(doc, headerType, margin, pageWidth, startY);
 
     // 添加标题
     doc.setFontSize(14);

@@ -4,6 +4,7 @@ import { PDFGeneratorData } from '@/types/pdf';
 import { getInvoiceTitle } from '@/utils/pdfHelpers';
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { getUnitDisplay } from '@/utils/unitUtils';
+import { drawHeaderBlock, PdfHeaderType } from '@/utils/pdfHeaderBlock';
 
 // 货币符号映射
 const currencySymbols: { [key: string]: string } = {
@@ -125,25 +126,6 @@ interface ExtendedJsPDF extends jsPDF {
   getImageProperties: (image: string) => ImageProperties;
 }
 
-// 获取表头图片
-async function getHeaderImageBase64(headerType: string): Promise<string> {
-  const { embeddedResources } = await import('@/lib/embedded-resources');
-  switch (headerType) {
-    case 'bilingual':
-      // 使用双语表头图片
-      return embeddedResources.headerImage;
-    case 'english':
-      // 使用英文表头图片
-      return embeddedResources.headerEnglish;
-    default:
-      return embeddedResources.headerImage;
-  }
-}
-
-function getHeaderImageFormat(headerType: string): 'JPEG' | 'PNG' {
-  return headerType === 'bilingual' ? 'JPEG' : 'PNG';
-}
-
 // 获取印章图片的简化版本
 async function getStampImage(stampType: string): Promise<string> {
   const { embeddedResources } = await import('@/lib/embedded-resources');
@@ -193,41 +175,15 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
     const margin = 20;  // 页面边距
     let startY = margin;  // 初始化起始位置
 
-    // 添加表头
-    if (data.templateConfig.headerType !== 'none') {
-      try {
-        const headerType = data.templateConfig.headerType;
-        const headerImageBase64 = await getHeaderImageBase64(headerType);
-        const headerFormat = getHeaderImageFormat(headerType);
-        const mimeType = headerFormat === 'JPEG' ? 'image/jpeg' : 'image/png';
-        const headerImage = `data:${mimeType};base64,${headerImageBase64}`;
-        const imgProperties = doc.getImageProperties(headerImage);
-        const imgWidth = pageWidth - 30;  // 左右各留15mm
-        const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
-        doc.addImage(
-          headerImage,
-          headerFormat,
-          15,  // 左边距15mm
-          15,  // 上边距15mm
-          imgWidth,
-          imgHeight,
-          undefined,
-          'FAST'  // 使用快速压缩
-        );
-        doc.setFontSize(14);
-        setCnFont(doc, 'bold');
-        const title = getInvoiceTitle(data);
-        const titleWidth = doc.getTextWidth(title);
-        const titleY = margin + imgHeight + 5;  // 标题Y坐标
-        doc.text(String(title), (pageWidth - titleWidth) / 2, titleY);
-        startY = titleY + 10;
-      } catch (error) {
-        console.error('Error processing header:', error);
-        startY = handleHeaderError(doc, data, margin);
-      }
-    } else {
-      startY = handleNoHeader(doc, data, margin);
-    }
+    // 添加表头（logo 图标 + 矢量文字，替代原先的整条横幅图片）
+    startY = await drawHeaderBlock(doc, data.templateConfig.headerType as PdfHeaderType, margin, pageWidth, startY);
+    doc.setFontSize(14);
+    setCnFont(doc, 'bold');
+    const title = getInvoiceTitle(data);
+    const titleWidth = doc.getTextWidth(title);
+    const titleY = startY + 5;
+    doc.text(String(title), (pageWidth - titleWidth) / 2, titleY);
+    startY = titleY + 10;
 
     // 设置字体和样式
     doc.setFontSize(8);
@@ -285,28 +241,6 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
     console.error('Error generating PDF:', error);
     throw error;
   }
-}
-
-// 处理表头错误的情况
-function handleHeaderError(doc: ExtendedJsPDF, data: PDFGeneratorData, margin: number): number {
-  doc.setFontSize(14);
-  setCnFont(doc, 'bold');
-  const title = getInvoiceTitle(data);
-  const titleWidth = doc.getTextWidth(title);
-  const titleY = margin + 5;
-  doc.text(String(title), (doc.internal.pageSize.width - titleWidth) / 2, titleY);
-  return titleY + 10;
-}
-
-// 处理无表头的情况
-function handleNoHeader(doc: ExtendedJsPDF, data: PDFGeneratorData, margin: number): number {
-  doc.setFontSize(14);
-  setCnFont(doc, 'bold');
-  const title = getInvoiceTitle(data);
-  const titleWidth = doc.getTextWidth(title);
-  const titleY = margin + 5;
-  doc.text(String(title), (doc.internal.pageSize.width - titleWidth) / 2, titleY);
-  return titleY + 10;
 }
 
 // 渲染客户信息

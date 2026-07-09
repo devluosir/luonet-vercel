@@ -190,7 +190,7 @@ PDF 相关改动风险高。修改前先定位具体生成器：
 字体和图片资源：
 
 - 字体：`public/fonts/NotoSansSC-Regular.ttf`、`public/fonts/NotoSansSC-Bold.ttf`（及同名 .gz）
-- 头图：`public/images/header-bilingual.jpg`、`public/images/header-english.png`
+- PDF 表头 logo 图标：`public/images/header-logo-icon.png`（6 个 PDF 生成器共用 `pdfHeaderBlock.ts` 的"logo+矢量文字"排版，不再用整条横幅图）
 - 印章：`public/images/stamp-hongkong.png`、`public/images/stamp-shanghai.png`
 - Logo：`public/assets/logo/`
 

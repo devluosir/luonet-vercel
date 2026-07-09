@@ -7,8 +7,8 @@ import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { safeSetCnFont } from './pdf/ensureFont';
 import { convertToRmbCapital } from './rmbCapitalAmount';
 import { getDomesticClauseNumber } from './domesticClauseNumber';
-import { getHeaderImage, getHeaderImageFormat } from './imageLoader';
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
+import { drawHeaderBlock as drawSharedHeaderBlock } from './pdfHeaderBlock';
 
 interface ExtendedJsPDF extends jsPDF {
   autoTable: (options: UserOptions) => void;
@@ -95,8 +95,10 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
   }
 }
 
-// 顶部Header图片（公司抬头）：None / 中英文 / 英文，与外贸报价单口径一致，默认双语
-async function drawHeaderImage(
+// 顶部公司抬头：None / 中英文 / 英文，与外贸报价单口径一致，默认双语。
+// 实际绘制逻辑在 pdfHeaderBlock.ts（logo 图标 + 矢量文字，替代原先 ~92KB/24KB 的整条横幅图），
+// 6 个 PDF 生成器共用同一份实现，这里只做 headerType 取值的转接。
+async function drawHeaderBlock(
   doc: ExtendedJsPDF,
   data: QuotationData,
   margin: number,
@@ -104,33 +106,7 @@ async function drawHeaderImage(
   y: number
 ): Promise<number> {
   const headerType = data.templateConfig?.headerType || 'bilingual';
-  if (headerType === 'none') return y;
-
-  try {
-    const normalizedHeaderType = headerType as 'bilingual' | 'english';
-    const headerImage = await getHeaderImage(normalizedHeaderType);
-    const headerFormat = getHeaderImageFormat(normalizedHeaderType);
-    const contentWidth = pageWidth - margin * 2;
-
-    const imgProperties = doc.getImageProperties(headerImage);
-    const aspectRatio = imgProperties.width / imgProperties.height;
-    const maxWidth = contentWidth;
-    const maxHeight = 32;
-    let imgWidth = maxWidth;
-    let imgHeight = imgWidth / aspectRatio;
-
-    if (imgHeight > maxHeight) {
-      imgHeight = maxHeight;
-      imgWidth = imgHeight * aspectRatio;
-    }
-
-    const xPosition = margin + (contentWidth - imgWidth) / 2;
-    doc.addImage(headerImage, headerFormat, xPosition, y, imgWidth, imgHeight);
-    return y + imgHeight + 6;
-  } catch (error) {
-    console.error('[DomesticQuotationPDF] 头部图片加载失败，跳过:', error);
-    return y;
-  }
+  return drawSharedHeaderBlock(doc, headerType, margin, pageWidth, y);
 }
 
 function drawHeader(
@@ -394,7 +370,7 @@ export async function generateDomesticQuotationPDF(
   const visibleCols = savedVisibleCols ?? getLocalStorageJSON<string[]>('qt.visibleCols', []);
   const showRemarksCol = visibleCols ? visibleCols.includes('remarks') : true;
 
-  y = await drawHeaderImage(doc, data, margin, pageWidth, y);
+  y = await drawHeaderBlock(doc, data, margin, pageWidth, y);
   y = drawHeader(doc, data, margin, pageWidth, y, isContract);
 
   doc.setFontSize(10);

@@ -156,7 +156,7 @@ node scripts/embed-resources.js
 生成 `src/lib/embedded-resources.ts`，内嵌：
 
 - 中文字体：`public/fonts/NotoSansSC-Regular.ttf`、`public/fonts/NotoSansSC-Bold.ttf`（及 .gz）
-- PDF 头图：`public/images/header-bilingual.jpg`、`public/images/header-english.png`
+- PDF 表头 logo 图标：`public/images/header-logo-icon.png`（PDF 表头已改为"logo+矢量文字"排版，不再用整条横幅图）
 - 印章：`public/images/stamp-hongkong.png`、`public/images/stamp-shanghai.png`
 - Logo：`public/assets/logo/`
 

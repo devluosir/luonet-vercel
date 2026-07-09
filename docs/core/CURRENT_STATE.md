@@ -18,7 +18,8 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 - 主站：Vercel，香港 `hkg1` 区域。
 - 用户和权限服务：Cloudflare Worker + D1，自定义域 `https://udb.luocompany.net`。
 - AI 邮件：DeepSeek Chat API，通过 `/api/generate` 调用。
-- PDF/Excel：前端生成；字体、头图、印章资源由 `scripts/embed-resources.js` 在构建时嵌入到 `src/lib/embedded-resources.ts`。
+- PDF/Excel：前端生成；字体、头图、印章、logo 图标资源由 `scripts/embed-resources.js` 在构建时嵌入到 `src/lib/embedded-resources.ts`（该文件仍不手工编辑，改 `public/` 源文件后重跑脚本）。
+- 全部 6 个 PDF 生成器（内销报价/合同、外贸报价单、销售确认、装箱单、发票、采购单）的表头已从整条横幅图片统一改为"logo 图标 + 矢量文字"排版，共享实现在 `src/utils/pdfHeaderBlock.ts`（`drawHeaderBlock()`），文字来自 `src/utils/companyLetterhead.ts` 的 `COMPANY_LETTERHEAD` 常量；单份文档体积减少约 80KB（双语表头场景）。`logoIcon`（`public/images/header-logo-icon.png`，237×246px，~13.8KB）不是简单的方形图标，而是直接从原横幅图裁出来的"菱形 LC 图标 + Luo & Company 文字"完整 lockup（96 色量化压缩），保留了原图标下方的蓝色 "Luo & Company" 小字——这行字是 logo 本身的一部分，不能用单纯的方形图标替代。绘制时按 237:246 的真实长宽比换算宽高，避免被拉伸变形。装箱单在横向 A4（显示 marks 列时）会触发文字居中宽度封顶（180mm）逻辑，避免 logo 和文字在宽页面上分得太开；其余 5 个纵向 A4 生成器不受影响，行为跟封顶前完全一致。原横幅图源文件 `public/images/header-bilingual.jpg`（~92KB）/`header-english.png`（~24KB）已删除，`embedded-resources.ts` 里对应的 `headerImage`/`headerEnglish` 资源项、`imageLoader.ts` 里的 `getHeaderImage()`/`getHeaderImageFormat()` 也已一并清理。
 
 ## 代码质量现状
 
