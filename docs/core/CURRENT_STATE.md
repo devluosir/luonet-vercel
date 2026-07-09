@@ -162,6 +162,7 @@ theme-config
 - 移动端侧边栏和整体布局容器改用 `.app-h-dvh`（`100vh` 回退 + `100dvh` 覆盖），修复移动浏览器地址栏显示时固定侧边栏底部（用户菜单）被压到可视区域外的问题。
 - 移动端底部导航（`src/components/layout/MobileBottomTab.tsx`，`md:hidden`）为：首页（直达链接）+ 新建 / 登记 / 管理 / 工具 / 我（浮动子菜单），共最多 6 个入口。「新建」子项复用 `dashboardModules.ts` 的 `QUICK_CREATE_MODULES`；「登记/管理/工具」子项与桌面端 `AppSidebar.tsx` 的 `NAV_ITEMS` 保持同一套 id 和权限 moduleId（「工具」现含 AI 邮件，moduleId `ai-email`，与桌面 tools 分组对齐）；权限过滤后子项全空则对应分类入口隐藏，「首页」「我」固定常驻不受权限过滤。「我」菜单含关于、个人信息、管理后台（仅 `user.isAdmin`，跳转 `/admin`，与桌面端一致）、退出登录。
 - 移动端汉堡菜单（`AppTopBar.tsx` 的 `onMenuClick` 按钮）改为只在 768–1024px（`md`–`lg`）之间显示（`hidden md:flex lg:hidden`）。原因：<768px 已由底部 6 个入口（含首页/AI邮件）覆盖全部导航；768–1024px 之间桌面侧边栏（`lg:flex`）和底部导航都不显示，此按钮是该区间唯一导航入口，不能整体移除。
+- 修复：`/quotation?tab=domestic&docType=quotation|contract` 这个 `docType` URL 参数此前只在页面**首次挂载**时生效（`useInitQuotation.ts` 里的一次性初始化 effect），页面已挂载时仅切换查询参数（如移动端"新建"浮动菜单在 内销报价 ⇄ 内销合同 之间连续点击、或先点其他"新建"子项再点内销合同）不会重新应用，会静默停留在旧的单据类型/条款配置上。现已在监听 `searchParams` 变化的 effect 里补上 `updateData({ domesticDocType })` + 对应默认条款（`DOMESTIC_NOTES_CONFIG` / `DOMESTIC_QUOTATION_NOTES_CONFIG`）同步，并在应用后从 URL 中移除已消费的 `docType`（避免后续浏览器前进/后退等场景重新触发、覆盖用户在页面内手动切换的选择）。
 - 「关于」「个人信息」弹窗（`MobileSheetModal.tsx`）在所有屏宽下都居中显示（不再是移动端贴底、`sm` 以上才居中）。「关于」内容为 Logo + 「LC App」+ 展示版本号 `V1.0.0`（`MobileBottomTab.tsx` 内 `APP_DISPLAY_VERSION` 常量，与 `package.json` 的内部版本号 `1.2.0` 分开维护，如需同步需手动改）。「个人信息」在弹窗内使用 `UserProfilePanel` 的 `layout="sheet"` 排版：居中头像 + 大字号姓名/邮箱 + 独立的「修改密码」按钮，桌面端 hover 子菜单仍用默认紧凑排版。
 - 用户资料 + 改密表单从 `AppUserMenu.tsx` 抽成独立组件 `UserProfilePanel.tsx`，供桌面端下拉菜单与移动端「我」菜单的个人信息弹窗共用，避免两份改密逻辑。
 
