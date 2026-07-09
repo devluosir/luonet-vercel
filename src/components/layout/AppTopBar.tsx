@@ -32,12 +32,16 @@ export function AppTopBar({ breadcrumbs, onMenuClick, topBarSlot }: AppTopBarPro
   return (
     <header className="sticky top-0 z-40 h-12 bg-white shadow-sm dark:bg-app-dark-base dark:shadow-black/30">
       <div className="flex h-full items-center gap-2 px-3 sm:px-4 lg:px-5">
-        {/* 移动端汉堡按钮 */}
+        {/*
+          汉堡按钮：<768px 有底部 5 分类导航覆盖全部入口，不再需要；
+          768–1024px（md–lg）之间桌面侧边栏和底部导航都不显示，此按钮是唯一导航入口，必须保留；
+          ≥1024px 由桌面侧边栏覆盖。
+        */}
         {onMenuClick && (
           <button
             type="button"
             onClick={onMenuClick}
-            className="rounded-md p-1.5 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800/50 dark:hover:text-white lg:hidden"
+            className="hidden rounded-md p-1.5 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800/50 dark:hover:text-white md:flex lg:hidden"
             aria-label="打开导航"
           >
             <Menu className="h-5 w-5" />

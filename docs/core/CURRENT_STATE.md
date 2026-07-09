@@ -160,7 +160,8 @@ theme-config
 - 预加载只保留真实阶段：静态资源到 50%，PDF 字体到 100%；空实现的表单页 / 脚本样式阶段已移除。完成后用户菜单中的预加载行直接隐藏，不再显示「资源已预加载 (100%)」（详见 `docs/features/PRELOAD_FEATURE.md`）。
 - 用户菜单个人信息子菜单在 <640px 屏幕下改为在按钮下方原地展开，避免移动端 220px 侧边栏空间不足导致子菜单溢出可视区域；`sm` 及以上保持原有向右弹出。
 - 移动端侧边栏和整体布局容器改用 `.app-h-dvh`（`100vh` 回退 + `100dvh` 覆盖），修复移动浏览器地址栏显示时固定侧边栏底部（用户菜单）被压到可视区域外的问题。
-- 移动端底部导航（`src/components/layout/MobileBottomTab.tsx`，`md:hidden`）改为固定 5 个分类入口：新建 / 登记 / 管理 / 工具 / 我，点击后弹出浮动子菜单而非直接跳页。「新建」子项复用 `dashboardModules.ts` 的 `QUICK_CREATE_MODULES`；「登记/管理/工具」子项与桌面端 `AppSidebar.tsx` 的 `NAV_ITEMS` 保持同一套 id 和权限 moduleId（工具分类不含 AI 邮件）；权限过滤后子项全空则对应顶层入口隐藏，「我」入口固定常驻。「我」菜单含关于、个人信息、管理后台（仅 `user.isAdmin`，跳转 `/admin`，与桌面端一致）、退出登录。
+- 移动端底部导航（`src/components/layout/MobileBottomTab.tsx`，`md:hidden`）为：首页（直达链接）+ 新建 / 登记 / 管理 / 工具 / 我（浮动子菜单），共最多 6 个入口。「新建」子项复用 `dashboardModules.ts` 的 `QUICK_CREATE_MODULES`；「登记/管理/工具」子项与桌面端 `AppSidebar.tsx` 的 `NAV_ITEMS` 保持同一套 id 和权限 moduleId（「工具」现含 AI 邮件，moduleId `ai-email`，与桌面 tools 分组对齐）；权限过滤后子项全空则对应分类入口隐藏，「首页」「我」固定常驻不受权限过滤。「我」菜单含关于、个人信息、管理后台（仅 `user.isAdmin`，跳转 `/admin`，与桌面端一致）、退出登录。
+- 移动端汉堡菜单（`AppTopBar.tsx` 的 `onMenuClick` 按钮）改为只在 768–1024px（`md`–`lg`）之间显示（`hidden md:flex lg:hidden`）。原因：<768px 已由底部 6 个入口（含首页/AI邮件）覆盖全部导航；768–1024px 之间桌面侧边栏（`lg:flex`）和底部导航都不显示，此按钮是该区间唯一导航入口，不能整体移除。
 - 「关于」「个人信息」弹窗（`MobileSheetModal.tsx`）在所有屏宽下都居中显示（不再是移动端贴底、`sm` 以上才居中）。「关于」内容为 Logo + 「LC App」+ 展示版本号 `V1.0.0`（`MobileBottomTab.tsx` 内 `APP_DISPLAY_VERSION` 常量，与 `package.json` 的内部版本号 `1.2.0` 分开维护，如需同步需手动改）。「个人信息」在弹窗内使用 `UserProfilePanel` 的 `layout="sheet"` 排版：居中头像 + 大字号姓名/邮箱 + 独立的「修改密码」按钮，桌面端 hover 子菜单仍用默认紧凑排版。
 - 用户资料 + 改密表单从 `AppUserMenu.tsx` 抽成独立组件 `UserProfilePanel.tsx`，供桌面端下拉菜单与移动端「我」菜单的个人信息弹窗共用，避免两份改密逻辑。
 

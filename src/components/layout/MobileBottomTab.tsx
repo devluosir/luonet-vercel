@@ -12,7 +12,9 @@ import {
   ClipboardList,
   Clock,
   Info,
+  LayoutDashboard,
   LogOut,
+  Mail,
   PackageSearch,
   Plus,
   Search,
@@ -97,6 +99,7 @@ const TOOLS_LINKS: MobileMenuLink[] = [
   { id: 'clock', label: '时区汇率', path: '/clock', icon: Clock, moduleId: 'clock' },
   { id: 'holidays', label: '全球假日', path: '/holidays', icon: CalendarDays, moduleId: 'holidays' },
   { id: 'rmb', label: 'RMB大写', path: '/rmb', icon: Banknote, moduleId: 'rmb' },
+  { id: 'mail', label: 'AI 邮件', path: '/mail', icon: Mail, moduleId: 'ai-email' },
 ];
 
 const CATEGORY_DEFS: MobileCategory[] = [
@@ -150,11 +153,13 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
     links: category.links.filter(isLinkVisible),
   })).filter((category) => category.links.length > 0);
 
-  // “我”入口固定常驻，不受权限过滤
+  // “首页”为直达链接（不受权限过滤，等同旧版行为）；“我”入口固定常驻，也不受权限过滤
   const allEntries: Array<
+    | { kind: 'link'; id: string; label: string; icon: LucideIcon; path: string }
     | { kind: 'links'; id: string; label: string; icon: LucideIcon; links: MobileMenuLink[] }
     | { kind: 'me'; id: 'me'; label: string; icon: LucideIcon }
   > = [
+    { kind: 'link' as const, id: 'dashboard', label: '首页', icon: LayoutDashboard, path: '/dashboard' },
     ...visibleCategories.map((category) => ({ kind: 'links' as const, ...category })),
     { kind: 'me' as const, id: 'me', label: '我', icon: User },
   ];
@@ -169,9 +174,30 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
         {allEntries.map((entry, index) => {
           const Icon = entry.icon;
           const isOpen = openCategory === entry.id;
-          const active = entry.kind === 'links' && isCategoryActive(entry.links);
+          const active =
+            entry.kind === 'links'
+              ? isCategoryActive(entry.links)
+              : entry.kind === 'link'
+                ? pathname === entry.path || pathname.startsWith(`${entry.path}/`)
+                : false;
           const panelPositionClass =
             index === 0 ? 'left-0' : index === allEntries.length - 1 ? 'right-0' : 'left-1/2 -translate-x-1/2';
+          const buttonClassName = `flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] transition-colors ${
+            active || isOpen
+              ? 'font-medium text-blue-600 dark:text-blue-400'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+          }`;
+
+          if (entry.kind === 'link') {
+            return (
+              <div key={entry.id} className="relative flex">
+                <Link href={entry.path} onClick={() => setOpenCategory(null)} className={buttonClassName}>
+                  <Icon className="h-4 w-4" />
+                  <span className="max-w-full truncate">{entry.label}</span>
+                </Link>
+              </div>
+            );
+          }
 
           return (
             <div key={entry.id} className="relative flex">
@@ -179,11 +205,7 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
                 type="button"
                 onClick={() => setOpenCategory(isOpen ? null : entry.id)}
                 aria-expanded={isOpen}
-                className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] transition-colors ${
-                  active || isOpen
-                    ? 'font-medium text-blue-600 dark:text-blue-400'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                }`}
+                className={buttonClassName}
               >
                 <Icon className="h-4 w-4" />
                 <span className="max-w-full truncate">{entry.label}</span>
