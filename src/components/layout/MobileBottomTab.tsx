@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Archive,
   Banknote,
@@ -15,6 +16,7 @@ import {
   PackageSearch,
   Plus,
   Search,
+  Settings,
   Settings2,
   ShoppingCart,
   User,
@@ -24,8 +26,12 @@ import {
 } from 'lucide-react';
 import { usePermissionStore } from '@/lib/permissions';
 import { QUICK_CREATE_MODULES } from '@/constants/dashboardModules';
+import { LOGO_CONFIG } from '@/lib/logo-config';
 import { MobileSheetModal } from './MobileSheetModal';
 import { UserProfilePanel } from './UserProfilePanel';
+
+/** 「关于」面板的展示版本号，与 package.json 内部版本号分开维护 */
+const APP_DISPLAY_VERSION = 'V1.0.0';
 
 interface MobileMenuLink {
   id: string;
@@ -105,6 +111,7 @@ const menuItemClass =
 
 export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const permissionUser = usePermissionStore((state) => state.user);
   const isLoading = usePermissionStore((state) => state.isLoading);
 
@@ -210,6 +217,19 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
                         <User className="h-4 w-4 shrink-0" />
                         <span className="truncate">个人信息</span>
                       </button>
+                      {user.isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenCategory(null);
+                            router.push('/admin');
+                          }}
+                          className={menuItemClass}
+                        >
+                          <Settings className="h-4 w-4 shrink-0" />
+                          <span className="truncate">管理后台</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => {
@@ -264,11 +284,21 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
       </nav>
 
       <MobileSheetModal open={showAbout} title="关于" onClose={() => setShowAbout(false)}>
-        <p className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">内容待补充</p>
+        <div className="flex flex-col items-center gap-2 py-4 text-center">
+          <Image
+            src={LOGO_CONFIG.web.logo}
+            alt="LC App"
+            width={64}
+            height={64}
+            className="shrink-0 object-contain"
+          />
+          <span className="text-base font-semibold text-gray-900 dark:text-white">LC App</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{APP_DISPLAY_VERSION}</span>
+        </div>
       </MobileSheetModal>
 
       <MobileSheetModal open={showProfile} title="个人信息" onClose={() => setShowProfile(false)}>
-        <UserProfilePanel user={user} />
+        <UserProfilePanel user={user} layout="sheet" />
       </MobileSheetModal>
     </>
   );

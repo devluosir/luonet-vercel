@@ -16,11 +16,11 @@ export function MobileSheetModal({ open, title, onClose, children }: MobileSheet
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 sm:items-center"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4"
       onClick={onClose}
     >
       <div
-        className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl dark:bg-app-dark-surface dark:ring-1 dark:ring-white/10 sm:rounded-2xl"
+        className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-4 shadow-xl dark:bg-app-dark-surface dark:ring-1 dark:ring-white/10"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
