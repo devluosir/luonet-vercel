@@ -23,6 +23,8 @@ src/constants/permissionModules.ts
 | `inquiry` | 询报价登记表 / 订单状态表 |
 | `inquiry.batchEdit` | 询报价批量编辑 / 导入导出 |
 | `order.financials` | 订单金额 / 回款 / 到账金额 |
+| `purchaseRegistration` | 采购部登记（过滤视图） |
+| `purchaseOrderTable` | 采购订单表（已成单过滤视图） |
 | `history` | 单据历史 |
 | `customer` | 客户管理 |
 | `ai-email` | AI 邮件 |

@@ -250,25 +250,17 @@ GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git f
 
 不要把私钥或 `.env.local` 提交进仓库。
 
-## 后续优化重点
-
-参见 `AGENTS.md` 推荐优化路线，按优先级：
-
-1. **安全**：Worker 管理接口从 `X-User-*` header 升级到签名验证；轮换已暴露 token。
-2. **数据持久化**：业务历史从 `localStorage` 迁移到服务端，解决多设备同步和 5MB 配额。
-3. **测试**：补 Playwright 关键路径集成测试（登录、PDF、导入导出）。
-4. **代码整合**：消除 `src/components` 与 `src/features` 之间的重复实现。
-5. **已知缺陷修复**：`validatePassword` bcrypt 分支、`silent-refresh` 服务端失效。
-6. **构建质量**：恢复 ESLint 构建检查，建立 CI 流程。
-
 ## 文档索引
 
-- `AGENTS.md`：代理维护说明（完整技术细节）
+- `AGENTS.md`：代理维护说明
 - `docs/core/CURRENT_STATE.md`：最新系统现状说明书
 - `docs/README.md`：文档总目录
-- `docs/core/`：项目总结、现状说明、更新日志
-- `docs/features/`：各功能模块设计文档
-- `docs/bugfixes/`：问题修复记录
-- `docs/technical/`：性能、主题、稳定性、权限技术文档
+- `docs/features/`：各功能模块入口
+- `docs/technical/`：权限、主题、工程守则、PDF
+- `docs/archived/README.md`：已删除过程文档的 git 找回说明
 - `RELEASE_CHECKLIST.md`：发布检查清单
 - `VERCEL_DEPLOYMENT.md`：Vercel 部署说明
+
+## 后续优化方向
+
+参见 `AGENTS.md` 推荐优化路线（以 `docs/core/CURRENT_STATE.md` 为准）。

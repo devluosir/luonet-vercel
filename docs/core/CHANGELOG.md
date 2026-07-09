@@ -43,11 +43,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 同步 `AGENTS.md` / `README.md` / `PROJECT_SUMMARY.md` / `CURRENT_STATE.md`：权限模块补全、路由补全、Bearer/secret 现状、客户 D1 主存表述；关闭已过时的「紧急安全」待办描述。
 - 跨设备策略确认：取消 TASK-14 旧历史批量迁移；保留双写 + 登录拉取 + 本地补推。
 
-#### 文档归档（2026-07-09）
-- 约 76 篇过程/重复 FIX·SUMMARY 迁入 `docs/archived/2026-07/`（features 与 bugfixes 同名副本、modularization、games 整夹、technical 一次性优化、core 字体/Logo 总结、testing 验收清单）。
-- `docs/bugfixes/` 原位保留为修复记录 canonical。
-- 根目录散落文档改路径：`INQUIRY_IMPORT_EXPORT` → `features/inquiry/`；`PDF_TABLE_RENDERER_GUIDE` → `technical/pdf/`。
-- 重写 `docs/README.md`、`features/README.md`、`technical/README.md`、`core/README.md`；为 quotation/packing/purchase/invoice/mail/admin 补轻量 README 入口。
+#### 文档清理（2026-07-09）
+- **删除低价值过程文档**：整夹移除 `docs/bugfixes/`（39）、`docs/archived/2025-10/`、`docs/archived/2026-07/`；工作树仅留 `docs/archived/README.md`（用 git 历史找回）。
+- **删除过时活跃文档**：`RELEASE_v1.2.0_SUMMARY.md`、`performance_optimization.md`、`STABILITY_GUARDRAILS_FINAL.md`。
+- **精简 `CODEX_TASKS.md`**：由约 1.5 万行改为短索引。
+- 活跃文档收敛为：core 事实源 + 模块入口 + 权限/主题/工程守则/PDF 指南。
 
 #### 权限刷新
 - 删除无 listener 的 `silentRefreshPermissions` 事件；改为派发带 `tokenNeedsRefresh` 的 `permissionsUpdated`。完整 session 刷新仍由 `usePermissionRefresh` 负责。

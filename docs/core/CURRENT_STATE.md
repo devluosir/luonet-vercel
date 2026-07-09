@@ -206,10 +206,10 @@ theme-config
 
 - `docs/core/CURRENT_STATE.md`：最新事实源，记录“现在是什么样”。
 - `docs/core/CHANGELOG.md`：变更历史，记录“什么时候改了什么”。
-- `CODEX_TASKS.md`：任务执行和验收记录，记录“为什么做、怎么做、如何验收”。
-- `docs/features/**`、`docs/technical/**`、`docs/bugfixes/**`：模块说明、技术说明和历史修复记录。
-- `docs/archived/YYYY-MM/`：已归档的过程/重复 FIX·SUMMARY；不作为当前事实源。
-- 旧文档不应为了“最新”而重写历史结论，除非它是入口文档或明确误导当前维护。
+- `CODEX_TASKS.md`：精简任务索引（可选后续）；不要再堆已完成 TASK 全文。
+- `docs/features/**`、`docs/technical/**`：模块与技术入口说明。
+- `docs/archived/README.md`：说明过程 FIX/SUMMARY 已删除，用 git 历史找回。
+- 不要再新增 `*_FIX.md` / `*_SUMMARY.md` 过程文档；结论写入 CURRENT_STATE 或模块入口即可。
 
 ## 已知风险
 
@@ -217,4 +217,4 @@ theme-config
 2. 业务历史仍以 `localStorage` 为主；跨设备依赖双写 + 登录拉取 + 本地补推（不做 TASK-14 旧历史批量迁移）。配额写入已接入 `persistHistoryToStorage`，极端大数据量仍可能裁剪旧记录。
 3. 单据模块双轨已收敛：quotation / packing / purchase 业务 UI 在 `features/*/components/`；对应 `src/components/{quotation,packinglist,purchase}` 目录已删除。admin 的 `CreateUserModal` 本体亦在 features，`components/admin` 仅留兼容 re-export。
 
-> 已关闭（勿再当作待办）：Worker `X-User-*` 伪造（已改 Bearer）、`wrangler.toml` 明文 token（已迁 secret）、`validatePassword` bcrypt bug（已修复）、`updatePassword` 明文写入（已改 bcrypt）、登录无限流（已加 IP 限流）、NEXTAUTH 硬编码 secret（生产必填）、AI 邮件仅验登录（已验 `ai-email`）、业务页无页面级守卫（P1 已补）、`storageQuotaManager` 零引用（P1 已接入历史写入）、报价/装箱/采购 components↔features 双轨与 shim（P3 已删）、docs 过程文档堆积（2026-07 已归档至 `docs/archived/2026-07/`）。
+> 已关闭（勿再当作待办）：Worker `X-User-*` 伪造（已改 Bearer）、`wrangler.toml` 明文 token（已迁 secret）、`validatePassword` bcrypt bug（已修复）、`updatePassword` 明文写入（已改 bcrypt）、登录无限流（已加 IP 限流）、NEXTAUTH 硬编码 secret（生产必填）、AI 邮件仅验登录（已验 `ai-email`）、业务页无页面级守卫（P1 已补）、`storageQuotaManager` 零引用（P1 已接入历史写入）、报价/装箱/采购 components↔features 双轨与 shim（P3 已删）、docs 过程 FIX/SUMMARY 与超长 CODEX_TASKS（已从工作树删除，git 可找回）。

@@ -277,7 +277,6 @@ GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git f
 2. **权限刷新简化（可选）**：`fetchPermissions` 与 `usePermissionRefresh` 仍有重叠，可继续收敛。
 3. **跨设备同步**：保持双写 + 登录拉取 + 本地补推（选 B）；不做 TASK-14。
 4. **purchase-registration exhaustive-deps**：既有 lint warning，可择机修。
-5. **CODEX_TASKS 瘦身（可选）**：已完成 TASK 可迁入 `docs/archived/`，根文件只留待办与最近摘要。
 
 ## 文档索引
 
@@ -287,8 +286,9 @@ GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git f
 - `docs/core/CURRENT_STATE.md`：最新系统现状说明书
 - `docs/core/CHANGELOG.md`：更新日志
 - `docs/core/PROJECT_SUMMARY.md`：项目总结
-- `docs/features/`：各功能模块设计文档
-- `docs/bugfixes/`：问题修复记录
-- `docs/technical/`：性能、主题、稳定性、权限技术文档
+- `docs/features/`：各功能模块入口
+- `docs/technical/`：权限、主题、工程守则、PDF
+- `docs/archived/README.md`：已删除过程文档的 git 找回说明
+- `CODEX_TASKS.md`：精简任务索引
 - `RELEASE_CHECKLIST.md`：发布检查清单
 - `VERCEL_DEPLOYMENT.md`：Vercel 部署说明
