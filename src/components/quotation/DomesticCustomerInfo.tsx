@@ -224,10 +224,7 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
           ['domesticSeller', '供方', seller],
           ['domesticBuyer', '需方', buyer],
         ] as const).map(([party, title, details]) => (
-          <section
-            key={party}
-            className="rounded-xl border border-[#E5E5EA] bg-white/70 p-2.5 dark:border-[#3A3A3C] dark:bg-[#1C1C1E]/60"
-          >
+          <section key={party} className="p-2.5">
             <div className="mb-2 flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {title}
@@ -307,19 +304,9 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
                 </div>
               </div>
             )}
-            {!isContract && (
-              <p className="mt-2 text-[11px] text-[#86868B] dark:text-[#98989D]">
-                提示：切换到「产品购销合同」可填写地址/法定代表人/税号/开户行等详情并加盖印章。
-              </p>
-            )}
             {isContract && party === 'domesticBuyer' && saveMessage && (
               <p className={`mt-2 text-xs ${saveState === 'error' ? 'text-red-500' : 'text-[#34C759] dark:text-[#30D158]'}`}>
                 {saveMessage}
-              </p>
-            )}
-            {isContract && party === 'domesticBuyer' && (
-              <p className="mt-2 text-[11px] text-[#86868B] dark:text-[#98989D]">
-                提示：单位名称与已保存客户资料完全一致时，失焦后会自动调用其地址/税号/开户行等信息。
               </p>
             )}
           </section>
