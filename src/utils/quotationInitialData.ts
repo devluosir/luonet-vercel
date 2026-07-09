@@ -4,6 +4,7 @@ import { getDefaultNotes } from './getDefaultNotes';
 import type { QuotationData } from '@/types/quotation';
 import { calculatePaymentDate } from './quotationCalculations';
 import { OUR_COMPANY_PROFILE } from './domesticCompanyProfile';
+import { DOMESTIC_DEFAULT_UNITS } from './unitUtils';
 
 export function getInitialQuotationData(pageType: 'quotation' | 'confirmation' | 'domestic' = 'quotation'): QuotationData {
   const username = (() => {
@@ -42,15 +43,16 @@ export function getInitialQuotationData(pageType: 'quotation' | 'confirmation' |
     from: username,
     currency: isDomestic ? 'CNY' : 'USD',
     paymentDate: calculatePaymentDate(currentDate),
-    items: [{ 
-      id: 1, 
-      partName: '', 
-      description: '', 
-      quantity: 0, 
-      unit: 'pc', 
-      unitPrice: 0, 
-      amount: 0, 
-      remarks: '' 
+    items: [{
+      id: 1,
+      partName: '',
+      description: '',
+      quantity: 0,
+      // 内销单据首行默认单位应为中文（与后续手动添加行的默认单位口径一致），避免出现 "pc" 混在 "只/套/节" 里
+      unit: isDomestic ? DOMESTIC_DEFAULT_UNITS[0] : 'pc',
+      unitPrice: 0,
+      amount: 0,
+      remarks: ''
     }],
     notes: getDefaultNotes(username, notesType),
     amountInWords: { 
