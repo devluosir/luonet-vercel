@@ -406,6 +406,15 @@ function isItemActive(item: SidebarItem, pathname: string, tab: string | null, d
 - 用沙箱 `npx tsx` 跑了一遍独立断言脚本（写完即删，未留存到仓库）验证核心口径：① 询价单编号 `C251215F`（2025-12-15）+ `orderConfirmDate=[1.10]` 正确推算为 2026-01-10（不是误判成 2025-01-10）；② 同月场景 `C260620F` + `[6.25]` 推算为 2026-06-25；③ 无 `orderNo`/`orderConfirmDate` 返回 `null`；④ `quotedStatuses` 含 `unavailable` 时 `isRecordQuoted` 为 `false`（即使也有 `quoted` 条目）；⑤ `getQuotedOnDate` 按日期精确匹配；⑥ `countInquiriesOn`/`countOrdersOn`/`countOrdersInMonth` 对"今天"构造的记录计数正确；⑦ `bucketByGranularity('month', ..., 12)` 返回 12 个桶。全部断言通过。
 - **待用户在真实环境验证**：不同权限账号（有/无 `inquiry` 权限）登录首页，确认新增两块内容按权限显示/隐藏；5 个粒度切换分别看一次图表正常出图；抽 1～2 条真实数据在 `/inquiry`、`/order` 页面手工筛选核对，跟首页数字一致。
 
+**追加调整（2026-07-10）**：用户上传首页真实截图反馈，`StatsCards`（今日单据 7 项，flex-1 等分拉伸满宽）+ `InquiryOrderStats` 原来的两行（今日 3 项、本月 2 项，同样 flex-1 拉伸满宽）三个各自独立带边框阴影的长条盒子堆在一起，因为每行项目数不同（7/3/2），拉伸后间距一松一紧，视觉上"堆一起了"、不精致。改成统一的紧凑徽标风格：
+
+- 新建 `src/features/dashboard/components/StatChip.tsx`：最小统计单元（图标+短标签+数字），自然宽度、`flex-wrap` 排列，不再用 `flex-1` 拉伸铺满一整行——这是这次重构的核心，从"n 等分拉伸"改成"按内容宽度自然流动换行"。
+- `StatsCards.tsx` 改用 `StatChip` 渲染「今日」单据 7 项，去掉自己的外层边框/阴影/`mb-4`（改由父级统一包一层外壳）。
+- `InquiryOrderStats.tsx` 把原来两个独立盒子（今日 3 项 / 本月 2 项）合并成同一个 `flex-wrap` 行，中间用一道竖分隔线区分「今日」/「本月」两组；新增 `showTopDivider` prop，`StatsCards` 本身无可见项时（比如只有 inquiry 权限没有任何单据权限的账号）不画多余的顶部分隔线。
+- `DashboardPage.tsx`：`StatsCards` + `InquiryOrderStats` 现在包在同一个外层 `rounded-xl border shadow-sm` 卡片里，两行之间只用一道 `border-t` 分隔，不再是"两个盒子叠两个盒子"；整个卡片只在 `accessibleDocumentTypes.length > 0 || hasInquiryAccess` 时渲染，避免两个子组件都不可见时露出一个空盒子。
+
+验证：`npx tsc --noEmit` 通过，`npx eslint`（`StatChip.tsx`/`StatsCards.tsx`/`InquiryOrderStats.tsx`/`DashboardPage.tsx`）无输出。**未做视觉走查**（沙箱没有可视浏览器/运行中的 dev server），建议用户本地刷新页面看一眼新布局是否符合"简洁"的预期，尤其是窄屏下 `flex-wrap` 换行的效果。
+
 ### 背景
 
 首页目前只统计"新建单据"（报价单/销售确认/内销报价/内销合同/发票/箱单/采购订单）的当日新增数量（`StatsCards.tsx`），完全不反映询报价登记表（`InquiryRecord`，`src/features/inquiry`）和订单状态表（同一份数据的派生视图，`src/features/order`）里的业务量——对做外贸业务的内部人员来说，"今天/这个月询了几个价、报了几次价、成了几个单"是比"今天建了几张单据"更核心的经营数据，且首页现在完全看不到。用户要求新增：

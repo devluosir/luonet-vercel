@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import {
   FileCheck,
   FileText,
@@ -10,15 +9,14 @@ import {
   ShoppingCart,
   type LucideIcon,
 } from 'lucide-react';
+import { StatChip } from './StatChip';
 import type { PermissionMap } from '../types';
 
 interface StatItem {
   type: 'quotation' | 'confirmation' | 'domestic-quotation' | 'domestic-contract' | 'invoice' | 'packing' | 'purchase';
   label: string;
-  tag: string;
   icon: LucideIcon;
   textColorClass: string;
-  dotClass: string;
 }
 
 export interface StatCounts {
@@ -38,67 +36,20 @@ interface StatsCardsProps {
 }
 
 const STAT_ITEMS: StatItem[] = [
-  {
-    type: 'quotation',
-    label: '报价单',
-    tag: 'QTN',
-    icon: FileText,
-    textColorClass: 'text-blue-600 dark:text-blue-400',
-    dotClass: 'bg-blue-500',
-  },
-  {
-    type: 'confirmation',
-    label: '销售确认',
-    tag: 'SC',
-    icon: FileCheck,
-    textColorClass: 'text-green-600 dark:text-green-400',
-    dotClass: 'bg-green-500',
-  },
-  {
-    type: 'domestic-quotation',
-    label: '内销报价',
-    tag: '内销报价',
-    icon: FileSignature,
-    textColorClass: 'text-blue-600 dark:text-blue-400',
-    dotClass: 'bg-blue-500',
-  },
-  {
-    type: 'domestic-contract',
-    label: '内销合同',
-    tag: '内销合同',
-    icon: FileSignature,
-    textColorClass: 'text-green-600 dark:text-green-400',
-    dotClass: 'bg-green-500',
-  },
-  {
-    type: 'invoice',
-    label: '财务发票',
-    tag: 'INV',
-    icon: Receipt,
-    textColorClass: 'text-purple-600 dark:text-purple-400',
-    dotClass: 'bg-purple-500',
-  },
-  {
-    type: 'packing',
-    label: '箱单发票',
-    tag: 'PL',
-    icon: Package,
-    textColorClass: 'text-teal-600 dark:text-teal-400',
-    dotClass: 'bg-teal-500',
-  },
-  {
-    type: 'purchase',
-    label: '采购订单',
-    tag: 'PO',
-    icon: ShoppingCart,
-    textColorClass: 'text-orange-600 dark:text-orange-400',
-    dotClass: 'bg-orange-500',
-  },
+  { type: 'quotation', label: '报价单', icon: FileText, textColorClass: 'text-blue-600 dark:text-blue-400' },
+  { type: 'confirmation', label: '销售确认', icon: FileCheck, textColorClass: 'text-green-600 dark:text-green-400' },
+  { type: 'domestic-quotation', label: '内销报价', icon: FileSignature, textColorClass: 'text-blue-600 dark:text-blue-400' },
+  { type: 'domestic-contract', label: '内销合同', icon: FileSignature, textColorClass: 'text-green-600 dark:text-green-400' },
+  { type: 'invoice', label: '财务发票', icon: Receipt, textColorClass: 'text-purple-600 dark:text-purple-400' },
+  { type: 'packing', label: '箱单发票', icon: Package, textColorClass: 'text-teal-600 dark:text-teal-400' },
+  { type: 'purchase', label: '采购订单', icon: ShoppingCart, textColorClass: 'text-orange-600 dark:text-orange-400' },
 ];
 
+/**
+ * 「今日新增单据」紧凑徽标行。不再自带外层边框/阴影——由 `DashboardPage.tsx` 统一包一层
+ * 外壳，跟 `InquiryOrderStats` 的「今日/本月」行合并成一个统一的统计面板（见 TASK-110 追加调整）。
+ */
 export function StatsCards({ counts, loading = false, permissionMap }: StatsCardsProps) {
-  const router = useRouter();
-
   const visibleItems = STAT_ITEMS.filter(({ type }) => {
     if (!permissionMap) return true;
     return permissionMap.documentTypePermissions[type] ?? false;
@@ -107,36 +58,20 @@ export function StatsCards({ counts, loading = false, permissionMap }: StatsCard
   if (visibleItems.length === 0) return null;
 
   return (
-    <div className="mb-4 flex items-stretch overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      {/* 左侧「今日」标签 */}
-      <div className="flex shrink-0 items-center border-r border-gray-100 px-3 dark:border-gray-700">
-        <span className="text-[11px] font-medium tracking-wide text-gray-400 dark:text-gray-500">
-          今日
-        </span>
-      </div>
-
-      {visibleItems.map(({ type, label, icon: Icon, textColorClass }, index) => (
-        <button
+    <div className="flex flex-wrap items-center gap-x-0.5 gap-y-1 px-3 py-2.5">
+      <span className="mr-1 shrink-0 text-[11px] font-medium tracking-wide text-gray-400 dark:text-gray-500">
+        今日
+      </span>
+      {visibleItems.map(({ type, label, icon, textColorClass }) => (
+        <StatChip
           key={type}
-          type="button"
-          onClick={() => router.push(`/history?type=${type}&time=today`)}
-          className={`group flex flex-1 items-center gap-2 px-3 py-3 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 dark:hover:bg-gray-700/40 ${
-            index > 0 ? 'border-l border-gray-100 dark:border-gray-700' : ''
-          }`}
-          title={`查看今日${label}`}
-        >
-          <Icon className={`h-4 w-4 shrink-0 ${textColorClass}`} />
-          <span className="hidden truncate text-xs text-gray-500 dark:text-gray-400 sm:block">
-            {label}
-          </span>
-          <span className={`ml-auto font-bold tabular-nums text-lg leading-none ${textColorClass}`}>
-            {loading ? (
-              <span className="inline-block h-5 w-7 animate-pulse rounded bg-gray-200 align-middle dark:bg-gray-700" />
-            ) : (
-              counts[type]
-            )}
-          </span>
-        </button>
+          icon={icon}
+          label={label}
+          value={counts[type]}
+          colorClass={textColorClass}
+          path={`/history?type=${type}&time=today`}
+          loading={loading}
+        />
       ))}
     </div>
   );

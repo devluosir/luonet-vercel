@@ -159,14 +159,19 @@ export default function DashboardPage() {
           onClose={() => setShowSuccessMessage(false)}
         />
 
-        <StatsCards counts={todayCounts} loading={!mounted || isPermissionLoading} permissionMap={permissionMap} />
+        {(permissionMap.accessibleDocumentTypes.length > 0 || hasInquiryAccess) && (
+          <div className="mb-4 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <StatsCards counts={todayCounts} loading={!mounted || isPermissionLoading} permissionMap={permissionMap} />
 
-        <InquiryOrderStats
-          visible={hasInquiryAccess}
-          loading={!mounted || isPermissionLoading || !inquiryOrderStats.mounted}
-          today={inquiryOrderStats.today}
-          month={inquiryOrderStats.month}
-        />
+            <InquiryOrderStats
+              visible={hasInquiryAccess}
+              loading={!mounted || isPermissionLoading || !inquiryOrderStats.mounted}
+              today={inquiryOrderStats.today}
+              month={inquiryOrderStats.month}
+              showTopDivider={permissionMap.accessibleDocumentTypes.length > 0}
+            />
+          </div>
+        )}
 
         <DashboardModules
           quickCreateModules={availableQuickCreateModules}
