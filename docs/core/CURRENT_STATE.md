@@ -213,6 +213,8 @@ theme-config
 
 1. 权限刷新链路仍复杂（store / hook / API 多处联动），改动需谨慎；页面级守卫已覆盖主要业务页，middleware 仍不做 moduleId 拦截。
 2. 业务历史仍以 `localStorage` 为主；跨设备依赖双写 + 登录拉取 + 本地补推（不做 TASK-14 旧历史批量迁移）。配额写入已接入 `persistHistoryToStorage`，极端大数据量仍可能裁剪旧记录。
-3. 单据模块双轨：quotation / packing / purchase 业务 UI 已迁入对应 `features/*/components/`；`src/components/quotation|packinglist|purchase` 现仅保留 re-export shim，确认无外部引用后可删除。
+3. 单据模块双轨已收敛：quotation / packing / purchase 业务 UI 在 `features/*/components/`；对应 `src/components/{quotation,packinglist,purchase}` 目录已删除。admin 的 `CreateUserModal` 本体亦在 features，`components/admin` 仅留兼容 re-export。
 
-> 已关闭（勿再当作待办）：Worker `X-User-*` 伪造（已改 Bearer）、`wrangler.toml` 明文 token（已迁 secret）、`validatePassword` bcrypt bug（已修复）、`updatePassword` 明文写入（已改 bcrypt）、登录无限流（已加 IP 限流）、NEXTAUTH 硬编码 secret（生产必填）、AI 邮件仅验登录（已验 `ai-email`）、业务页无页面级守卫（P1 已补）、`storageQuotaManager` 零引用（P1 已接入历史写入）、报价/装箱/采购 components↔features 双轨（P3 已迁完，旧路径 shim 待删）。
+> 已关闭（勿再当作待办）：Worker `X-User-*` 伪造（已改 Bearer）、`wrangler.toml` 明文 token（已迁 secret）、`validatePassword` bcrypt bug（已修复）、`updatePassword` 明文写入（已改 bcrypt）、登录无限流（已加 IP 限流）、NEXTAUTH 硬编码 secret（生产必填）、AI 邮件仅验登录（已验 `ai-email`）、业务页无页面级守卫（P1 已补）、`storageQuotaManager` 零引用（P1 已接入历史写入）、报价/装箱/采购 components↔features 双轨与 shim（P3 已删）。
+
+> 待另开：文档归档（docs 同名 FIX/SUMMARY 去重，勿与代码同 commit）。

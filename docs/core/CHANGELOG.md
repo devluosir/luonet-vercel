@@ -37,6 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **purchase**：`SettingsPanel`、`PurchaseBaseInfo` 迁入 features；开票资料组件重命名为 `InvoiceCompanyInfo`（避免与 sections/BankInfoSection 冲突）；删除孤儿 `SupplierInfoSection`。
 - 旧路径保留 thin re-export shim。
 
+#### P3 清理 shim + admin 约定对齐
+- **删除** `src/components/quotation`、`src/components/packinglist`、`src/components/purchase` 全部 re-export shim（全仓库无生产/测试引用）。
+- **CreateUserModal**：本体迁入 `features/admin/components/CreateUserModal.tsx`；`components/admin/CreateUserModal.tsx` 改为指向 features 的兼容 re-export。
+- 验证：`tsc --noEmit`、`next lint`、`npm run build` 均通过（purchase-registration 既有 exhaustive-deps warning 未引入）。
+
+> 文档归档（docs/bugfixes 与 features 同名 FIX 去重）另开一轮，不与本批代码混提。
+
 ### Changed
 
 #### 文档对齐
