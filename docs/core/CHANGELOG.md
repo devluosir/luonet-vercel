@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-07-09
+
+### Security
+
+#### P0 安全加固
+- **改密哈希**：`d1-client.updatePassword` 写入前使用 `bcrypt.hash`，与创建用户一致，避免明文落库。
+- **登录限流**：Worker `/api/auth/d1-users` 按 IP 限流（1 分钟最多 10 次），超限返回 429。
+- **NEXTAUTH_SECRET**：生产环境未配置时直接抛错，禁止硬编码回退密钥；开发环境使用临时密钥并告警。
+- **AI 邮件权限**：`/api/generate` 除登录外校验 `ai-email` 模块权限（管理员放行）。
+- **日志收敛**：登录成功/失败日志不再输出密码明文或 hash 前缀。
+
+### Added
+
+#### P1 权限与配额
+- **页面级 moduleId 守卫**：新增 `useModulePermissionGuard`；报价/装箱/发票/采购/历史/客户（含详情）/邮件/时区/假日/RMB 共 11 页接入，无权限显示 `PermissionDenied`（询报价相关 4 页此前已有）。
+- **历史写入配额统一入口**：`persistHistoryToStorage`；报价/发票/装箱/采购历史与 `d1Pull.mergeIntoStorage` 主写入路径接入，超限时智能清理/裁剪。
+- **PermissionMap 补全**：`inquiry`、`purchaseRegistration`、`purchaseOrderTable`、`clock`、`holidays`、`rmb`；dashboard 类型改为复用 `@/types/permissions`。
+
+### Changed
+
+#### 文档对齐
+- 同步 `AGENTS.md` / `README.md` / `PROJECT_SUMMARY.md` / `CURRENT_STATE.md`：权限模块补全、路由补全、Bearer/secret 现状、客户 D1 主存表述；关闭已过时的「紧急安全」待办描述。
+- 跨设备策略确认：取消 TASK-14 旧历史批量迁移；保留双写 + 登录拉取 + 本地补推。
+
+#### 权限刷新
+- 删除无 listener 的 `silentRefreshPermissions` 事件；改为派发带 `tokenNeedsRefresh` 的 `permissionsUpdated`。完整 session 刷新仍由 `usePermissionRefresh` 负责。
+
+### Tests
+- `npx tsc --noEmit`
+- 手动建议：无模块权限直链对应路由应见权限不足；历史保存超配额时控制台有裁剪/清理日志
+
 ## [Unreleased] - 2026-07-07
 
 ### Changed

@@ -5,7 +5,10 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Banknote, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
+import { PermissionDenied } from '@/components/PermissionDenied';
+import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { useAppUser } from '@/hooks/useAppUser';
+import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
 import { convertRmbInputToCapital } from '@/utils/rmbCapitalAmount';
 
 // ── 英文金额算法 ──────────────────────────────────────────────────────────────
@@ -84,6 +87,7 @@ export function RmbPage() {
   const { status } = useSession();
   const router = useRouter();
   const { user, handleLogout } = useAppUser();
+  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('rmb');
 
   const [input, setInput]       = useState('');
   const [copiedCN, setCopiedCN] = useState(false);
@@ -107,6 +111,14 @@ export function RmbPage() {
       setTimeout(() => setCopied(false), 2000);
     } catch { /* ignore */ }
   }, []);
+
+  // 页面级权限守卫
+  if (!permissionReady) {
+    return <FullScreenSpinner />;
+  }
+  if (!hasModuleAccess) {
+    return <PermissionDenied message="您没有 RMB 大写的访问权限" />;
+  }
 
   if (status === 'loading') {
     return (

@@ -1,6 +1,6 @@
 # Current State
 
-最后更新：2026-07-07
+最后更新：2026-07-09
 当前分支：`main`
 当前提交：以 `git log -1 --oneline` 为准
 应用版本：`1.2.0`（`package.json`）
@@ -211,9 +211,8 @@ theme-config
 
 ## 已知风险
 
-1. Worker 管理接口仍依赖客户端传入 `X-User-*` 请求头，存在伪造风险，应迁移到 HMAC/JWT 或服务端 session 校验。
-2. `wrangler.toml` 中仍存在明文 token，应迁移到 Cloudflare secret 并轮换。
-3. 业务历史仍大量依赖 `localStorage`，有容量和多设备同步风险。
-4. `src/lib/d1-client.ts` 的 `validatePassword` bcrypt 分支存在已知问题，修改密码相关功能需谨慎验证。
-5. `silent-refresh` 服务端分支依赖浏览器缓存，仍不可作为可靠刷新机制。
-6. `src/components` 与 `src/features` 仍有迁移中的重复边界，修改前必须确认实际 import 路径。
+1. 权限刷新链路仍复杂（store / hook / API 多处联动），改动需谨慎；页面级守卫已覆盖主要业务页，middleware 仍不做 moduleId 拦截。
+2. 业务历史仍以 `localStorage` 为主；跨设备依赖双写 + 登录拉取 + 本地补推（不做 TASK-14 旧历史批量迁移）。配额写入已接入 `persistHistoryToStorage`，极端大数据量仍可能裁剪旧记录。
+3. `src/components` 与 `src/features` 仍有迁移中的重复边界（quotation/purchase/packing），修改前必须确认实际 import 路径。
+
+> 已关闭（勿再当作待办）：Worker `X-User-*` 伪造（已改 Bearer）、`wrangler.toml` 明文 token（已迁 secret）、`validatePassword` bcrypt bug（已修复）、`updatePassword` 明文写入（已改 bcrypt）、登录无限流（已加 IP 限流）、NEXTAUTH 硬编码 secret（生产必填）、AI 邮件仅验登录（已验 `ai-email`）、业务页无页面级守卫（P1 已补）、`storageQuotaManager` 零引用（P1 已接入历史写入）。

@@ -5,9 +5,12 @@ import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { FileText } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
+import { PermissionDenied } from '@/components/PermissionDenied';
+import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { useAppUser } from '@/hooks/useAppUser';
+import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
 import {
   CustomerActivityFeed,
   CustomerInfoCard,
@@ -103,6 +106,7 @@ function toFormData(customer: Customer, changes: Partial<Pick<CustomerFormData, 
 export default function CustomerDetailPage() {
   const { data: session } = useSession();
   const { user, handleLogout } = useAppUser();
+  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('customer');
   const searchParams = useSearchParams();
   const customerId = searchParams?.get('id');
   const customerName = searchParams?.get('name');
@@ -215,6 +219,13 @@ export default function CustomerDetailPage() {
       return null;
     });
   }, []);
+
+  if (!permissionReady) {
+    return <FullScreenSpinner />;
+  }
+  if (!hasModuleAccess) {
+    return <PermissionDenied message="您没有客户管理的访问权限" />;
+  }
 
   if (!session) {
     return (

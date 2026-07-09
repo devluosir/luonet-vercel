@@ -1,5 +1,6 @@
 import { InvoiceHistory } from '@/types/invoice-history';
 import type { InvoiceData } from '@/features/invoice';
+import { persistHistoryToStorage } from '@/utils/storageQuotaManager';
 import { d1SyncDocument } from './d1Sync';
 
 const STORAGE_KEY = 'invoice_history';
@@ -42,16 +43,7 @@ export const getInvoiceHistory = (): InvoiceHistory[] => {
 // 保存历史记录
 export const saveInvoiceHistory = (history: InvoiceHistory[]): boolean => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-
-    // 触发自定义事件，通知Dashboard页面更新
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('customStorageChange', {
-        detail: { key: STORAGE_KEY }
-      }));
-    }
-
-    return true;
+    return persistHistoryToStorage(STORAGE_KEY, history);
   } catch (error) {
     console.error('Error saving invoice history:', error);
     return false;
@@ -226,30 +218,6 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
       return saveInvoiceHistory(uniqueHistory);
     } catch (storageError) {
       console.error('Error saving to localStorage:', storageError);
-      // 尝试分块保存（如果数据太大）
-      if (
-        typeof storageError === 'object' &&
-        storageError !== null &&
-        'name' in storageError &&
-        (storageError.name === 'QuotaExceededError' || storageError.name === 'NS_ERROR_DOM_QUOTA_REACHED')
-      ) {
-        console.warn('Storage quota exceeded, trying to free up space...');
-        // 尝试清理其他不重要的数据
-        try {
-          // 保留最重要的数据
-          const existingHistory = getInvoiceHistory();
-          // 只保留最近的50条记录
-          const trimmedHistory = existingHistory.slice(-50);
-          saveInvoiceHistory(trimmedHistory);
-          console.log('Successfully trimmed history to make space');
-
-          // 再次尝试保存导入的数据
-          return importInvoiceHistory(jsonData);
-        } catch (e) {
-          console.error('Failed to free up space:', e);
-          return false;
-        }
-      }
       return false;
     }
   } catch (error) {

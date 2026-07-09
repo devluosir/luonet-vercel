@@ -43,7 +43,13 @@ export const buildPermissionMap = (
         history: false,
         customer: false,
         'ai-email': false,
-        impa: false
+        impa: false,
+        inquiry: false,
+        purchaseRegistration: false,
+        purchaseOrderTable: false,
+        clock: false,
+        holidays: false,
+        rmb: false,
       },
       documentTypePermissions: {
         quotation: false,
@@ -71,7 +77,13 @@ export const buildPermissionMap = (
     history: permissionMap.get('history') === true,
     customer: permissionMap.get('customer') === true,
     'ai-email': permissionMap.get('ai-email') === true,
-    impa: permissionMap.get('impa') === true
+    impa: permissionMap.get('impa') === true,
+    inquiry: permissionMap.get('inquiry') === true,
+    purchaseRegistration: permissionMap.get('purchaseRegistration') === true,
+    purchaseOrderTable: permissionMap.get('purchaseOrderTable') === true,
+    clock: permissionMap.get('clock') === true,
+    holidays: permissionMap.get('holidays') === true,
+    rmb: permissionMap.get('rmb') === true,
   };
 
   const documentTypePermissions = {

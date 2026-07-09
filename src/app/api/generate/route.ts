@@ -13,6 +13,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // 模块权限：管理员放行；普通用户需 ai-email 可访问
+  const isAdmin = session.user.isAdmin === true;
+  const permissions = session.user.permissions ?? [];
+  const aiEmailPermission = permissions.find((p) => p.moduleId === 'ai-email');
+  const hasAiEmailPermission = aiEmailPermission?.canAccess ?? isAdmin;
+  if (!hasAiEmailPermission) {
+    return NextResponse.json(
+      { error: '无 AI 邮件助手权限' },
+      { status: 403 }
+    );
+  }
+
   // 设置响应超时
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 120000); // 2分钟超时

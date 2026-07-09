@@ -22,13 +22,21 @@ git@github.com:devluosir/luonet-vercel.git
 |------|------|---------|------|
 | 登录 | `/` | NextAuth session、本地权限缓存 | 登录后进入 `/dashboard` |
 | Dashboard | `/dashboard` | 各历史记录、权限缓存 | 快速创建单据、最近文档、按权限显示模块 |
-| 报价 / 销售确认 | `/quotation` | `quotation_history`、`draftQuotation`、`qt.visibleCols` | Tab 切换报价/确认、PDF、Excel、复制、编辑、订单确认转装箱单 |
+| 报价 / 销售确认 | `/quotation` | `quotation_history`、`draftQuotation`、`qt.visibleCols` | 设置面板内切换 Type；PDF、Excel、复制、编辑、转装箱单 |
+| 内销报价 | `/quotation?tab=domestic` | `quotation_history`（`type=domestic`） | 独立侧边栏入口，中文合同式 PDF |
+| 询报价登记 | `/inquiry` | D1 `Document` | 客户/联络人关联、订单标记、批量关联 |
+| 订单状态表 | `/order` | D1 `Document.data` | 执行情况、收货人、金额权限 |
+| 采购部登记 | `/purchase-registration` | D1 `Document` | 询报价过滤视图，采购部专属字段 |
+| 采购订单表 | `/purchase-order-table` | D1 `Document` | 已成单过滤视图 |
 | 装箱单 | `/packing` | `packing_history`、`pk.visibleCols` | 支持从销售确认导入，生成装箱单 + 唛头 PDF |
 | 财务发票 | `/invoice` | `invoice_history` | 导入报价数据、PDF、Excel、复制、编辑 |
 | 采购订单 | `/purchase` | `purchase_history`、`draftPurchase` | 供应商、银行信息、PDF、自动草稿保存 |
 | 历史管理 | `/history` | 全部历史记录 | 搜索、筛选、批量删除、导入导出 JSON |
-| 客户管理 | `/customer`、`/customer/detail` | 客户/供应商/收货人、联络人、分类、活动、跟进、收货订单 | 统一公司信息 + 联络人数组结构，支持客户分类、卡片/列表视图、详情行内编辑；收货人详情显示收货订单 |
+| 客户管理 | `/customer`、`/customer/detail` | D1 Customer/Contact | 分类、卡片/列表、详情行内编辑、收货订单 |
 | AI 邮件助手 | `/mail` | DeepSeek API（无持久化） | 撰写、回复、多语言、多语气风格 |
+| 时区汇率 | `/clock` | 无持久化 | 时间轴城市联动、外币兑人民币 |
+| 全球假日 | `/holidays` | 无持久化 | 按月展示假日 |
+| RMB 大写 | `/rmb` | 无持久化 | 金额大写转换 |
 | 管理后台 | `/admin`、`/admin/users/[id]` | D1 User、Permission | 用户创建、账户状态、管理员状态、模块权限 |
 | IMPA 物料 | 外部链接 | `impa` 权限 | 左侧工具入口，新窗口打开 `https://impa.luocompany.com` |
 
@@ -87,9 +95,7 @@ Worker 入口：`src/worker.ts`。配置：`wrangler.toml`（Worker 名 `mluonet
 | `invoice_history` | 财务发票 | 中 |
 | `packing_history` | 装箱单 | 中 |
 | `purchase_history` | 采购订单 | 中 |
-| `customer_management` | 客户列表 | 中 |
-| `supplier_management` | 供应商列表 | 低 |
-| `consignee_management` | 收货人列表 | 低 |
+| `customer_cache_v2` 等 | 客户/供应商/收货人离线缓存 | 中 |
 | `customer_timeline_events` | 客户时间轴 | 中 |
 | `customer_followups` | 跟进记录 | 低 |
 | `new_customer_tracking` | 新客户跟踪 | 低 |
@@ -120,6 +126,7 @@ Worker 入口：`src/worker.ts`。配置：`wrangler.toml`（Worker 名 `mluonet
 ```text
 quotation, packing, invoice, purchase,
 inquiry, inquiry.batchEdit, order.financials,
+purchaseRegistration, purchaseOrderTable,
 history, customer,
 ai-email, impa, clock, holidays, rmb
 ```
@@ -134,6 +141,7 @@ PDF 引擎：`jspdf` + `jspdf-autotable`。生成器：
 |------|------|
 | 报价单 | `src/utils/quotationPdfGenerator.ts` |
 | 销售确认 | `src/utils/orderConfirmationPdfGenerator.ts` |
+| 内销报价 | `src/utils/domesticQuotationPdfGenerator.ts` |
 | 发票 | `src/utils/invoicePdfGenerator.ts` |
 | 装箱单 | `src/utils/packingPdfGenerator.ts` |
 | 唛头 | `src/utils/shippingMarksPdfGenerator.ts` |
@@ -167,7 +175,7 @@ WORKER_URL=https://udb.luocompany.net
 API_TOKEN=replace-with-worker-token
 ```
 
-⚠️ `wrangler.toml` 中目前含明文 `API_TOKEN`，后续需迁移到 Cloudflare secret 并轮换。
+⚠️ `API_TOKEN` 已迁到 Cloudflare secret（`npx wrangler secret put API_TOKEN`），勿写入 `wrangler.toml`。生产环境必须配置 `NEXTAUTH_SECRET`。
 
 ## 本地开发
 

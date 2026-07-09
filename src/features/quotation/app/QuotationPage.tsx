@@ -5,7 +5,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { unstable_batchedUpdates as batch } from 'react-dom';
 import { AppLayout, type ActionButton } from '@/components/layout';
+import { PermissionDenied } from '@/components/PermissionDenied';
+import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { useAppUser } from '@/hooks/useAppUser';
+import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
 import { useQuotationStore } from '../state/useQuotationStore';
 import { sel } from '../state/selectors';
 import { isAllowedSettingsKey, SETTINGS_ALLOWED_KEYS } from '../constants/settings-allowed-keys';
@@ -76,6 +79,7 @@ export default function QuotationPage() {
   const { user, handleLogout } = useAppUser();
   const { showToast } = useToast();
   const confirm = useConfirm();
+  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('quotation');
 
   // 性能调试开关（开发模式）
   if (process.env.NODE_ENV === 'development') {
@@ -630,6 +634,14 @@ export default function QuotationPage() {
   ];
 
 
+
+  // 页面级权限守卫
+  if (!permissionReady) {
+    return <FullScreenSpinner />;
+  }
+  if (!hasModuleAccess) {
+    return <PermissionDenied message="您没有外贸报价合同的访问权限" />;
+  }
 
   // 守卫：等待数据初始化完成
   if (!data || Object.keys(data).length === 0) {

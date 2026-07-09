@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本文件给后续维护代理使用。范围覆盖整个仓库。最后更新：2026-07-06（main 快照以 `git log -1 --oneline` 为准）
+本文件给后续维护代理使用。范围覆盖整个仓库。最后更新：2026-07-09（main 快照以 `git log -1 --oneline` 为准）
 
 ## 项目定位
 
@@ -92,10 +92,15 @@ utils/      模块内部工具
 | `/purchase` | 采购订单，支持自动保存草稿 | `purchase_history`、`draftPurchase`、`purchase-autosave` |
 | `/inquiry` | 询报价登记，支持客户/联络人关联、订单标记和批量关联 | D1 `Document` |
 | `/order` | 订单状态表，复用询报价记录，支持执行情况、收货人关联和金额权限 | D1 `Document.data` |
+| `/purchase-registration` | 采购部登记（询报价过滤视图） | D1 `Document` |
+| `/purchase-order-table` | 采购订单表（已成单过滤视图） | D1 `Document` |
 | `/history` | 全部历史记录搜索/导入导出 | 全部历史 key |
-| `/customer` | 客户/供应商/收货人管理，支持分类、列表/卡片和详情 | `customer_management`、`supplier_management`、`consignee_management`、`customer_timeline_events`、`customer_followups`、`new_customer_tracking` |
+| `/customer` | 客户/供应商/收货人管理，支持分类、列表/卡片和详情 | D1 `Customer`/`Contact` + 离线缓存 `customer_cache_v2` 等 |
 | `/customer/detail` | 客户/供应商/收货人详情；名称/地址行内编辑；收货人详情显示收货订单 | D1 `Customer` / `Contact` + D1 `Document.data.orderDeliveryConsignee` |
 | `/mail` | AI 邮件助手（DeepSeek Chat API） | 无持久化 |
+| `/clock` | 时区汇率 | 无持久化 |
+| `/holidays` | 全球假日 | 无持久化 |
+| `/rmb` | RMB 大写 | 无持久化 |
 | `/admin` | 用户管理、权限分配 | Cloudflare D1 |
 
 动态路由：`edit/[id]`、`copy/[id]` 存在于 quotation、packing、invoice、purchase 四个模块。
@@ -107,15 +112,16 @@ utils/      模块内部工具
 - **User**：id、username、password（bcrypt hash）、email、status、isAdmin、lastLoginAt、createdAt、updatedAt
 - **Permission**：id、userId、moduleId、canAccess — 用户到模块权限的映射
 - **quotation_history**：旧表，保留兼容，主站历史**目前不走这个表**
-- **Document**：统一业务单据表，当前询报价登记和订单状态表使用 `data` JSON 保存业务字段（含 `orderDeliveryConsignee`）
-- **Customer / Contact**：客户、供应商、收货人及其联络人资料
+- **Document**：统一业务单据表；询报价登记、采购部登记、采购订单表使用 `data` JSON；报价/装箱/发票/采购单另有双写副本（按 `user_id` 隔离）
+- **Customer / Contact**：客户、供应商、收货人及其联络人资料（D1 主存）
+- **CustomerEvent**：客户时间轴/跟进相关事件（schema 已建）
 
 Worker 入口：`src/worker.ts`，D1 客户端：`src/lib/d1-client.ts`，配置：`wrangler.toml`。
-线上 API 基地址：`https://udb.luocompany.net`
+线上 API 基地址：`https://udb.luocompany.net`。Worker 管理接口使用 `Authorization: Bearer <API_TOKEN>`（Cloudflare secret）；`API_TOKEN` 不写在 `wrangler.toml`。
 
-### 浏览器本地存储（业务单据主存储）
+### 浏览器本地存储（多数历史单据仍以此为主）
 
-所有业务历史和客户数据当前保存在浏览器 `localStorage`（约 5MB 上限）。关键 key：
+报价/装箱/发票/采购单历史以 `localStorage` 为主，登录后从 D1 拉取合并（约 5MB 上限）。客户主数据在 D1，离线缓存用 `customer_cache_v2` 等。关键 key：
 
 | Key | 用途 |
 |-----|------|
@@ -123,9 +129,7 @@ Worker 入口：`src/worker.ts`，D1 客户端：`src/lib/d1-client.ts`，配置
 | `invoice_history` | 财务发票记录 |
 | `packing_history` | 装箱单记录 |
 | `purchase_history` | 采购订单记录 |
-| `customer_management` | 客户列表 |
-| `supplier_management` | 供应商列表 |
-| `consignee_management` | 收货人列表 |
+| `customer_cache_v2` 等 | 客户/供应商/收货人离线缓存（旧 `customer_management` 等已废弃） |
 | `customer_timeline_events` | 客户时间轴事件 |
 | `customer_followups` | 客户跟进记录 |
 | `new_customer_tracking` | 新客户跟踪 |
@@ -135,7 +139,7 @@ Worker 入口：`src/worker.ts`，D1 客户端：`src/lib/d1-client.ts`，配置
 | `theme-config`、`themeConfig` | 主题明暗模式（兼容旧 key） |
 | `draftQuotation`、`draftPurchase` | 草稿暂存 |
 
-配额监控：`src/utils/storageQuotaManager.ts`。新增字段、图片、长文本或大批量历史时，必须评估 5MB 上限影响。
+配额监控：`src/utils/storageQuotaManager.ts`（已实现，写入路径接入仍待 P1）。新增字段、图片、长文本或大批量历史时，必须评估 5MB 上限影响。
 
 ### IndexedDB（字体和图片缓存）
 
@@ -151,9 +155,9 @@ Worker 入口：`src/worker.ts`，D1 客户端：`src/lib/d1-client.ts`，配置
 4. `src/app/providers.tsx` 在客户端初始化权限 store 和本地缓存
 5. `src/middleware.ts` 拦截未登录访问和 `/admin` 路径
 
-**认证已知问题**：`silent-refresh` 场景（密码为字符串 `'silent-refresh'`）依赖 `localStorage.userCache`，服务端 authorize 函数访问不到 `window`，该分支实际无效。
+**认证说明**：`silent-refresh` 已改为服务端带 Bearer 远程拉取用户信息；失败则要求重新登录。权限刷新链路仍较复杂（store / hook / API 多处联动），改动需谨慎。
 
-**Worker 管理接口安全**：当前通过请求头 `X-User-ID`、`X-User-Name`、`X-User-Admin` 传递身份，**客户端可伪造**。这是高风险点，后续应迁移到 HMAC 签名或 NextAuth 服务端 session 校验。
+**Worker 管理接口安全**：已使用 `Authorization: Bearer <API_TOKEN>`（Cloudflare secret）。登录端点 `/api/auth/d1-users` 有 IP 限流（1 分钟 10 次）。`NEXTAUTH_SECRET` 生产环境必填，禁止硬编码回退。
 
 权限模块唯一注册表：`src/constants/permissionModules.ts`
 
@@ -161,6 +165,7 @@ Worker 入口：`src/worker.ts`，D1 客户端：`src/lib/d1-client.ts`，配置
 ```text
 quotation, packing, invoice, purchase,
 inquiry, inquiry.batchEdit, order.financials,
+purchaseRegistration, purchaseOrderTable,
 history, customer,
 ai-email, impa, clock, holidays, rmb
 ```
@@ -175,6 +180,7 @@ PDF 相关改动风险高。修改前先定位具体生成器：
 |---------|-----------|
 | 报价单 | `src/utils/quotationPdfGenerator.ts` |
 | 销售确认 | `src/utils/orderConfirmationPdfGenerator.ts` |
+| 内销报价 | `src/utils/domesticQuotationPdfGenerator.ts` |
 | 财务发票 | `src/utils/invoicePdfGenerator.ts` + `src/features/invoice/services/pdf.service.ts` |
 | 装箱单 | `src/utils/packingPdfGenerator.ts` |
 | 装箱单（唛头） | `src/utils/shippingMarksPdfGenerator.ts` |
@@ -200,6 +206,7 @@ npm run check:autotable
 
 - API 路由：`src/app/api/generate/route.ts`（POST）
 - AI 服务：`src/lib/deepseek.ts`（OpenAI-compatible SDK → DeepSeek Chat API）
+- 鉴权：需登录，且 session 具备 `ai-email` 模块权限（管理员放行）
 - 超时：2 分钟（`AbortController`）
 - 参数：`content`、`language`、`type`、`mode`（mail/reply）、`originalMail`（reply 模式必填）
 - 需要环境变量：`DEEPSEEK_API_KEY`
@@ -252,27 +259,25 @@ origin git@github.com:devluosir/luonet-vercel.git
 GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git fetch origin
 ```
 
-**绝对不要提交**：私钥、`.env.local`、真实 API key、生产 token。`wrangler.toml` 中已有明文 `API_TOKEN`，后续应迁移到 Cloudflare secret 并轮换。
+**绝对不要提交**：私钥、`.env.local`、真实 API key、生产 token。`API_TOKEN` 已迁到 Cloudflare secret（`npx wrangler secret put API_TOKEN`），勿再写入 `wrangler.toml`。
 
 ## 高风险区域（改动需额外谨慎）
 
-1. **Worker 管理接口认证**：`X-User-*` headers 客户端可伪造，最高优先级安全修复
-2. **权限缓存和 session 刷新**：多处联动，只改一处必出问题
-3. **PDF 字体、头图、表格分页和合并单元格**：调试成本高
-4. **`quotation_history` 报价与销售确认共存结构**：按 `type` 字段区分，迁移时要保持兼容
-5. **本地存储配额**：5MB 上限，历史记录增大时要触发清理
-6. **旧组件与 feature 模块重复代码**：改前先确认实际 import 路径
-7. **主题系统和 Tailwind safelist**：动态类名容易被 purge
-8. **`validatePassword` 方法**（`d1-client.ts`）：bcrypt 分支有 bug，直接返回 false，修改密码功能受影响
+1. **权限缓存和 session 刷新**：多处联动，只改一处必出问题；页面级守卫已覆盖主要业务页，middleware 仍不做 moduleId 拦截
+2. **PDF 字体、头图、表格分页和合并单元格**：调试成本高
+3. **`quotation_history` 报价与销售确认共存结构**：按 `type` 字段区分，迁移时要保持兼容
+4. **本地存储配额**：5MB 上限；历史主写入已走 `persistHistoryToStorage`，极端情况会裁剪旧记录
+5. **旧组件与 feature 模块重复代码**：改前先确认实际 import 路径（quotation/purchase/packing 仍双轨）
+6. **主题系统和 Tailwind safelist**：动态类名容易被 purge
+7. **单据双写 / 登录拉取**：`d1Sync` + `d1Pull` + `useD1Sync`；换账号必须先 `prepareD1DocumentSyncForUser`，避免串数据
 
 ## 推荐优化路线（优先级排序）
 
-1. **紧急安全**：将 Worker 管理接口从 `X-User-*` header 认证迁移到 HMAC 签名或 JWT 校验；轮换已暴露的 `wrangler.toml` API_TOKEN。
-2. **数据持久化**：业务历史数据从 `localStorage` 迁移到服务端数据库（Cloudflare D1 扩展 schema 或独立数据库），解决多设备同步和 5MB 配额问题。
-3. **测试覆盖**：补 Playwright 关键路径集成测试（登录、权限、创建单据、PDF 生成、导入导出）。
-4. **代码清理**：分批消除 `src/components` 与 `src/features` 的重复实现，让每个业务模块自包含。
-5. **修复已知问题**：`validatePassword` bcrypt 分支、`silent-refresh` 服务端不可用问题。
-6. **构建质量**：恢复 `eslint.ignoreDuringBuilds = false`，在 CI 中强制执行 lint。
+1. **跨设备同步（轻量）**：保留新建双写 + 登录拉取 + 本地补推；不做旧历史批量迁移（TASK-14 取消）；不做 D1 primary 读路径切换。
+2. **测试覆盖**：补 Playwright 关键路径集成测试（登录、权限、创建单据、PDF 生成、导入导出）。
+3. **代码清理**：分批消除 `src/components` 与 `src/features` 的重复实现，让每个业务模块自包含。
+4. **文档治理**：以 `docs/core/CURRENT_STATE.md` 为事实源，同步 README/AGENTS/PROJECT_SUMMARY；归档过时 SUMMARY/FIX。
+5. **权限刷新简化（可选）**：`fetchPermissions` 与 `usePermissionRefresh` 仍有重叠，可继续收敛。
 
 ## 文档索引
 

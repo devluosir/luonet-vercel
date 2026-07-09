@@ -4,7 +4,10 @@ import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Download, Eye } from 'lucide-react';
 import { AppLayout, type ActionButton } from '@/components/layout';
+import { PermissionDenied } from '@/components/PermissionDenied';
+import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { useAppUser } from '@/hooks/useAppUser';
+import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
 import PurchaseHeader from '../components/PurchaseHeader';
 import PurchaseForm from '../components/PurchaseForm';
 import { usePurchaseInit, usePurchasePdfActions } from '../hooks/usePurchaseActions';
@@ -21,6 +24,7 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
 export default function PurchasePage() {
   const pathname = usePathname();
   const { user, handleLogout } = useAppUser();
+  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('purchase');
   const { showPreview, previewItem, setShowPreview, setPreviewItem, editId } = usePurchaseStore();
   const { handleGenerate, handlePreview, isGenerating } = usePurchasePdfActions();
   
@@ -49,6 +53,14 @@ export default function PurchasePage() {
       icon: Eye,
     },
   ];
+
+  // 页面级权限守卫
+  if (!permissionReady) {
+    return <FullScreenSpinner />;
+  }
+  if (!hasModuleAccess) {
+    return <PermissionDenied message="您没有采购订单的访问权限" />;
+  }
 
   return (
     <AppLayout

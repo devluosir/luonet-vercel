@@ -1,6 +1,7 @@
 import { PackingData, PackingHistory } from '../types';
 import { getLocalStorageJSON } from '../../../utils/safeLocalStorage';
 import { calculateTotalAmount } from '../utils/calculations';
+import { persistHistoryToStorage } from '@/utils/storageQuotaManager';
 import { d1SyncDocument } from '@/utils/d1Sync';
 
 const STORAGE_KEY = 'packing_history';
@@ -42,7 +43,9 @@ export const savePackingHistory = (data: PackingData, existingId?: string): Pack
           data
         };
         history[index] = updatedHistory;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        if (!persistHistoryToStorage(STORAGE_KEY, history)) {
+          return null;
+        }
         // D1 双写（fire-and-forget）
         d1SyncDocument('update', {
           id: existingId,
@@ -85,7 +88,9 @@ export const savePackingHistory = (data: PackingData, existingId?: string): Pack
           return item;
         });
         
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
+        if (!persistHistoryToStorage(STORAGE_KEY, updatedHistory)) {
+          return null;
+        }
         // D1 双写（fire-and-forget）
         const updated = updatedHistory.find(item => item.id === existingPacking.id);
         if (updated) {
@@ -120,7 +125,9 @@ export const savePackingHistory = (data: PackingData, existingId?: string): Pack
     };
 
     history.unshift(newHistory);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    if (!persistHistoryToStorage(STORAGE_KEY, history)) {
+      return null;
+    }
     // D1 双写（fire-and-forget）
     d1SyncDocument('create', {
       id: newHistory.id,
@@ -172,7 +179,9 @@ export const deletePackingHistory = (id: string): boolean => {
   try {
     const history = getPackingHistory();
     const filteredHistory = history.filter(item => item.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredHistory));
+    if (!persistHistoryToStorage(STORAGE_KEY, filteredHistory)) {
+      return false;
+    }
     // D1 删除（fire-and-forget）
     d1SyncDocument('delete', { id, type: 'packing', doc_no: '', data: null });
     return true;
@@ -206,14 +215,11 @@ export const importPackingHistory = (jsonData: string, mergeStrategy: 'replace' 
     }
 
     if (mergeStrategy === 'replace') {
-      localStorage.setItem(STORAGE_KEY, jsonData);
-    } else {
-      const existingHistory = getPackingHistory();
-      const mergedHistory = [...importedData, ...existingHistory];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedHistory));
+      return persistHistoryToStorage(STORAGE_KEY, importedData);
     }
-
-    return true;
+    const existingHistory = getPackingHistory();
+    const mergedHistory = [...importedData, ...existingHistory];
+    return persistHistoryToStorage(STORAGE_KEY, mergedHistory);
   } catch (error) {
     console.error('Error importing packing history:', error);
     return false;

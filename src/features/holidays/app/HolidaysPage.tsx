@@ -4,6 +4,9 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Globe, ChevronDown, Info } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
+import { PermissionDenied } from '@/components/PermissionDenied';
+import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
+import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
 import { usePermissionStore } from '@/lib/permissions';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
 import { HOLIDAYS_2026, CATEGORY_LABEL, getHolidayDetail, type Holiday, type HolidayCategory } from '../data/holidays2026';
@@ -226,6 +229,7 @@ const CAT_TABS: { key: CategoryFilter; label: string; dot?: string }[] = [
 export function HolidaysPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('holidays');
   const [mounted, setMounted] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const hasPositionedCurrentMonth = useRef(false);
@@ -314,6 +318,14 @@ export function HolidaysPage() {
 
     return () => window.cancelAnimationFrame(frame);
   }, [mounted, initialScrollTargetKey]);
+
+  // 页面级权限守卫
+  if (!permissionReady) {
+    return <FullScreenSpinner />;
+  }
+  if (!hasModuleAccess) {
+    return <PermissionDenied message="您没有全球假日的访问权限" />;
+  }
 
   if (!mounted || status === 'unauthenticated') return null;
 

@@ -263,12 +263,14 @@ export class D1UserClient {
     return currentPassword === user.password;
   }
 
-  // 更新用户密码
+  // 更新用户密码（始终写入 bcrypt 哈希，与创建用户一致）
   async updatePassword(userId: string, newPassword: string): Promise<boolean> {
     try {
+      if (!newPassword || newPassword.length < 1) return false;
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
       const result = await this.db.prepare(`
         UPDATE User SET password = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?
-      `).bind(newPassword, userId).run();
+      `).bind(hashedPassword, userId).run();
 
       return result.meta.changes > 0;
     } catch (error) {

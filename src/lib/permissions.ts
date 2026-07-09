@@ -590,9 +590,9 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
                 permissionsChanged: sessionUpdateData.debug?.permissionsChanged
               });
 
-              // ✅ 如果权限有变化，执行silent-refresh
+              // ✅ 如果权限有变化，清理缓存并通知监听方（完整 session 刷新由 usePermissionRefresh 负责）
               if (sessionUpdateData.tokenNeedsRefresh) {
-                logPermission('权限已变化，执行silent-refresh');
+                logPermission('权限已变化，清理缓存并派发 permissionsUpdated');
 
                 // ✅ 清理所有缓存
                 if (typeof window !== 'undefined') {
@@ -605,22 +605,19 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
                   } catch (error) {
                     console.error('清理缓存失败:', error);
                   }
-                }
 
-                // ✅ 触发silent-refresh事件
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('silentRefreshPermissions', {
+                  window.dispatchEvent(new CustomEvent('permissionsUpdated', {
                     detail: {
-                      message: '权限已更新，执行silent-refresh',
+                      message: '权限已更新，需要刷新 session',
                       requiresRelogin: false,
+                      tokenNeedsRefresh: true,
                       permissions: permissions,
-                      silentRefresh: true,
                       username: session.user.username || session.user.name
                     }
                   }));
                 }
               } else {
-                logPermission('权限无变化，跳过silent-refresh');
+                logPermission('权限无变化，跳过 token 刷新提示');
 
                 // ✅ 即使权限无变化，也要更新Store中的权限数据
                 if (typeof window !== 'undefined') {

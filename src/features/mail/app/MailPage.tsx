@@ -2,7 +2,10 @@
 
 import { useEffect } from 'react';
 import { AppLayout } from '@/components/layout';
+import { PermissionDenied } from '@/components/PermissionDenied';
+import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { useAppUser } from '@/hooks/useAppUser';
+import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
 import { performanceMonitor, optimizePerformance } from '@/utils/performance';
 import { MailTabs } from '../components/MailTabs';
 import { ChatInterface } from '../components/ChatInterface';
@@ -17,6 +20,7 @@ export default function MailPage() {
   const activeTab = useActiveTab();
   const setActiveTab = useSetActiveTab();
   const { user, handleLogout } = useAppUser();
+  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('ai-email');
   const [showSettings, setShowSettings] = useState(false);
   const { field } = useMailForm();
   const { mailType, setMailType } = useMailStore();
@@ -53,6 +57,14 @@ export default function MailPage() {
       }
     }
   }, []);
+
+  // 页面级权限守卫
+  if (!permissionReady) {
+    return <FullScreenSpinner />;
+  }
+  if (!hasModuleAccess) {
+    return <PermissionDenied message="您没有 AI 邮件助手的访问权限" />;
+  }
 
   return (
     <AppLayout

@@ -26,6 +26,12 @@ export interface PermissionMap {
     customer: boolean;
     'ai-email': boolean;
     impa: boolean;
+    inquiry: boolean;
+    purchaseRegistration: boolean;
+    purchaseOrderTable: boolean;
+    clock: boolean;
+    holidays: boolean;
+    rmb: boolean;
   };
   documentTypePermissions: {
     quotation: boolean;

@@ -84,6 +84,49 @@ function verifyBearerToken(request: Request, env: Env): boolean {
   return auth.slice(7) === env.API_TOKEN;
 }
 
+/**
+ * 登录端点简易限流（isolate 内存，best-effort）。
+ * 同一 IP：1 分钟内最多 10 次尝试；超限返回 429。
+ */
+const AUTH_RATE_LIMIT_WINDOW_MS = 60_000;
+const AUTH_RATE_LIMIT_MAX = 10;
+const authAttemptBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function getClientIp(request: Request): string {
+  return (
+    request.headers.get('CF-Connecting-IP') ||
+    request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
+    'unknown'
+  );
+}
+
+function checkAuthRateLimit(request: Request): { allowed: boolean; retryAfterSec: number } {
+  const ip = getClientIp(request);
+  const now = Date.now();
+  const bucket = authAttemptBuckets.get(ip);
+
+  if (!bucket || now >= bucket.resetAt) {
+    authAttemptBuckets.set(ip, { count: 1, resetAt: now + AUTH_RATE_LIMIT_WINDOW_MS });
+    // 顺带清理过期桶，避免 Map 无限增长
+    if (authAttemptBuckets.size > 500) {
+      for (const [key, value] of Array.from(authAttemptBuckets.entries())) {
+        if (now >= value.resetAt) authAttemptBuckets.delete(key);
+      }
+    }
+    return { allowed: true, retryAfterSec: 0 };
+  }
+
+  if (bucket.count >= AUTH_RATE_LIMIT_MAX) {
+    return {
+      allowed: false,
+      retryAfterSec: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)),
+    };
+  }
+
+  bucket.count += 1;
+  return { allowed: true, retryAfterSec: 0 };
+}
+
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(
     JSON.stringify(data),
@@ -350,6 +393,21 @@ export default worker;
 
 async function handleUserAuth(request: Request, env: Env): Promise<Response> {
   try {
+    const rate = checkAuthRateLimit(request);
+    if (!rate.allowed) {
+      return new Response(
+        JSON.stringify({ error: '登录尝试过于频繁，请稍后再试' }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(rate.retryAfterSec),
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
     const { username, password } = await request.json();
 
     console.log('handleUserAuth - 开始验证:', { username, password: password ? '***' : 'empty' });
@@ -388,7 +446,9 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
     console.log('handleUserAuth - 找到用户:', {
       id: user.id,
       username: user.username,
-      password: user.password ? `${user.password.substring(0, 10)}...` : 'empty',
+      passwordType: user.password
+        ? (user.password.startsWith('$2') ? 'bcrypt' : 'plaintext')
+        : 'empty',
       status: user.status,
       isAdmin: user.isAdmin
     });
@@ -445,19 +505,9 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
       }
     } else if (password === user.password) {
       console.log('密码验证成功: 明文密码匹配');
-      console.log('密码匹配详情:', {
-        inputPassword: password,
-        storedPassword: user.password,
-        match: password === user.password
-      });
       passwordValid = true;
     } else {
       console.log('密码验证失败: 密码不匹配');
-      console.log('密码不匹配详情:', {
-        inputPassword: password,
-        storedPassword: user.password,
-        match: password === user.password
-      });
       passwordValid = false;
     }
 

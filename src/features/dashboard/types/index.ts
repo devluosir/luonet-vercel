@@ -1,4 +1,5 @@
 export type { DocumentType } from '@/utils/dashboardUtils';
+export type { PermissionMap } from '@/types/permissions';
 import type { DocumentType } from '@/utils/dashboardUtils';
 
 // Dashboard模块类型定义
@@ -24,30 +25,6 @@ export interface DocumentCounts {
   invoice: number;
   packing: number;
   purchase: number;
-}
-
-// 权限映射类型
-export interface PermissionMap {
-  permissions: {
-    quotation: boolean;
-    confirmation: boolean;
-    packing: boolean;
-    invoice: boolean;
-    purchase: boolean;
-    'ai-email': boolean;
-    history: boolean;
-    customer: boolean;
-  };
-  documentTypePermissions: {
-    quotation: boolean;
-    confirmation: boolean;
-    'domestic-quotation': boolean;
-    'domestic-contract': boolean;
-    packing: boolean;
-    invoice: boolean;
-    purchase: boolean;
-  };
-  accessibleDocumentTypes: DocumentType[];
 }
 
 // 成功消息类型

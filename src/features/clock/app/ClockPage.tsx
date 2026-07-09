@@ -5,7 +5,10 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Clock, Plus, RefreshCw, Search, X } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
+import { PermissionDenied } from '@/components/PermissionDenied';
+import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { Button } from '@/components/ui/Button';
+import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
 import { usePermissionStore } from '@/lib/permissions';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
 
@@ -885,6 +888,7 @@ function TimeGrid({
 export function ClockPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('clock');
   const [mounted, setMounted] = useState(false);
   const [tab, setTab] = useState<TabKey>('clock');
   const [cityIds, setCityIds] = useState<string[]>(DEFAULT_CITY_IDS);
@@ -925,6 +929,14 @@ export function ClockPage() {
     if (id === homeCityId) return;
     setCityIds((current) => current.filter((cityId) => cityId !== id));
   }, [homeCityId]);
+
+  // 页面级权限守卫
+  if (!permissionReady) {
+    return <FullScreenSpinner />;
+  }
+  if (!hasModuleAccess) {
+    return <PermissionDenied message="您没有时区汇率的访问权限" />;
+  }
 
   if (!mounted || status === 'unauthenticated') return null;
 

@@ -2,15 +2,11 @@ import { QuotationData } from '@/types/quotation';
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-history';
 import { getDefaultNotes } from '@/utils/getDefaultNotes';
+import { persistHistoryToStorage } from '@/utils/storageQuotaManager';
 import { d1SyncDocument } from './d1Sync';
 
 const STORAGE_KEY = 'quotation_history';
 type QuotationHistoryType = QuotationHistory['type'];
-
-const isQuotaExceededError = (error: unknown): boolean => (
-  error instanceof DOMException &&
-  (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')
-);
 
 // 生成唯一ID
 const generateId = () => {
@@ -76,38 +72,8 @@ export const saveQuotationHistory = (type: QuotationHistoryType, data: Quotation
         };
         history[index] = updatedHistory;
 
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-        } catch (storageError: unknown) {
-          // 处理配额超限错误
-          if (isQuotaExceededError(storageError)) {
-            console.warn('存储配额超限，尝试清理后重试...');
-            // 清理其他localStorage键，但保留当前历史记录
-            const keysToClean = Object.keys(localStorage).filter(k =>
-              (k.includes('draft') || k.includes('v2') || k.includes('temp') || k.includes('cache')) &&
-              k !== STORAGE_KEY // 不清理当前存储键
-            );
-            keysToClean.forEach(k => localStorage.removeItem(k));
-
-            // 重试保存，如果仍然失败，则只保留最近的100条记录
-            try {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-              console.log('清理后保存成功');
-            } catch (retryError) {
-              console.warn('清理后仍然无法保存，保留最近100条记录');
-              const trimmedHistory = history.slice(-100); // 增加到100条
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
-            }
-          } else {
-            throw storageError;
-          }
-        }
-
-        // 触发自定义事件，通知Dashboard页面更新
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('customStorageChange', {
-            detail: { key: STORAGE_KEY }
-          }));
+        if (!persistHistoryToStorage(STORAGE_KEY, history)) {
+          return null;
         }
 
         // D1 双写（fire-and-forget）
@@ -152,38 +118,8 @@ export const saveQuotationHistory = (type: QuotationHistoryType, data: Quotation
 
     history.unshift(newHistory);
 
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-    } catch (storageError: unknown) {
-      // 处理配额超限错误
-      if (isQuotaExceededError(storageError)) {
-        console.warn('存储配额超限，尝试清理后重试...');
-        // 清理其他localStorage键，但保留当前历史记录
-        const keysToClean = Object.keys(localStorage).filter(k =>
-          (k.includes('draft') || k.includes('v2') || k.includes('temp') || k.includes('cache')) &&
-          k !== STORAGE_KEY // 不清理当前存储键
-        );
-        keysToClean.forEach(k => localStorage.removeItem(k));
-
-        // 重试保存，如果仍然失败，则只保留最近的100条记录
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-          console.log('清理后保存成功');
-        } catch (retryError) {
-          console.warn('清理后仍然无法保存，保留最近100条记录');
-          const trimmedHistory = history.slice(-100); // 增加到100条
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
-        }
-      } else {
-        throw storageError;
-      }
-    }
-
-    // 触发自定义事件，通知Dashboard页面更新
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('customStorageChange', {
-        detail: { key: STORAGE_KEY }
-      }));
+    if (!persistHistoryToStorage(STORAGE_KEY, history)) {
+      return null;
     }
 
     // D1 双写（fire-and-forget）
@@ -250,7 +186,9 @@ export const deleteQuotationHistory = (id: string): boolean => {
     const history = getQuotationHistory();
     const item = history.find(record => record.id === id);
     const filtered = history.filter(item => item.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    if (!persistHistoryToStorage(STORAGE_KEY, filtered)) {
+      return false;
+    }
     d1SyncDocument('delete', { id, type: item?.type ?? 'quotation', doc_no: '', data: null });
     return true;
   } catch (error) {
@@ -388,35 +326,18 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
 
     try {
       if (mergeStrategy === 'replace') {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(processedData));
-      } else {
-        // 合并策略：保留现有记录，添加新记录（根据 id 去重）
-        const existingHistory = getQuotationHistory();
-        const existingIds = new Set(existingHistory.map(item => item.id));
-        const newHistory = [
-          ...existingHistory,
-          ...processedData.filter(item => !existingIds.has(item.id))
-        ];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+        return persistHistoryToStorage(STORAGE_KEY, processedData);
       }
-      return true;
+      // 合并策略：保留现有记录，添加新记录（根据 id 去重）
+      const existingHistory = getQuotationHistory();
+      const existingIds = new Set(existingHistory.map(item => item.id));
+      const newHistory = [
+        ...existingHistory,
+        ...processedData.filter(item => !existingIds.has(item.id))
+      ];
+      return persistHistoryToStorage(STORAGE_KEY, newHistory);
     } catch (storageError) {
-      // 尝试分块保存（如果数据太大）
-      if (isQuotaExceededError(storageError)) {
-        // 尝试清理其他不重要的数据
-        try {
-          // 保留最重要的数据
-          const existingHistory = getQuotationHistory();
-          // 只保留最近的50条记录
-          const trimmedHistory = existingHistory.slice(-50);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
-
-          // 再次尝试保存导入的数据
-          return importQuotationHistory(jsonData, mergeStrategy);
-        } catch (e) {
-          return false;
-        }
-      }
+      console.error('Error saving quotation history import:', storageError);
       return false;
     }
   } catch (error) {

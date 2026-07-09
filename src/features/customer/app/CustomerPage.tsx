@@ -5,10 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Building2, LayoutGrid, List as ListIcon, Package, Plus, Search, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
+import { PermissionDenied } from '@/components/PermissionDenied';
+import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Button } from '@/components/ui/Button';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { useAppUser } from '@/hooks/useAppUser';
+import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
 import { useCustomerData, useCustomerActions, useCustomerForm } from '../hooks';
 import { getConsigneeDisplayName } from '../services/customerService';
 import { CustomerList, SupplierList, ConsigneeList, CustomerModal, ProfileCardGrid } from '../components';
@@ -57,6 +60,7 @@ export default function CustomerPage() {
   const tabParam = searchParams?.get('tab') ?? null;
   const { data: session, status } = useSession();
   const { user, handleLogout } = useAppUser();
+  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('customer');
 
   const [activeTab, setActiveTab] = useState<TabType>('customers');
   const [showModal, setShowModal] = useState(false);
@@ -129,6 +133,13 @@ export default function CustomerPage() {
   }, [consignees, inquiryRecords]);
 
   // ── Early returns ───────────────────────────────────────────────
+  if (!permissionReady) {
+    return <FullScreenSpinner />;
+  }
+  if (!hasModuleAccess) {
+    return <PermissionDenied message="您没有客户管理的访问权限" />;
+  }
+
   if (status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-black">

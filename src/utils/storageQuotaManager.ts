@@ -203,3 +203,19 @@ export function monitorStorageUsage(): void {
     smartCleanup();
   }
 }
+
+/** 安全写入历史数组并派发 customStorageChange（供各 *History 使用） */
+export function persistHistoryToStorage(key: string, data: unknown): boolean {
+  const result = safeSaveToStorage(key, data);
+  if (!result.success) {
+    console.error(`[storageQuota] 写入失败 ${key}: ${result.message}`);
+    return false;
+  }
+  if (result.trimmed) {
+    console.warn(`[storageQuota] ${key} 已压缩裁剪后保存`);
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('customStorageChange', { detail: { key } }));
+  }
+  return true;
+}

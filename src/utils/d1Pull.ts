@@ -15,6 +15,7 @@ import {
   recordDeletedDocId,
   type D1DocType,
 } from '@/utils/d1Sync';
+import { persistHistoryToStorage } from '@/utils/storageQuotaManager';
 
 type D1Doc = {
   id: string;
@@ -281,7 +282,9 @@ function mergeIntoStorage<T extends LocalStorageItem>(
     return tb - ta;
   });
 
-  localStorage.setItem(storageKey, JSON.stringify(merged));
+  if (!persistHistoryToStorage(storageKey, merged)) {
+    console.warn(`[d1Pull] 合并写入失败: ${storageKey}`);
+  }
 }
 
 function docToQuotationHistory(doc: D1Doc) {

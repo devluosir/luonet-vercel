@@ -181,7 +181,16 @@ export const authOptions: NextAuthOptions = {
     }
   },
 
-  secret: process.env.NEXTAUTH_SECRET || "your-secret-key-here"
+  // 生产环境必须配置 NEXTAUTH_SECRET；禁止硬编码回退
+  secret: (() => {
+    const secret = process.env.NEXTAUTH_SECRET;
+    if (secret) return secret;
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('NEXTAUTH_SECRET 未配置，生产环境禁止使用默认密钥');
+    }
+    console.warn('[auth] NEXTAUTH_SECRET 未配置，开发环境使用临时密钥');
+    return 'dev-only-nextauth-secret';
+  })(),
 };
 
 const handler = NextAuth(authOptions);

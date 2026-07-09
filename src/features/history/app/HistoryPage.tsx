@@ -5,7 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Search, X, RefreshCw, Upload, Download } from 'lucide-react';
 import { AppLayout, type ActionButton } from '@/components/layout';
+import { PermissionDenied } from '@/components/PermissionDenied';
+import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { useAppUser } from '@/hooks/useAppUser';
+import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
 import { HistoryTabs } from '../components/HistoryTabs';
 import { useHistoryStore } from '../state/history.store';
 import { useHistoryActions } from '../hooks/useHistoryActions';
@@ -68,6 +71,7 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
 export function HistoryPage() {
   const searchParams = useSearchParams();
   const { user, handleLogout } = useAppUser();
+  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('history');
 
   // 状态
   const mounted = useHistoryMounted();
@@ -298,6 +302,14 @@ export function HistoryPage() {
       disabled: isDeleting,
     }] : []),
   ];
+
+  // 页面级权限守卫
+  if (!permissionReady) {
+    return <FullScreenSpinner />;
+  }
+  if (!hasModuleAccess) {
+    return <PermissionDenied message="您没有单据历史的访问权限" />;
+  }
 
   return (
     <AppLayout
