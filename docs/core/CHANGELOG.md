@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### 首页导航与统计（TASK-109 / TASK-110）
+- **报价/合同 4 入口拆分**：侧边栏 `AppSidebar.tsx` 的「外贸报价合同」「内销报价合同」2 项拆成「外贸报价/外贸合同/内销报价/内销合同」4 项，id/路径与首页模块宫格 `QUICK_CREATE_MODULES` 对齐；4 项换用新建的 `src/components/icons/TradeDocIcons.tsx` 双维度自定义图标（文档主体区分报价/合同，右下角标区分外贸/内销），不再共用同一个 `FileText`。
+- **首页询价/订单统计**：新增「今日新增：询价/已报价/订单」「本月累计：询价/订单」两行统计卡片（`InquiryOrderStats.tsx`），以及可切换天/周/月/季/年度粒度的询价+订单趋势图（`InquiryOrderTrendChart.tsx`，基于新引入的 `recharts`）。统计口径：订单确认日期（`orderConfirmDate` 只存 `[月.日]`）按询价单编号年份推算跨年；已报价按记录数（`customer_quoted` 判定）而非报价条目数计。两块内容仅 `inquiry` 模块权限用户可见。
+
 #### P1 权限与配额
 - **页面级 moduleId 守卫**：新增 `useModulePermissionGuard`；报价/装箱/发票/采购/历史/客户（含详情）/邮件/时区/假日/RMB 共 11 页接入，无权限显示 `PermissionDenied`（询报价相关 4 页此前已有）。
 - **历史写入配额统一入口**：`persistHistoryToStorage`；报价/发票/装箱/采购历史与 `d1Pull.mergeIntoStorage` 主写入路径接入，超限时智能清理/裁剪。

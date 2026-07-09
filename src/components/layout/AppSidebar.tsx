@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Clock,
   ClipboardCheck,
-  FileText,
   LayoutDashboard,
   Mail,
   Package,
@@ -21,10 +20,15 @@ import {
   ShoppingCart,
   Users,
   X,
-  type LucideIcon,
 } from 'lucide-react';
 import { usePermissionStore } from '@/lib/permissions';
 import { LOGO_CONFIG } from '@/lib/logo-config';
+import {
+  ForeignQuotationIcon,
+  ForeignContractIcon,
+  DomesticQuotationIcon,
+  DomesticContractIcon,
+} from '@/components/icons/TradeDocIcons';
 import { AppUserMenu } from './AppUserMenu';
 
 // ── 类型 ──────────────────────────────────────────────────────────────────────
@@ -33,7 +37,8 @@ export interface SidebarItem {
   id: string;
   label: string;
   path: string;
-  icon: LucideIcon;
+  /** 大部分导航项用 lucide-react 图标，报价/合同 4 项用 TradeDocIcons 自定义组件，类型放宽兼容两者 */
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   permissionKey?: string;
   external?: boolean;
 }
@@ -65,8 +70,10 @@ interface AppSidebarProps {
 /** 全量平铺列表（供外部引用） */
 export const NAV_ITEMS: SidebarItem[] = [
   { id: 'dashboard',    label: '首页',      path: '/dashboard',               icon: LayoutDashboard },
-  { id: 'quotation',    label: '外贸报价合同', path: '/quotation',              icon: FileText,  permissionKey: 'canCreateQuotation' },
-  { id: 'quotation-domestic', label: '内销报价合同', path: '/quotation?tab=domestic', icon: FileText, permissionKey: 'canCreateQuotation' },
+  { id: 'quotation',                   label: '外贸报价', path: '/quotation?tab=quotation',                icon: ForeignQuotationIcon,  permissionKey: 'canCreateQuotation' },
+  { id: 'confirmation',                label: '外贸合同', path: '/quotation?tab=confirmation',              icon: ForeignContractIcon,   permissionKey: 'canCreateQuotation' },
+  { id: 'quotation-domestic',          label: '内销报价', path: '/quotation?tab=domestic&docType=quotation', icon: DomesticQuotationIcon, permissionKey: 'canCreateQuotation' },
+  { id: 'quotation-domestic-contract', label: '内销合同', path: '/quotation?tab=domestic&docType=contract',  icon: DomesticContractIcon,  permissionKey: 'canCreateQuotation' },
   { id: 'packing',      label: '箱单发票',  path: '/packing',                 icon: Package,   permissionKey: 'canCreatePacking' },
   { id: 'invoice',      label: '财务发票',  path: '/invoice',                 icon: Receipt,   permissionKey: 'canCreateInvoice' },
   { id: 'purchase',     label: '采购订单',  path: '/purchase',                icon: ShoppingCart, permissionKey: 'canCreatePurchase' },
@@ -102,7 +109,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: 'documents',
     label: '新单据',
-    items: navGroupItems(['quotation', 'quotation-domestic', 'packing', 'invoice', 'purchase']),
+    items: navGroupItems(['quotation', 'confirmation', 'quotation-domestic', 'quotation-domestic-contract', 'packing', 'invoice', 'purchase']),
   },
   {
     id: 'registration',
@@ -141,9 +148,16 @@ const PERMISSION_MODULE_MAP: Record<string, string> = {
 
 // ── 辅助函数 ──────────────────────────────────────────────────────────────────
 
-function isItemActive(item: SidebarItem, pathname: string, tab: string | null) {
-  if (item.id === 'quotation-domestic') return pathname.startsWith('/quotation') && tab === 'domestic';
-  if (item.id === 'quotation')    return pathname.startsWith('/quotation') && tab !== 'domestic';
+function isItemActive(item: SidebarItem, pathname: string, tab: string | null, docType: string | null) {
+  if (pathname.startsWith('/quotation')) {
+    switch (item.id) {
+      case 'quotation':                   return tab !== 'domestic' && tab !== 'confirmation';
+      case 'confirmation':                return tab === 'confirmation';
+      case 'quotation-domestic':          return tab === 'domestic' && docType !== 'contract';
+      case 'quotation-domestic-contract': return tab === 'domestic' && docType === 'contract';
+      default: return false;
+    }
+  }
   const itemPath = item.path.split('?')[0];
   return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
 }
@@ -161,6 +175,7 @@ export function AppSidebar({
   const pathname    = usePathname();
   const searchParams = useSearchParams();
   const tab         = searchParams.get('tab');
+  const docType     = searchParams.get('docType');
   const permissionUser = usePermissionStore((state) => state.user);
   const isLoading   = usePermissionStore((state) => state.isLoading);
 
@@ -263,7 +278,7 @@ export function AppSidebar({
               {/* 导航项 */}
               {visibleItems.map((item) => {
                 const Icon   = item.icon;
-                const active = isItemActive(item, pathname, tab);
+                const active = isItemActive(item, pathname, tab, docType);
                 const navItemClassName = `flex h-9 items-center rounded-md text-sm transition-colors ${
                   isCollapsed
                     ? 'justify-center px-0 mx-1'

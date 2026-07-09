@@ -281,6 +281,201 @@
 
 用同一套 `tsx` 真实复现脚本重新跑了一遍改动后的代码：同样的 10 行产品表 + 13 条默认条款，`pdfinfo` 确认从 2 页变成 1 页，供需双方信息表跟产品条款留在同一页，跟用户截图里"应该放得下"的直觉一致。
 
+## TASK-109：侧边栏拆分外贸/内销报价合同为 4 个独立入口 + 双维度自定义图标
+
+**状态**：已完成（2026-07-09，本次会话由 Claude 直接实现，未经 Codex）
+
+**执行记录**：
+- 新建 `src/components/icons/TradeDocIcons.tsx`：`ForeignQuotationIcon`/`ForeignContractIcon`/`DomesticQuotationIcon`/`DomesticContractIcon` 4 个自定义 SVG 组件，文档主体区分报价（3 条横线）/合同（1 条横线+签名波浪线），右下角标区分外贸（简化船体+桅杆）/内销（简化屋顶+主体），描边风格对齐 lucide（`strokeWidth=2`、round cap/join）。
+- `AppSidebar.tsx`：`NAV_ITEMS` 拆成 4 条（`quotation`/`confirmation`/`quotation-domestic`/`quotation-domestic-contract`，id 与 `dashboardModules.ts` 对齐），`NAV_GROUPS.documents` 同步更新；`isItemActive()` 改成按 `tab`+`docType` 判断 4 种状态；移除不再使用的 `FileText` 导入；`SidebarItem.icon` 类型从 `LucideIcon` 放宽为 `React.ComponentType<React.SVGProps<SVGSVGElement>>` 以兼容自定义图标组件。
+- `dashboardModules.ts`：`QUICK_CREATE_MODULES` 对应 4 条的 `icon` 换成新图标组件（原来 4 条共用 `FileText`）。
+- `MobileBottomTab.tsx`：`MobileMenuLink.icon` 类型同步放宽（它直接复用 `QUICK_CREATE_MODULES`，无需改结构，图标随之生效）。
+
+**未做**：未改 `useInitQuotation.ts`（TASK-103 已让 `docType` 持续监听生效，本任务不需要动）；未改 `ModuleButton.tsx` 的颜色方案。
+
+**验证**：`npx tsc --noEmit` 通过；`npx eslint`（改动+新增文件）无输出；`npm run build` 在沙箱 45s 超时内跑到 Next.js 编译阶段（"▲ Next.js 14.2.32"之后）未见报错，未能等到编译完全结束（沙箱单次命令时长限制，历史已知问题，见 TASK-103/TASK-108 verification 记录）——建议用户本地或 CI 跑一次完整 `npm run build` 二次确认。
+
+**追加调整（同日）**：用户反馈第一版图标（船/房子小图形角标）"一点也看不清"，截图确认首页卡片和侧边栏两种尺寸下角标细节确实完全糊成一团，报价/合同的主体差异也不明显。改用文字角标：右下角一个白色描边圆 + 实心色圆（`fill="currentColor"`，跟随卡片颜色）+ "外"/"内" 白色粗体文字，白色描边圆把角标从文档线条里"挖"出来，不再跟主体线条糊在一起。
+
+验证方式：沙箱装了 `@resvg/resvg-js`（临时装在 `/tmp`，未写入项目依赖）把新图标 SVG 光栅化成 PNG，用项目自带的 `public/fonts/NotoSansSC-Bold.ttf` 加载字体（避免用无 CJK 字体的环境误判"字糊了"是设计问题还是环境缺字体），在 16px/24px/48px 三档实际渲染尺寸下用 `pngjs` 做最近邻放大（不引入插值模糊，如实还原小尺寸下的真实像素）组成对比图人工检查：24px（首页卡片）"外"/"内"两个字清晰可辨；16px（侧边栏）在这套 1x 光栅模拟下仍然偏紧但已经明显好于船/房子图形版本，且真实 Retina 屏幕的抗锯齿会比这里的 1x 模拟更清晰。验证用的临时脚本、字体渲染测试文件均已清理，未留在仓库里。
+
+**仍需用户在真实浏览器里最终确认**：尤其是 16px 侧边栏场景，如果用户实际看到还是不满意，可选备用方案是把角标文字换成更简单的拉丁字母（如 F/D），单一字母笔画更少，在极小尺寸下比"外/内"这类多笔画汉字更容易辨认，但会跟应用其它部分的全中文风格不一致，需要用户确认是否接受这个权衡。
+
+### 背景
+
+首页模块宫格（`src/constants/dashboardModules.ts` 的 `QUICK_CREATE_MODULES`）已经把外贸报价/外贸合同/内销报价/内销合同拆成 4 个独立入口（id 分别是 `quotation`/`confirmation`/`quotation-domestic`/`quotation-domestic-contract`），移动端底部导航（`MobileBottomTab.tsx`，TASK-103 已改造）也直接复用这 4 个入口。但桌面端侧边栏 `AppSidebar.tsx` 的 `NAV_ITEMS` 还是旧的 2 项合并写法：
+
+```ts
+{ id: 'quotation',    label: '外贸报价合同', path: '/quotation',              icon: FileText,  permissionKey: 'canCreateQuotation' },
+{ id: 'quotation-domestic', label: '内销报价合同', path: '/quotation?tab=domestic', icon: FileText, permissionKey: 'canCreateQuotation' },
+```
+
+跟首页/移动端的导航粒度不一致。同时这 4 个入口目前全部共用同一个 lucide `FileText` 图标，仅靠 `ModuleButton.tsx` 里 `MODULE_STYLES` 的背景色区分——用户反馈图标本身分不清楚，要求换成能同时体现"外贸/内销"和"报价/合同"两个维度的自定义图标（不能只靠颜色）。
+
+**已确认不会重现的历史 bug**：`docType` 查询参数在 `src/features/quotation/hooks/useInitQuotation.ts` 里（TASK-103"追加调整 3"修复）现在会持续监听 `searchParams` 变化并实时生效、消费后从 URL 里删除，不再只在首次挂载时读一次一次性生效。也就是说桌面端在已经停留于 `/quotation` 页面时，通过侧边栏连续点击 4 个入口（同页面换 query、不重新挂载）也能正确切换单据类型，不会重现 TASK-103 之前"内销合同没有正确跳转"的问题。**本任务不需要改动 `useInitQuotation.ts`**，只是提前记录这个依赖关系，避免误以为要重新排查。
+
+### Files in scope
+
+- `src/components/layout/AppSidebar.tsx` — `NAV_ITEMS` 拆分、`NAV_GROUPS.documents`、`isItemActive()`
+- `src/constants/dashboardModules.ts` — `QUICK_CREATE_MODULES` 里 4 条的 `icon` 换成新图标
+- 新建 `src/components/icons/TradeDocIcons.tsx` — 4 个自定义 SVG 图标组件
+
+### Acceptance criteria
+
+**1. `AppSidebar.tsx` 的 `NAV_ITEMS`** 里把这 2 条替换成 4 条，id/path 直接对齐 `dashboardModules.ts` 的 `QUICK_CREATE_MODULES`（同一套 id，避免出现两套 quotation id 系统）：
+
+```ts
+{ id: 'quotation',                    label: '外贸报价', path: '/quotation?tab=quotation',                icon: ForeignQuotationIcon, permissionKey: 'canCreateQuotation' },
+{ id: 'confirmation',                 label: '外贸合同', path: '/quotation?tab=confirmation',              icon: ForeignContractIcon,  permissionKey: 'canCreateQuotation' },
+{ id: 'quotation-domestic',           label: '内销报价', path: '/quotation?tab=domestic&docType=quotation', icon: DomesticQuotationIcon, permissionKey: 'canCreateQuotation' },
+{ id: 'quotation-domestic-contract',  label: '内销合同', path: '/quotation?tab=domestic&docType=contract',  icon: DomesticContractIcon,  permissionKey: 'canCreateQuotation' },
+```
+
+4 条权限都仍然挂 `canCreateQuotation` → `PERMISSION_MODULE_MAP` 里现有的 `'quotation'` moduleId，**不新增权限维度**（有权限的用户看到全部 4 条，没权限的 4 条一起隐藏，跟现在行为一致）。
+
+**2. `NAV_GROUPS` 的 `documents` 组** 从 `navGroupItems(['quotation', 'quotation-domestic', 'packing', 'invoice', 'purchase'])` 改成：
+
+```ts
+navGroupItems(['quotation', 'confirmation', 'quotation-domestic', 'quotation-domestic-contract', 'packing', 'invoice', 'purchase']),
+```
+
+**3. `isItemActive()`** 需要能区分这 4 条（当前只判断了 `tab === 'domestic'`，没处理 `tab=confirmation` 和 `docType=contract`）。参考实现：
+
+```ts
+function isItemActive(item: SidebarItem, pathname: string, tab: string | null, docType: string | null) {
+  if (pathname.startsWith('/quotation')) {
+    switch (item.id) {
+      case 'quotation':                   return tab !== 'domestic' && tab !== 'confirmation';
+      case 'confirmation':                return tab === 'confirmation';
+      case 'quotation-domestic':          return tab === 'domestic' && docType !== 'contract';
+      case 'quotation-domestic-contract': return tab === 'domestic' && docType === 'contract';
+      default: return false;
+    }
+  }
+  const itemPath = item.path.split('?')[0];
+  return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+}
+```
+
+调用处补上 `const docType = searchParams.get('docType');` 并传入。
+
+**4. 新建 `src/components/icons/TradeDocIcons.tsx`**，导出 4 个组件，签名与 lucide 图标兼容（`(props: React.SVGProps<SVGSVGElement>) => JSX.Element`），`viewBox="0 0 24 24"`、`stroke="currentColor"` `strokeWidth={2}` `strokeLinecap="round"` `strokeLinejoin="round"` `fill="none"`，风格与现有 lucide 图标（`stroke-width=2` 描边风格）保持一致，可以直接接收 `className` 透传（跟 `FileText` 用法一致）。每个图标由两部分组成，画在同一个 24×24 视图里：
+
+- **主体（区分"报价 vs 合同"）**：报价用类似 `FileText` 的"文档 + 内部 2～3 条横线"轮廓；合同用类似 `FileSignature` 的"文档 + 底部一道签名波浪线"轮廓。
+- **角标（区分"外贸 vs 内销"）**：在文档右下角叠加一个约 8×8 单位的小图形——外贸用简化的船体+桅杆（或简化地球经纬线）图形，内销用简化的房屋/建筑图形（三角屋顶+矩形主体）。角标应使用相同描边风格，避免和主体线条打架，位置在两个"报价/合同"图标里保持一致，方便用户认"外贸/内销"角标位置。
+
+4 个组件：`ForeignQuotationIcon`（文档报价主体 + 船/地球角标）、`ForeignContractIcon`（文档合同主体 + 船/地球角标）、`DomesticQuotationIcon`（文档报价主体 + 房屋角标）、`DomesticContractIcon`（文档合同主体 + 房屋角标）。
+
+**5. `dashboardModules.ts` 的 `QUICK_CREATE_MODULES`** 里对应 4 条的 `icon` 从 `FileText` 换成上面 4 个新组件（`quotation-domestic-contract` 这一条目前缺 `icon` 属性使用了默认值，需要一并补上）。`MODULE_STYLES` 里已有的颜色分组保持不变（继续用颜色 + 新图标形状双重区分，不是替换颜色方案）。
+
+**⚠️ 图标可读性提醒**：侧边栏图标实际渲染只有 `h-4 w-4`（16px），首页模块卡片是 `h-5/h-6`（20～24px）。角标叠加主体在 16px 下可能挤在一起看不清——完成后请在这两种实际尺寸下截图/肉眼确认，如果 16px 下角标完全糊成一团，优先保证"报价 vs 合同"主体形状在小尺寸下清晰可辨，角标细节可以简化甚至在 16px 场景先只保留颜色区分，不必为了硬塞两个维度牺牲可读性——这个取舍需要实现完成后判断，不是提前定死的规则。
+
+### Non-goals / 红线
+
+- 不改 `src/features/quotation/hooks/useInitQuotation.ts` 或 `/quotation` 页面本身的 tab/docType 处理逻辑（已在 TASK-103 修好，见上文背景）。
+- 不改 `MobileBottomTab.tsx`（它已经直接复用 `QUICK_CREATE_MODULES`，图标换了会自动生效，不需要额外改动；结构本身不用动）。
+- 不新增权限维度，4 条入口继续共用 `canCreateQuotation`/`'quotation'` moduleId。
+- 不改 `ModuleButton.tsx` 里的 `MODULE_STYLES` 颜色方案。
+
+### Verification steps
+
+- `npx tsc --noEmit`
+- `npx eslint`（改动 + 新增的文件）
+- `npm run build`（沙箱此前有 45s 超时跑不完整的前科，跑到 webpack 编译阶段没报错即可，建议用户本地/CI 再跑一次完整确认）
+- 手动检查：桌面宽屏下侧边栏「新单据」分组应显示 4 条各自独立高亮的入口；在 `/quotation` 页面内连续点击 4 个入口不刷新页面也能正确切换单据类型；无 `quotation` 权限账号 4 条一起消失；对照 16px（侧边栏）和 24px（首页卡片）两种尺寸截图确认图标可辨识度。
+
+**Status:** not started
+
+## TASK-110：首页新增询价/报价/订单统计卡片 + 可切换时间粒度趋势图
+
+**状态**：已完成（2026-07-09，本次会话由 Claude 直接实现，未经 Codex）
+
+**执行记录**：
+- `package.json` 新增 `recharts@^3.9.2`；因沙箱 `npm install` 单次命令超过 45s 超时反复失败，改用「先手工建好 `node_modules/recharts`（网络安装本身其实已成功，只是没来得及落盘 package.json/lock）→ 补写 `package.json` 依赖 → 用更快的 `npm install --package-lock-only` 补全 `package-lock.json`」的方式完成，`npm ls recharts` 确认无 peer dependency 冲突。
+- 新建 `src/features/dashboard/utils/inquiryStats.ts`：`getInquiryCreatedDate`/`getOrderConfirmDate`/`isRecordQuoted`/`getQuotedOnDate`/`countInquiriesOn`/`countInquiriesInMonth`/`countQuotedOn`/`countOrdersOn`/`countOrdersInMonth`/`bucketByGranularity`/`buildTrendData`，复用 `inquiryUtils.ts` 的 `getDateInputValueFromInquiryNo`/`dateInputToDate`/`stripDateBrackets`，未重新写日期解析。跨年推算规则：`orderConfirmDate`/报价 `quoteDate` 的月份 < 询价单月份则年份 +1，否则同询价年份；`getOrderConfirmDate` 不按 `orderSubStatus` 过滤。
+- 新建 `src/features/dashboard/hooks/useInquiryOrderStats.ts`：`useEffect` 里 `useInquiryStore.getState().init()`（与 `InquiryPage.tsx` 同一模式），`records` 过滤 `status !== 'deleted'` 后用 `useMemo` 算 `today`/`month`/`trend` 三组数据。
+- 新建 `src/features/dashboard/components/InquiryOrderStats.tsx`：「今日」「本月」两行统计卡片，视觉复用 `StatsCards.tsx` 的卡片语言，点击跳转 `/inquiry` 或 `/order`（未附加时间筛选查询参数——`/inquiry`、`/order` 页面目前不支持通过 URL 传入"今天/本月"筛选，只做了跳转，未新增页面侧的筛选能力）。
+- 新建 `src/features/dashboard/components/InquiryOrderTrendChart.tsx`：recharts `LineChart`，天/周/月/季/年度切换（默认"月"），询价数量（粉色）+ 订单数量（绿色）两条线，深色模式用 Tailwind class 而非硬编码颜色。
+- `DashboardPage.tsx` 接入：`<InquiryOrderStats>` 在 `<StatsCards>` 下方，`<InquiryOrderTrendChart>` 在 `<DashboardModules>` 和 `<DashboardDocuments>` 之间；两者都用 `permissionMap.permissions.inquiry` 控制 `visible`，无权限时组件内部直接 `return null`，不占位。
+
+**未做**：未改 `InquiryRecord` 数据结构、未改 `/inquiry`、`/order` 页面本身、未新建/修改任何 D1 接口、趋势图未加"已报价"这条线、未做按询价人的个人维度统计——均与 spec 的 Non-goals 一致。
+
+**验证**：
+- `npx tsc --noEmit` 通过；`npx eslint`（新增+改动文件）无输出（过程中发现 `AppSidebar.tsx`/`MobileBottomTab.tsx` 的 `icon` 类型是 lucide 专属的 `LucideIcon`，跟自定义图标组件类型不兼容，已放宽为 `React.ComponentType<React.SVGProps<SVGSVGElement>>`，随 TASK-109 一起改的）。
+- `npm run build` 同 TASK-109，沙箱 45s 超时内跑到 Next.js 编译阶段未见报错，未等到编译完全结束。
+- 用沙箱 `npx tsx` 跑了一遍独立断言脚本（写完即删，未留存到仓库）验证核心口径：① 询价单编号 `C251215F`（2025-12-15）+ `orderConfirmDate=[1.10]` 正确推算为 2026-01-10（不是误判成 2025-01-10）；② 同月场景 `C260620F` + `[6.25]` 推算为 2026-06-25；③ 无 `orderNo`/`orderConfirmDate` 返回 `null`；④ `quotedStatuses` 含 `unavailable` 时 `isRecordQuoted` 为 `false`（即使也有 `quoted` 条目）；⑤ `getQuotedOnDate` 按日期精确匹配；⑥ `countInquiriesOn`/`countOrdersOn`/`countOrdersInMonth` 对"今天"构造的记录计数正确；⑦ `bucketByGranularity('month', ..., 12)` 返回 12 个桶。全部断言通过。
+- **待用户在真实环境验证**：不同权限账号（有/无 `inquiry` 权限）登录首页，确认新增两块内容按权限显示/隐藏；5 个粒度切换分别看一次图表正常出图；抽 1～2 条真实数据在 `/inquiry`、`/order` 页面手工筛选核对，跟首页数字一致。
+
+### 背景
+
+首页目前只统计"新建单据"（报价单/销售确认/内销报价/内销合同/发票/箱单/采购订单）的当日新增数量（`StatsCards.tsx`），完全不反映询报价登记表（`InquiryRecord`，`src/features/inquiry`）和订单状态表（同一份数据的派生视图，`src/features/order`）里的业务量——对做外贸业务的内部人员来说，"今天/这个月询了几个价、报了几次价、成了几个单"是比"今天建了几张单据"更核心的经营数据，且首页现在完全看不到。用户要求新增：
+
+1. 当天新增：**询价数量**、**已报价数量**、**订单数量**
+2. 当月累计：**询价数量**、**订单数量**（不含已报价，用户只要求这两项）
+3. 一个可切换 **天/周/月/季/年度** 粒度的趋势图，画**询价**和**订单**两条数量曲线（不含已报价，图表只有 2 条线，跟上面 3 个当日数字不是一一对应关系，不要自作主张加第三条线）
+
+已确认的口径（已用 AskUserQuestion 跟用户逐条确认过，不要重新猜）：
+
+- **订单确认日期缺年份**：`InquiryRecord.orderConfirmDate` 只存 `[月.日]`，不含年份。按用户选择的方案，**用询价单编号（`inquiryNo`，格式 `C[YY][MM][DD]...`）里的年份推算**：若确认日的月份 < 询价的月份，说明跨年了，年份 = 询价年份 + 1；否则年份 = 询价年份。这是推算，不是精确值，不改数据结构。
+- **"已报价数量"口径**：复用询报价登记表已有的"已报价"状态判定（`useInquiryFilter.ts` 里 `customer_quoted` 的判定逻辑：`quotedStatuses` 里没有 `unavailable`/`closed` 类型、且至少有一条 `quoted` 或无 `type` 的记录），**按记录数计，不按 `quotedStatuses` 条目数计**——同一条询价当天不管改几次价格/加几个供应商版本，只算 1 条。
+- **图表数据来源**：直接读 `useInquiryStore` 里的全量 `records`（本地 zustand store，来自 `localStorage` + D1 同步），不做服务端聚合、不做记录级别的"谁创建的"过滤——跟询报价登记表/订单状态表页面本身的可见范围一致（权限是模块级 `canAccess`，不是记录级隐私）。
+- **图表库**：引入 `recharts`（`package.json` 目前没有装任何图表库）。
+
+### Files in scope
+
+- `package.json` — 新增 `recharts` 依赖
+- 新建 `src/features/dashboard/utils/inquiryStats.ts` — 日期解析、口径判定、按粒度分桶的纯函数
+- 新建 `src/features/dashboard/hooks/useInquiryOrderStats.ts` — 订阅 `useInquiryStore`，用 `useInquiryStats.ts` 里的函数算出所有数字
+- 新建 `src/features/dashboard/components/InquiryOrderStats.tsx` — "当天新增"+"当月累计"两行统计卡片
+- 新建 `src/features/dashboard/components/InquiryOrderTrendChart.tsx` — recharts 折线图 + 粒度切换
+- `src/features/dashboard/app/DashboardPage.tsx` — 接入上面两个新组件
+
+### Acceptance criteria
+
+**`inquiryStats.ts` 需要的函数**（复用 `src/features/inquiry/utils/inquiryUtils.ts` 已有的 `getDateInputValueFromInquiryNo`/`dateInputToDate`，不要重新写一套日期解析）：
+
+- `getInquiryCreatedDate(record): Date` — 由 `record.inquiryNo` 解析出的完整日期（含年份）。
+- `isRecordQuoted(record): boolean` — 复制 `useInquiryFilter.ts` 里 `customer_quoted` 的判定：`!quotedStatuses.some(s => s.type === 'unavailable' || s.type === 'closed') && quotedStatuses.some(s => !s.type || s.type === 'quoted')`。
+- `getQuotedOnDate(record, date): boolean` — 该记录当前满足 `isRecordQuoted` **且** 其 `quotedStatuses` 中至少一条 `type` 为 `'quoted'`/未定义的条目，其 `quoteDate`（`[月.日]` 格式，用 `getInquiryCreatedDate` 的年份按同一条"月份倒退则年份+1"规则推算）落在指定日期。
+- `getOrderConfirmDate(record): Date | null` — 若 `record.orderNo` 为空或 `orderConfirmDate` 为空，返回 `null`；否则用上述年份推算规则返回完整日期。**不按 `orderSubStatus`（辙销/悬挂/善后）过滤**——这是"历史上曾确认过的订单数"口径，跟订单状态表"进行中/正常"筛选是不同用途的统计，全部计入。
+- `bucketByGranularity(records, granularity, dateGetter, bucketCount)` — 按 `'day' | 'week' | 'month' | 'quarter' | 'year'` 分桶统计最近 N 个桶的数量，`dateGetter` 传入 `getInquiryCreatedDate` 或 `getOrderConfirmDate`（后者需要先过滤掉返回 `null` 的记录）。默认桶数：天=14、周=12、月=12、季=8、年=5（这是本任务给的默认值，不是用户明确要求的数字，如果实现时觉得不合适可以调整，但要在实现记录里写清楚改成了多少）。
+
+**`InquiryOrderStats.tsx` 两行卡片**：
+
+- 当天新增：询价数量 = `getInquiryCreatedDate(record)` 等于今天的记录数；已报价数量 = `getQuotedOnDate(record, 今天)` 为真的记录数；订单数量 = `getOrderConfirmDate(record)` 等于今天的记录数。
+- 当月累计：询价数量 = `getInquiryCreatedDate(record)` 落在当前自然月的记录数；订单数量 = `getOrderConfirmDate(record)` 落在当前自然月的记录数。
+- 视觉上参考现有 `StatsCards.tsx` 的卡片语言（图标+文字+数字、点击可跳转），点击询价相关数字跳转 `/inquiry`，点击订单数字跳转 `/order`。
+- 仅当前登录用户对 `inquiry` 模块有权限（`Permission.moduleId === 'inquiry'`，与 `AppSidebar.tsx` 的 `canViewInquiry` 同一权限位）时渲染，否则整个组件不显示（无权限用户，例如纯财务/仓库账号，首页不应该出现这两行）。
+
+**`InquiryOrderTrendChart.tsx`**：
+
+- 顶部一个 5 选 1 的粒度切换（天/周/月/季/年度），默认选"月"。
+- recharts 折线图，两条线：询价数量、订单数量（口径同上），x 轴为分桶标签，y 轴为数量。
+- 同样仅在有 `inquiry` 权限时渲染。
+- 深色模式下颜色需要跟随现有 Tailwind CSS 变量/暗色 class，不要硬编码亮色主题颜色。
+
+**`DashboardPage.tsx` 接入**：`<InquiryOrderStats>` 放在现有 `<StatsCards>` 下方，`<InquiryOrderTrendChart>` 放在 `<DashboardModules>` 和 `<DashboardDocuments>` 之间（或视觉上更合理的位置，允许微调，但两个新组件都必须在无权限时完全不渲染、不占位）。
+
+### Non-goals / 红线
+
+- 不改 `InquiryRecord` 的数据结构，不新增字段存储 `orderConfirmDate` 的年份——按推算口径处理跨年。
+- 不改询报价登记表 (`/inquiry`)、订单状态表 (`/order`) 页面本身的筛选、排序、显示、D1 同步逻辑。
+- 不新建/修改任何 D1 Worker 接口，所有统计都基于本地 store 里已同步下来的 `records` 现算，不做服务端聚合查询。
+- 趋势图不加"已报价"这条线（用户没有要求）。
+- 不做按询价人/业务员拆分的统计（只做全局汇总，不做个人维度）。
+
+### Verification steps
+
+- `npx tsc --noEmit`
+- `npx eslint`（新增 + 改动的文件）
+- `npm run build`（同样注意沙箱 45s 超时前科）
+- 手动核对：任选 1～2 条真实/测试询价记录，手工在 `/inquiry`、`/order` 页面按"今天"/"本月"筛选核对出来的条数，跟首页新卡片数字一致。
+- 特别验证跨年推算：构造（或找到）一条询价单创建于去年 12 月、`orderConfirmDate` 填了 `[1.某日]` 的记录，确认它被正确计入"今年 1 月"而不是被漏算/错算成去年。
+- 5 个粒度切换（天/周/月/季/年度）分别看一次图表能正常出图、不报错。
+- 用无 `inquiry` 权限的账号登录，确认两个新组件都不出现（不留空白占位）。
+
+**Status:** not started
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

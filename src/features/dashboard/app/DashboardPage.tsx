@@ -18,9 +18,13 @@ import { DashboardModules } from '@/features/dashboard/components/DashboardModul
 import { DashboardDocuments } from '@/features/dashboard/components/DashboardDocuments';
 import { DashboardSuccessMessage } from '@/features/dashboard/components/DashboardSuccessMessage';
 import { StatsCards } from '@/features/dashboard/components/StatsCards';
+import { InquiryOrderStats } from '@/features/dashboard/components/InquiryOrderStats';
+import { InquiryOrderTrendChart } from '@/features/dashboard/components/InquiryOrderTrendChart';
 import { useDashboardState } from '@/features/dashboard/hooks/useDashboardState';
 import { useDashboardPermissions } from '@/features/dashboard/hooks/useDashboardPermissions';
 import { useDashboardDocuments } from '@/features/dashboard/hooks/useDashboardDocuments';
+import { useInquiryOrderStats } from '@/features/dashboard/hooks/useInquiryOrderStats';
+import type { Granularity } from '@/features/dashboard/utils/inquiryStats';
 import {
   filterQuickCreateModules,
   filterToolModules,
@@ -64,6 +68,11 @@ export default function DashboardPage() {
 
   // 使用权限刷新Hook
   const { refresh: _refreshPermissions } = usePermissionRefresh();
+
+  // 询价/订单统计 + 趋势图（仅有 inquiry 权限的用户可见）
+  const [trendGranularity, setTrendGranularity] = useState<Granularity>('month');
+  const hasInquiryAccess = permissionMap.permissions.inquiry;
+  const inquiryOrderStats = useInquiryOrderStats(hasInquiryAccess, trendGranularity);
 
   // 初始化逻辑
   useEffect(() => {
@@ -152,6 +161,13 @@ export default function DashboardPage() {
 
         <StatsCards counts={todayCounts} loading={!mounted || isPermissionLoading} permissionMap={permissionMap} />
 
+        <InquiryOrderStats
+          visible={hasInquiryAccess}
+          loading={!mounted || isPermissionLoading || !inquiryOrderStats.mounted}
+          today={inquiryOrderStats.today}
+          month={inquiryOrderStats.month}
+        />
+
         <DashboardModules
           quickCreateModules={availableQuickCreateModules}
           toolModules={availableToolModules}
@@ -159,6 +175,13 @@ export default function DashboardPage() {
           documentCounts={documentCounts}
           onModuleClick={handleModuleClick}
           onModuleHover={handleModuleHover}
+        />
+
+        <InquiryOrderTrendChart
+          visible={hasInquiryAccess}
+          granularity={trendGranularity}
+          onGranularityChange={setTrendGranularity}
+          data={inquiryOrderStats.trend}
         />
 
         <DashboardDocuments

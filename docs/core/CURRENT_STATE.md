@@ -14,7 +14,7 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 
 ## 技术与部署
 
-- 前端：Next.js 14、React 18、TypeScript 5、Tailwind CSS 3。
+- 前端：Next.js 14、React 18、TypeScript 5、Tailwind CSS 3；图表用 `recharts`（首页询价/订单趋势图，2026-07-09 新增，此前项目未装任何图表库）。
 - 主站：Vercel，香港 `hkg1` 区域。
 - 用户和权限服务：Cloudflare Worker + D1，自定义域 `https://udb.luocompany.net`。
 - AI 邮件：DeepSeek Chat API，通过 `/api/generate` 调用。
@@ -36,7 +36,7 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 
 | 路由 | 模块 | 当前状态 |
 |------|------|----------|
-| `/dashboard` | 首页 | 快速创建、最近文档、权限过滤入口 |
+| `/dashboard` | 首页 | 快速创建（外贸报价/外贸合同/内销报价/内销合同各自独立入口+双维度图标）、今日新增/本月累计询价与订单统计、可切换粒度的询价/订单趋势图（`recharts`，仅 `inquiry` 权限可见）、最近文档、权限过滤入口 |
 | `/quotation` | 外贸报价合同（报价单 / 销售确认） | 已合并为同一入口，页面顶部不再有 tab 按钮，改在设置面板内用 "Type: Quotation / Sales Confirmation" 切换；本地历史为主，支持 PDF/Excel、复制、编辑 |
 | `/quotation?tab=domestic` | 内销报价合同 | 独立侧边栏入口，复用报价单页面与 `quotation_history` 存储 key，默认 CNY，中文录入表单和中文合同式 PDF，历史记录使用独立 `type='domestic'`，避免混入外贸报价单 |
 | `/inquiry` | 询报价登记 | 已接入 D1 `Document`，支持客户/联络人关联、批量关联、筛选 |

@@ -39,7 +39,8 @@ interface MobileMenuLink {
   id: string;
   label: string;
   path: string;
-  icon: LucideIcon;
+  /** 「新建」子项复用 QUICK_CREATE_MODULES，其中报价/合同 4 项用 TradeDocIcons 自定义组件，类型放宽兼容两者 */
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   moduleId?: string;
   external?: boolean;
 }

@@ -1,5 +1,4 @@
 import {
-  FileText,
   Receipt,
   Package,
   ShoppingCart,
@@ -7,6 +6,12 @@ import {
   Archive,
   Users,
 } from 'lucide-react';
+import {
+  ForeignQuotationIcon,
+  ForeignContractIcon,
+  DomesticQuotationIcon,
+  DomesticContractIcon,
+} from '@/components/icons/TradeDocIcons';
 
 // 快速创建单据的模块
 export const QUICK_CREATE_MODULES = [
@@ -14,25 +19,25 @@ export const QUICK_CREATE_MODULES = [
     id: 'quotation',
     name: '外贸报价',
     path: '/quotation?tab=quotation',
-    icon: FileText
+    icon: ForeignQuotationIcon
   },
   {
     id: 'confirmation',
     name: '外贸合同',
     path: '/quotation?tab=confirmation',
-    icon: FileText
+    icon: ForeignContractIcon
   },
   {
     id: 'quotation-domestic',
     name: '内销报价',
     path: '/quotation?tab=domestic&docType=quotation',
-    icon: FileText
+    icon: DomesticQuotationIcon
   },
   {
     id: 'quotation-domestic-contract',
     name: '内销合同',
     path: '/quotation?tab=domestic&docType=contract',
-    icon: FileText
+    icon: DomesticContractIcon
   },
   {
     id: 'packing',
