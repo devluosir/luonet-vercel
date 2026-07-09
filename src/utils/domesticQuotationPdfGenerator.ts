@@ -267,21 +267,49 @@ async function drawPartyTable(
   pageHeight: number,
   y: number
 ): Promise<number> {
-  y = checkPage(doc, y, data.showBank ? 64 : 52, margin, pageHeight);
+  const partyRowsData = partyRows(data);
+  const rowCount = partyRowsData.length;
+  const headerRows = 1;
+  const rowsTotal = rowCount + headerRows;
 
-  const rows = partyRows(data).map(([label, seller, buyer]) => [
+  // 基准尺寸：和原来的视觉效果一致（未压缩时）
+  const baseCellPadding = 2.2;
+  const baseFontSize = 8.5;
+  const baseMinCellHeight = 7;
+  const baseNeededHeight = rowsTotal * baseMinCellHeight + 4;
+
+  // 当前页剩余空间不够整张表按基准尺寸绘制时，优先适度压缩行高/内边距/字号，让表格精确贴合剩余
+  // 空间、和产品条款留在同一页，而不是整体挪到下一页、在当前页留下一大片空白
+  // （供方/需方签章应尽量与正文同页）。压缩到行高 5.2mm / 字号 7pt 这个下限仍放不下，才真正换页。
+  let cellPadding = baseCellPadding;
+  let bodyFontSize = baseFontSize;
+  let minCellHeight = baseMinCellHeight;
+  let neededHeight = baseNeededHeight;
+
+  const available = pageHeight - margin - 12 - y;
+  if (available < baseNeededHeight) {
+    const targetMinCellHeight = (available - 4) / rowsTotal;
+    minCellHeight = Math.min(baseMinCellHeight, Math.max(5.2, targetMinCellHeight));
+    const scale = minCellHeight / baseMinCellHeight;
+    cellPadding = Math.max(1.3, baseCellPadding * scale);
+    bodyFontSize = Math.max(7, baseFontSize * Math.max(scale, 0.85));
+    neededHeight = rowsTotal * minCellHeight + 4;
+  }
+
+  y = checkPage(doc, y, neededHeight, margin, pageHeight);
+
+  const rows = partyRowsData.map(([label, seller, buyer]) => [
     `${label}：${seller}`,
     `${label}：${buyer}`,
   ]);
 
   // "单位地址"行内容常常偏长（自贸区/门牌号等），字号按需缩小到能单行显示为止，避免自动换行撑高表格
-  const cellPadding = 2.2;
   const colWidth = (pageWidth - margin * 2) / 2 - cellPadding * 2;
   const addressRowIndex = 1; // partyRows 固定顺序：0 单位名称，1 单位地址
   const addressFontSizes = rows[addressRowIndex]?.map((text) =>
-    fitFontSizeToOneLine(doc, text, colWidth, 8.5, 6)
-  ) ?? [8.5, 8.5];
-  doc.setFontSize(8.5); // 恢复默认字号，避免测量时的 setFontSize 调用影响后续绘制
+    fitFontSizeToOneLine(doc, text, colWidth, bodyFontSize, 6)
+  ) ?? [bodyFontSize, bodyFontSize];
+  doc.setFontSize(bodyFontSize); // 恢复默认字号，避免测量时的 setFontSize 调用影响后续绘制
 
   doc.autoTable({
     startY: y,
@@ -292,12 +320,12 @@ async function drawPartyTable(
     styles: {
       font: 'NotoSansSC',
       fontStyle: 'normal',
-      fontSize: 8.5,
-      cellPadding: 2.2,
+      fontSize: bodyFontSize,
+      cellPadding,
       textColor: [20, 20, 20],
       lineColor: [90, 90, 90],
       lineWidth: 0.2,
-      minCellHeight: 7,
+      minCellHeight,
     },
     headStyles: {
       font: 'NotoSansSC',
@@ -313,7 +341,7 @@ async function drawPartyTable(
     didParseCell: (hookData) => {
       hookData.cell.styles.font = 'NotoSansSC';
       if (hookData.section === 'body' && hookData.row.index === addressRowIndex) {
-        hookData.cell.styles.fontSize = addressFontSizes[hookData.column.index] ?? 8.5;
+        hookData.cell.styles.fontSize = addressFontSizes[hookData.column.index] ?? bodyFontSize;
       }
     },
   });
