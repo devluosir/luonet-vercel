@@ -64,7 +64,7 @@ export function AppLayout({
           <AppBottomActionBar actions={bottomActions} leftSlot={bottomLeftSlot} />
         )}
         <Suspense fallback={null}>
-          <MobileBottomTab />
+          <MobileBottomTab user={user} onLogout={onLogout} />
         </Suspense>
       </div>
     </div>

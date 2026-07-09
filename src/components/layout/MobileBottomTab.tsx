@@ -1,72 +1,275 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
-import { Archive, ClipboardList, FileText, LayoutDashboard, Mail, type LucideIcon } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import {
+  Archive,
+  Banknote,
+  CalendarDays,
+  ClipboardCheck,
+  ClipboardList,
+  Clock,
+  Info,
+  LogOut,
+  PackageSearch,
+  Plus,
+  Search,
+  Settings2,
+  ShoppingCart,
+  User,
+  Users,
+  Wrench,
+  type LucideIcon,
+} from 'lucide-react';
 import { usePermissionStore } from '@/lib/permissions';
+import { QUICK_CREATE_MODULES } from '@/constants/dashboardModules';
+import { MobileSheetModal } from './MobileSheetModal';
+import { UserProfilePanel } from './UserProfilePanel';
 
-interface MobileTabItem {
+interface MobileMenuLink {
   id: string;
   label: string;
   path: string;
   icon: LucideIcon;
   moduleId?: string;
+  external?: boolean;
 }
 
-const MOBILE_TABS: MobileTabItem[] = [
-  { id: 'dashboard', label: '首页', path: '/dashboard', icon: LayoutDashboard },
-  { id: 'quotation', label: '外贸报价合同', path: '/quotation', icon: FileText, moduleId: 'quotation' },
-  { id: 'inquiry', label: '登记表', path: '/inquiry', icon: ClipboardList, moduleId: 'inquiry' },
-  { id: 'history', label: '历史', path: '/history', icon: Archive, moduleId: 'history' },
-  { id: 'mail', label: '邮件', path: '/mail', icon: Mail, moduleId: 'ai-email' },
+interface MobileCategory {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  links: MobileMenuLink[];
+}
+
+interface MobileBottomTabUser {
+  name: string;
+  isAdmin: boolean;
+  email?: string | null;
+}
+
+interface MobileBottomTabProps {
+  user: MobileBottomTabUser;
+  onLogout: () => void | Promise<void>;
+}
+
+/** “新建”子项直接复用仪表盘快捷创建的数据源，id → 权限 moduleId 映射 */
+const QUICK_CREATE_MODULE_ID: Record<string, string> = {
+  quotation: 'quotation',
+  confirmation: 'quotation',
+  'quotation-domestic': 'quotation',
+  'quotation-domestic-contract': 'quotation',
+  packing: 'packing',
+  invoice: 'invoice',
+  purchase: 'purchase',
+};
+
+const NEW_LINKS: MobileMenuLink[] = QUICK_CREATE_MODULES.map((module) => ({
+  id: module.id,
+  label: module.name,
+  path: module.path,
+  icon: module.icon,
+  moduleId: QUICK_CREATE_MODULE_ID[module.id],
+}));
+
+/** “登记/管理/工具”子项与 AppSidebar.tsx 的 NAV_ITEMS + PERMISSION_MODULE_MAP 保持同一套 id/moduleId */
+const REGISTER_LINKS: MobileMenuLink[] = [
+  { id: 'inquiry', label: '询报价登记', path: '/inquiry', icon: Search, moduleId: 'inquiry' },
+  { id: 'order', label: '订单状态表', path: '/order', icon: ClipboardCheck, moduleId: 'inquiry' },
+  { id: 'purchase-registration', label: '采购部登记', path: '/purchase-registration', icon: ClipboardCheck, moduleId: 'purchaseRegistration' },
+  { id: 'purchase-order-table', label: '采购订单表', path: '/purchase-order-table', icon: ShoppingCart, moduleId: 'purchaseOrderTable' },
 ];
 
-function isTabActive(item: MobileTabItem, pathname: string, tab: string | null) {
-  if (item.id === 'quotation') {
-    return pathname.startsWith('/quotation') && tab !== 'domestic';
-  }
+const MANAGE_LINKS: MobileMenuLink[] = [
+  { id: 'history', label: '单据历史', path: '/history', icon: Archive, moduleId: 'history' },
+  { id: 'customer', label: '客户管理', path: '/customer', icon: Users, moduleId: 'customer' },
+];
 
-  return pathname.startsWith(item.path);
-}
+const TOOLS_LINKS: MobileMenuLink[] = [
+  { id: 'impa', label: 'IMPA物料', path: 'https://impa.luocompany.com', icon: PackageSearch, moduleId: 'impa', external: true },
+  { id: 'clock', label: '时区汇率', path: '/clock', icon: Clock, moduleId: 'clock' },
+  { id: 'holidays', label: '全球假日', path: '/holidays', icon: CalendarDays, moduleId: 'holidays' },
+  { id: 'rmb', label: 'RMB大写', path: '/rmb', icon: Banknote, moduleId: 'rmb' },
+];
 
-export function MobileBottomTab() {
+const CATEGORY_DEFS: MobileCategory[] = [
+  { id: 'new', label: '新建', icon: Plus, links: NEW_LINKS },
+  { id: 'register', label: '登记', icon: ClipboardList, links: REGISTER_LINKS },
+  { id: 'manage', label: '管理', icon: Settings2, links: MANAGE_LINKS },
+  { id: 'tools', label: '工具', icon: Wrench, links: TOOLS_LINKS },
+];
+
+const menuItemClass =
+  'flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50';
+
+export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const tab = searchParams.get('tab');
   const permissionUser = usePermissionStore((state) => state.user);
   const isLoading = usePermissionStore((state) => state.isLoading);
 
-  const visibleTabs = MOBILE_TABS.filter((item) => {
-    if (!item.moduleId) return true;
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
+        setOpenCategory(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function isLinkVisible(link: MobileMenuLink) {
+    if (!link.moduleId) return true;
     if (isLoading || !permissionUser) return false;
-    const permission = permissionUser.permissions?.find((p) => p.moduleId === item.moduleId);
+    const permission = permissionUser.permissions?.find((p) => p.moduleId === link.moduleId);
     return permission?.canAccess ?? permissionUser.isAdmin;
-  });
+  }
+
+  function isCategoryActive(links: MobileMenuLink[]) {
+    return links.some((link) => {
+      if (link.external) return false;
+      const base = link.path.split('?')[0];
+      return pathname === base || pathname.startsWith(`${base}/`);
+    });
+  }
+
+  const visibleCategories = CATEGORY_DEFS.map((category) => ({
+    ...category,
+    links: category.links.filter(isLinkVisible),
+  })).filter((category) => category.links.length > 0);
+
+  // “我”入口固定常驻，不受权限过滤
+  const allEntries: Array<
+    | { kind: 'links'; id: string; label: string; icon: LucideIcon; links: MobileMenuLink[] }
+    | { kind: 'me'; id: 'me'; label: string; icon: LucideIcon }
+  > = [
+    ...visibleCategories.map((category) => ({ kind: 'links' as const, ...category })),
+    { kind: 'me' as const, id: 'me', label: '我', icon: User },
+  ];
 
   return (
-    <nav
-      className="fixed inset-x-0 bottom-0 z-40 grid h-12 border-t border-gray-200 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.04)] dark:border-gray-700 dark:bg-app-dark-base md:hidden"
-      style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}
-    >
-      {visibleTabs.map((item) => {
-        const Icon = item.icon;
-        const active = isTabActive(item, pathname, tab);
+    <>
+      <nav
+        ref={navRef}
+        className="fixed inset-x-0 bottom-0 z-40 grid h-12 border-t border-gray-200 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.04)] dark:border-gray-700 dark:bg-app-dark-base md:hidden"
+        style={{ gridTemplateColumns: `repeat(${allEntries.length}, minmax(0, 1fr))` }}
+      >
+        {allEntries.map((entry, index) => {
+          const Icon = entry.icon;
+          const isOpen = openCategory === entry.id;
+          const active = entry.kind === 'links' && isCategoryActive(entry.links);
+          const panelPositionClass =
+            index === 0 ? 'left-0' : index === allEntries.length - 1 ? 'right-0' : 'left-1/2 -translate-x-1/2';
 
-        return (
-          <Link
-            key={item.id}
-            href={item.path}
-            className={`flex min-w-0 flex-col items-center justify-center gap-0.5 text-[11px] transition-colors ${
-              active
-                ? 'font-medium text-blue-600 dark:text-blue-400'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            <span className="max-w-full truncate">{item.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
+          return (
+            <div key={entry.id} className="relative flex">
+              <button
+                type="button"
+                onClick={() => setOpenCategory(isOpen ? null : entry.id)}
+                aria-expanded={isOpen}
+                className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] transition-colors ${
+                  active || isOpen
+                    ? 'font-medium text-blue-600 dark:text-blue-400'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="max-w-full truncate">{entry.label}</span>
+              </button>
+
+              {isOpen && (
+                <div
+                  className={`absolute bottom-full z-50 mb-2 w-48 rounded-xl border border-gray-100 bg-white p-1.5 shadow-lg ring-1 ring-black/5 dark:border-gray-700 dark:bg-app-dark-surface dark:ring-white/10 ${panelPositionClass}`}
+                >
+                  {entry.kind === 'me' ? (
+                    <div className="flex flex-col">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenCategory(null);
+                          setShowAbout(true);
+                        }}
+                        className={menuItemClass}
+                      >
+                        <Info className="h-4 w-4 shrink-0" />
+                        <span className="truncate">关于</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenCategory(null);
+                          setShowProfile(true);
+                        }}
+                        className={menuItemClass}
+                      >
+                        <User className="h-4 w-4 shrink-0" />
+                        <span className="truncate">个人信息</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenCategory(null);
+                          onLogout();
+                        }}
+                        className={menuItemClass}
+                      >
+                        <LogOut className="h-4 w-4 shrink-0" />
+                        <span className="truncate">退出登录</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col">
+                      {entry.links.map((link) => {
+                        const LinkIcon = link.icon;
+                        const content = (
+                          <>
+                            <LinkIcon className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{link.label}</span>
+                          </>
+                        );
+                        return link.external ? (
+                          <a
+                            key={link.id}
+                            href={link.path}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => setOpenCategory(null)}
+                            className={menuItemClass}
+                          >
+                            {content}
+                          </a>
+                        ) : (
+                          <Link
+                            key={link.id}
+                            href={link.path}
+                            onClick={() => setOpenCategory(null)}
+                            className={menuItemClass}
+                          >
+                            {content}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </nav>
+
+      <MobileSheetModal open={showAbout} title="关于" onClose={() => setShowAbout(false)}>
+        <p className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">内容待补充</p>
+      </MobileSheetModal>
+
+      <MobileSheetModal open={showProfile} title="个人信息" onClose={() => setShowProfile(false)}>
+        <UserProfilePanel user={user} />
+      </MobileSheetModal>
+    </>
   );
 }

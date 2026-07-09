@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **历史写入配额统一入口**：`persistHistoryToStorage`；报价/发票/装箱/采购历史与 `d1Pull.mergeIntoStorage` 主写入路径接入，超限时智能清理/裁剪。
 - **PermissionMap 补全**：`inquiry`、`purchaseRegistration`、`purchaseOrderTable`、`clock`、`holidays`、`rmb`；dashboard 类型改为复用 `@/types/permissions`。
 
+#### 移动端底部导航改版（TASK-103）
+- **五分类浮动菜单**：`MobileBottomTab.tsx` 从 5 个直达 tab（首页/外贸报价合同/登记表/历史/邮件）改为固定 5 个分类入口（新建/登记/管理/工具/我），点击弹出浮动子菜单；子项按权限过滤，全空则顶层入口隐藏，「我」常驻。
+- **数据源复用**：「新建」复用 `dashboardModules.ts` 的 `QUICK_CREATE_MODULES`；「登记/管理/工具」子项 id 与权限 moduleId 与 `AppSidebar.tsx` 的 `NAV_ITEMS` 保持一致。
+- **新增组件**：`UserProfilePanel.tsx`（从 `AppUserMenu.tsx` 抽出的资料/改密面板，桌面端下拉菜单与移动端「我」菜单共用）、`MobileSheetModal.tsx`（移动端底部弹窗壳，用于「关于」占位内容和「个人信息」）。
+- 「关于」目前为占位弹窗（「内容待补充」），具体文案后续再定。
+
 #### P3 测试与结构（第一批）
 - **E2E**：新增 `e2e/permission-guard.spec.ts`（已登录访问守卫路由不回登录页；未登录直链回登录）、`e2e/document-pages.spec.ts`（装箱/发票/采购页可达）。
 - **报价双轨迁移 PR-1**：`PasteDialog`、`CustomerInfoCompact`、`PaymentTermsSection`、`DomesticCustomerInfo` 迁入 `features/quotation/components/`；旧路径保留 re-export；删除孤儿 `TabButton` / `NotesSection` / `CustomerInfoSection`。
