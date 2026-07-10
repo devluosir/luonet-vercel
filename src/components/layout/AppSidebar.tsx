@@ -29,6 +29,7 @@ import {
   DomesticQuotationIcon,
   DomesticContractIcon,
 } from '@/components/icons/TradeDocIcons';
+import { MENU_ICON_COLORS, DEFAULT_MENU_ICON_COLOR } from '@/constants/menuIconColors';
 import { AppUserMenu } from './AppUserMenu';
 
 // ── 类型 ──────────────────────────────────────────────────────────────────────
@@ -275,17 +276,19 @@ export function AppSidebar({
                 </div>
               )}
 
-              {/* 导航项 */}
+              {/* 导航项：图标固定专属配色（MENU_ICON_COLORS），不随选中态变化；
+                  选中态改用背景高亮 + 加粗文字区分，不再靠图标/文字变色表达 */}
               {visibleItems.map((item) => {
-                const Icon   = item.icon;
-                const active = isItemActive(item, pathname, tab, docType);
+                const Icon      = item.icon;
+                const active    = isItemActive(item, pathname, tab, docType);
+                const iconColor = MENU_ICON_COLORS[item.id] ?? DEFAULT_MENU_ICON_COLOR;
                 const navItemClassName = `flex h-9 items-center rounded-md text-sm transition-colors ${
                   isCollapsed
                     ? 'justify-center px-0 mx-1'
                     : 'gap-2.5 px-2'
                 } ${
                   active
-                    ? 'bg-blue-50 font-medium text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                    ? 'bg-gray-100 font-medium text-gray-900 dark:bg-gray-800/60 dark:text-white'
                     : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/50'
                 }`;
 
@@ -299,7 +302,7 @@ export function AppSidebar({
                         onClick={onClose}
                         className={navItemClassName}
                       >
-                        <Icon className="h-4 w-4 shrink-0" />
+                        <Icon className={`h-4 w-4 shrink-0 ${iconColor}`} />
                         {!isCollapsed && (
                           <span className="app-sidebar-nav-label truncate">{item.label}</span>
                         )}
@@ -310,7 +313,7 @@ export function AppSidebar({
                         onClick={onClose}
                         className={navItemClassName}
                       >
-                        <Icon className="h-4 w-4 shrink-0" />
+                        <Icon className={`h-4 w-4 shrink-0 ${iconColor}`} />
                         {!isCollapsed && (
                           <span className="app-sidebar-nav-label truncate">{item.label}</span>
                         )}

@@ -13,6 +13,7 @@ import {
 import { Avatar } from '@/components/Avatar';
 import { UserProfilePanel } from './UserProfilePanel';
 import { preloadManager } from '@/utils/preloadUtils';
+import { USER_MENU_ICON_COLORS } from '@/constants/menuIconColors';
 
 export interface AppUserMenuProps {
   user: {
@@ -185,7 +186,7 @@ export function AppUserMenu({
               onClick={openProfileSubmenu}
               className="relative flex w-full items-center px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50"
             >
-              <User className="mr-2 h-4 w-4" />
+              <User className={`mr-2 h-4 w-4 ${USER_MENU_ICON_COLORS.profile}`} />
               个人信息
               {openSubmenu === 'profile' && (
                 <span
@@ -235,7 +236,7 @@ export function AppUserMenu({
                     />
                   )}
                   <div className="relative z-10 flex w-full items-center">
-                    <Download className={`mr-2 h-4 w-4 ${isPreloading ? 'animate-pulse' : ''}`} />
+                    <Download className={`mr-2 h-4 w-4 ${USER_MENU_ICON_COLORS.preload} ${isPreloading ? 'animate-pulse' : ''}`} />
                     <span className="flex-1 text-left">
                       {isPreloading ? (
                         <span className="flex flex-col">
@@ -262,7 +263,7 @@ export function AppUserMenu({
                 }}
                 className="flex w-full items-center px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50"
               >
-                <Settings className="mr-2 h-4 w-4" />
+                <Settings className={`mr-2 h-4 w-4 ${USER_MENU_ICON_COLORS.admin}`} />
                 管理后台
               </button>
             )}
@@ -275,7 +276,7 @@ export function AppUserMenu({
               }}
               className="flex w-full items-center px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50"
             >
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className={`mr-2 h-4 w-4 ${USER_MENU_ICON_COLORS.logout}`} />
               退出登录
             </button>
           </div>

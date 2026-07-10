@@ -28,6 +28,12 @@ import {
 } from 'lucide-react';
 import { usePermissionStore } from '@/lib/permissions';
 import { QUICK_CREATE_MODULES } from '@/constants/dashboardModules';
+import {
+  MENU_ICON_COLORS,
+  MOBILE_CATEGORY_ICON_COLORS,
+  USER_MENU_ICON_COLORS,
+  DEFAULT_MENU_ICON_COLOR,
+} from '@/constants/menuIconColors';
 import { LOGO_CONFIG } from '@/lib/logo-config';
 import { MobileSheetModal } from './MobileSheetModal';
 import { UserProfilePanel } from './UserProfilePanel';
@@ -183,9 +189,11 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
                 : false;
           const panelPositionClass =
             index === 0 ? 'left-0' : index === allEntries.length - 1 ? 'right-0' : 'left-1/2 -translate-x-1/2';
-          const buttonClassName = `flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] transition-colors ${
+          // 顶层分类图标固定专属配色，不随选中态变化；选中态改用背景高亮块 + 加粗文字区分
+          const iconColor = MOBILE_CATEGORY_ICON_COLORS[entry.id] ?? DEFAULT_MENU_ICON_COLOR;
+          const buttonClassName = `flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-0.5 text-[11px] transition-colors ${
             active || isOpen
-              ? 'font-medium text-blue-600 dark:text-blue-400'
+              ? 'bg-gray-100 font-medium text-gray-900 dark:bg-gray-800/60 dark:text-white'
               : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
           }`;
 
@@ -193,7 +201,7 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
             return (
               <div key={entry.id} className="relative flex">
                 <Link href={entry.path} onClick={() => setOpenCategory(null)} className={buttonClassName}>
-                  <Icon className="h-4 w-4" />
+                  <Icon className={`h-4 w-4 ${iconColor}`} />
                   <span className="max-w-full truncate">{entry.label}</span>
                 </Link>
               </div>
@@ -208,7 +216,7 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
                 aria-expanded={isOpen}
                 className={buttonClassName}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className={`h-4 w-4 ${iconColor}`} />
                 <span className="max-w-full truncate">{entry.label}</span>
               </button>
 
@@ -226,7 +234,7 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
                         }}
                         className={menuItemClass}
                       >
-                        <Info className="h-4 w-4 shrink-0" />
+                        <Info className={`h-4 w-4 shrink-0 ${USER_MENU_ICON_COLORS.about}`} />
                         <span className="truncate">关于</span>
                       </button>
                       <button
@@ -237,7 +245,7 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
                         }}
                         className={menuItemClass}
                       >
-                        <User className="h-4 w-4 shrink-0" />
+                        <User className={`h-4 w-4 shrink-0 ${USER_MENU_ICON_COLORS.profile}`} />
                         <span className="truncate">个人信息</span>
                       </button>
                       {user.isAdmin && (
@@ -249,7 +257,7 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
                           }}
                           className={menuItemClass}
                         >
-                          <Settings className="h-4 w-4 shrink-0" />
+                          <Settings className={`h-4 w-4 shrink-0 ${USER_MENU_ICON_COLORS.admin}`} />
                           <span className="truncate">管理后台</span>
                         </button>
                       )}
@@ -261,7 +269,7 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
                         }}
                         className={menuItemClass}
                       >
-                        <LogOut className="h-4 w-4 shrink-0" />
+                        <LogOut className={`h-4 w-4 shrink-0 ${USER_MENU_ICON_COLORS.logout}`} />
                         <span className="truncate">退出登录</span>
                       </button>
                     </div>
@@ -269,9 +277,10 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
                     <div className="flex flex-col">
                       {entry.links.map((link) => {
                         const LinkIcon = link.icon;
+                        const linkIconColor = MENU_ICON_COLORS[link.id] ?? DEFAULT_MENU_ICON_COLOR;
                         const content = (
                           <>
-                            <LinkIcon className="h-4 w-4 shrink-0" />
+                            <LinkIcon className={`h-4 w-4 shrink-0 ${linkIconColor}`} />
                             <span className="truncate">{link.label}</span>
                           </>
                         );
