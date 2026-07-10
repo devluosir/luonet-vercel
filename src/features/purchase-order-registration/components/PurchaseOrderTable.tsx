@@ -14,6 +14,7 @@ import {
   showCustomerNoCol,
   showPurchaseOrderNoCol,
 } from '../utils/purchaseOrderTableLayout';
+import { PurchaseOrderEditModal } from './PurchaseOrderEditModal';
 import { PurchaseOrderRow } from './PurchaseOrderRow';
 
 export type { PurchaseOrderTableBreakpoint };
@@ -46,6 +47,7 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
   const purchaseOrderNoCol = showPurchaseOrderNoCol(bp);
   const confirmDateCol = showConfirmDateCol(bp);
   const customerNoCol = showCustomerNoCol(bp);
+  const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
 
   if (records.length === 0) {
     return (
@@ -61,6 +63,7 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
   const colWidths = getVisibleColWidths(bp, canViewFinancials);
 
   return (
+    <>
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <table className="w-full table-fixed">
         <colgroup>
@@ -92,10 +95,20 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
               canViewFinancials={canViewFinancials}
               consigneeOptions={consigneeOptions}
               onUpdate={(patch) => onUpdate(record.id, patch)}
+              onOpenEdit={setEditingRecord}
             />
           ))}
         </tbody>
       </table>
     </div>
+    <PurchaseOrderEditModal
+      isOpen={editingRecord !== null}
+      record={editingRecord}
+      canViewFinancials={canViewFinancials}
+      consigneeOptions={consigneeOptions}
+      onClose={() => setEditingRecord(null)}
+      onSave={(id, patch) => onUpdate(id, patch)}
+    />
+    </>
   );
 }

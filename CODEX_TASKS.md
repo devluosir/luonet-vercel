@@ -1119,6 +1119,70 @@ TASK-116 修好了收缩态悬浮提示的可见性问题，但当时沿用的�
 
 **Status:** completed
 
+## TASK-126：采购订单表新增"编辑采购订单"弹窗 + 客户订单号列的情况备注只读同步显示
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 背景
+
+TASK-125 给订单状态表加了"编辑订单"弹窗后，用户要求采购订单表也补一个对应的编辑弹窗；同时订单状态表"客户订单号"列第二行会显示撤销C/悬挂P/善后S 的情况备注小字，采购订单表这一列此前没有同步展示这段说明，用户要求也做只读展示（不可编辑——状态标记的编辑入口仍然只在订单状态表）。
+
+### 执行记录
+
+- 新建 `src/features/purchase-order-registration/components/PurchaseOrderEditModal.tsx`，结构参考 `OrderEditModal.tsx` 但字段范围按采购订单表的实际编辑权限收窄：只读信息区展示订单编号/询价编号/客户询价编号/联络人/内容描述/确认日期/客户订单号/订单状态标记（含情况备注），并附一行提示"确认日期、客户订单号、订单状态标记如需修改，请在订单状态表的编辑订单中操作"；可编辑区只有采购订单表本来就允许编辑的字段——采购单号、供应商、采购金额（`canViewFinancials` 权限、¥/$/€ 三态循环切换，逻辑照抄 `PurchaseOrderRow.tsx` 里的 `AmountEditCell`）、交货日期（与订单状态表双向共享字段）、执行情况+收货人（同样双向共享，复用 `STATUS_PRESETS`）。确认日期、客户订单号、撤销/悬挂/善后状态标记及情况备注这几个字段在这个弹窗里从头到尾没有编辑控件，纯文字展示。
+- `src/features/purchase-order-registration/components/PurchaseOrderRow.tsx`：新增可选 prop `onOpenEdit`，"订单编号+询价编号"单元格包一层点击/回车触发，写法跟 `OrderRow.tsx` 的对应改动完全一致；新增本地 `getOrderSubStatusRemarkClass`（从 `OrderRow.tsx` 抄一份，项目里 Order/PurchaseOrder 两套组件本来就是独立实现，不共享）；"客户订单号"单元格内部包一层 flex 纵向布局，第二行加情况备注（`record.orderSubStatusRemark`，仅在 `record.orderSubStatus` 存在且备注非空时显示），文字大小/颜色/截断逻辑与订单状态表 `OrderRow.tsx` 对应单元格完全一致，只是这里没有 `EditableCell`，客户订单号本身还是原来的 `ReadOnlyText`。
+- `src/features/purchase-order-registration/components/PurchaseOrderTable.tsx`：新增 `editingRecord` state，渲染 `<PurchaseOrderEditModal>`，把 `onOpenEdit={setEditingRecord}` 传给每个 `PurchaseOrderRow`，`onSave` 直接调用外部 `onUpdate(id, patch)`，跟订单状态表的接法一致。
+
+### Files in scope
+
+- `src/features/purchase-order-registration/components/PurchaseOrderEditModal.tsx`（新增）
+- `src/features/purchase-order-registration/components/PurchaseOrderRow.tsx`
+- `src/features/purchase-order-registration/components/PurchaseOrderTable.tsx`
+
+### Non-goals / 红线
+
+- 弹窗里确认日期、客户订单号、撤销C/悬挂P/善后S + 情况备注均为只读，未在采购订单表新增这几个字段的编辑能力——这几个字段本来就规定只在订单状态表编辑（见 `InquiryRecord` 类型注释和 TASK-125），本次只是把"情况备注"这一小段文字的**展示**同步到采购订单表，不涉及编辑权限变化。
+- 未改动交货日期/执行情况这两个双向共享字段的既有编辑逻辑，只是在弹窗里多提供一个编辑入口，行内点击编辑保留、并存（与 TASK-125 保持同一设计原则）。
+- 未联动修改订单状态表任何文件。
+
+### Verification steps
+
+- `npx tsc --noEmit`、`npx eslint`（三个改动/新增文件）均无输出。
+- 建议用户实测：① 采购订单表点击"订单编号+询价编号"区域，确认弹出"编辑采购订单"，只读信息区的确认日期/客户订单号/订单状态标记与订单状态表同一条记录一致；② 编辑采购单号/供应商/采购金额/交货日期/执行情况保存后，确认对应行内单元格同步更新；③ 找一条在订单状态表标了撤销/悬挂/善后并填了情况备注的记录，确认采购订单表"客户订单号"列下方能看到同一段备注文字（中屏及以下该列隐藏时自然也看不到备注，属预期，与客户订单号列的显隐规则一致）。
+
+**Status:** completed
+
+## TASK-127：采购订单表补齐"备货/交货/发票"执行情况颜色，与订单状态表同步
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 背景
+
+用户反馈采购订单表里备货/交货/发票几种执行情况对应的记录颜色没有跟订单状态表同步。排查发现 `getRowTextClass`/`getRowBgClass` 这两个颜色判定函数在 `PurchaseOrderRow.tsx` 和 `OrderRow.tsx` 里本来就是逐字一致的实现（TASK-121/TASK-124 之前就已核对过），根因不在颜色判定逻辑，而在于套用：`PurchaseOrderRow.tsx` 里"采购单号"（`EditableText`）、"供应商"（`EditableText`）、"金额"（`AmountEditCell`）这三个单元格调用时漏传了 `textClassName={rowTextClass}`，实际渲染用的是各自组件的默认灰色（`text-gray-800`），跟同一行"交货日期""执行情况"两个有传 `textClassName` 的单元格颜色对不上，也跟订单状态表 `OrderRow.tsx` 里所有单元格统一传 `rowTextClass` 的做法不一致。
+
+### 执行记录
+
+- `src/features/purchase-order-registration/components/PurchaseOrderRow.tsx`：给"采购单号"的 `EditableText`、"供应商"的 `EditableText`、"金额"的 `AmountEditCell` 三处调用补上 `textClassName={rowTextClass}`，跟"交货日期"（`DateEditCell`）、"执行情况"（`DeliveryStatusCell`）保持一致，行内所有可编辑字段现在统一跟随 `getRowTextClass` 的判定结果（备货/其它自由文本=粉色，交货=蓝色，发票=黑色，撤销订单=统一黑色）。
+
+### Files in scope
+
+- `src/features/purchase-order-registration/components/PurchaseOrderRow.tsx`
+
+### Non-goals / 红线
+
+- 未改动 `getRowTextClass`/`getRowBgClass` 判定逻辑本身——这两个函数在 Order/PurchaseOrder 两边一直是一致的，问题只在个别单元格没接上判定结果。
+- 未改动"内容描述"单元格和"订单编号+询价编号"单元格的颜色处理——这两处本来就已经传了 `rowTextClass`。
+- 未改动只读字段（确认日期、客户订单号）的颜色——这两个字段本来就用固定的 `ReadOnlyText` 灰色展示，不跟随执行情况变色，订单状态表那边对应的只读展示逻辑也是如此。
+
+### Verification steps
+
+- `npx tsc --noEmit`、`npx eslint`（该文件）均无输出。
+- 建议用户实测：找同一条记录分别在订单状态表和采购订单表对比，执行情况为"备货"（或任意非"交货/发票"开头的自由文本）时两边都应是粉色，"交货..."开头时两边都是蓝色，"发票..."开头时两边都是黑色；采购订单表里"采购单号""供应商""金额"这三列现在应该也跟着变成同样的颜色，而不是一直显示默认灰色。
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

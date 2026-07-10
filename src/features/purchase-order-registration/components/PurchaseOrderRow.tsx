@@ -38,6 +38,13 @@ function getRowTextClass(record: InquiryRecord): string {
   return 'text-pink-500 dark:text-pink-400';
 }
 
+function getOrderSubStatusRemarkClass(record: InquiryRecord): string {
+  if (record.orderSubStatus === 'cancelled') return 'text-red-600 dark:text-red-400';
+  if (record.orderSubStatus === 'suspended') return 'text-green-600 dark:text-green-400';
+  if (record.orderSubStatus === 'followup') return 'text-blue-600 dark:text-blue-400';
+  return 'text-gray-500 dark:text-gray-400';
+}
+
 function OrderNoText({ record, textClassName }: { record: InquiryRecord; textClassName: string }) {
   const { orderNo, orderSubStatus } = record;
   const letter =
@@ -298,9 +305,10 @@ interface PurchaseOrderRowProps {
   canViewFinancials: boolean;
   consigneeOptions: string[];
   onUpdate: (patch: Partial<InquiryRecord>) => void;
+  onOpenEdit?: (record: InquiryRecord) => void;
 }
 
-export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptions, onUpdate }: PurchaseOrderRowProps) {
+export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptions, onUpdate, onOpenEdit }: PurchaseOrderRowProps) {
   const [activeField, setActiveField] = useState<EditField>(null);
   const activate = (f: EditField) => setActiveField(f);
   const cancel = () => setActiveField(null);
@@ -311,12 +319,24 @@ export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptio
 
   // 客户订单号只读展示，fallback 逻辑与订单状态表一致（RFQ→PO）
   const customerNoFallback = (record.customerNo ?? '').replace(/RFQ/g, 'PO');
+  const orderSubStatusRemark = record.orderSubStatusRemark?.trim();
 
   return (
     <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getRowBgClass(record)}`}>
-      {/* 订单编号 + 询价编号（只读，来自订单状态表/询报价登记的共享数据） */}
+      {/* 订单编号 + 询价编号：点击打开"编辑采购订单"弹窗 */}
       <td className="max-w-0 overflow-hidden px-2 py-2 sm:px-3">
-        <div className="flex min-w-0 flex-col gap-0.5" title={`${record.orderNo ?? ''} ${record.inquiryNo}`}>
+        <div
+          role={onOpenEdit ? 'button' : undefined}
+          tabIndex={onOpenEdit ? 0 : undefined}
+          onClick={() => onOpenEdit?.(record)}
+          onKeyDown={(e) => {
+            if (onOpenEdit && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpenEdit(record); }
+          }}
+          className={`flex min-w-0 flex-col gap-0.5 rounded px-0.5 -mx-0.5 ${
+            onOpenEdit ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5' : ''
+          }`}
+          title={`${record.orderNo ?? ''} ${record.inquiryNo}${onOpenEdit ? '（点击编辑采购订单）' : ''}`}
+        >
           <OrderNoText record={record} textClassName={rowTextClass} />
           <span className="block truncate font-mono text-[10px] text-gray-400 dark:text-gray-500">{record.inquiryNo}</span>
         </div>
@@ -334,6 +354,7 @@ export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptio
             editing={activeField === 'purchaseOrderNo'}
             value={record.purchaseOrderNo}
             placeholder="采购单号"
+            textClassName={rowTextClass}
             onActivate={() => activate('purchaseOrderNo')}
             onSave={(val) => { setActiveField(null); onUpdate({ purchaseOrderNo: val }); }}
             onCancel={cancel}
@@ -347,6 +368,7 @@ export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptio
           editing={activeField === 'purchaseOrderSupplier'}
           value={record.purchaseOrderSupplier}
           placeholder="供应商"
+          textClassName={rowTextClass}
           onActivate={() => activate('purchaseOrderSupplier')}
           onSave={(val) => { setActiveField(null); onUpdate({ purchaseOrderSupplier: val }); }}
           onCancel={cancel}
@@ -359,6 +381,7 @@ export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptio
           <AmountEditCell
             editing={activeField === 'amount'}
             value={record.purchaseOrderAmount}
+            textClassName={rowTextClass}
             onActivate={() => activate('amount')}
             onSave={(val) => { setActiveField(null); onUpdate({ purchaseOrderAmount: val }); }}
             onCancel={cancel}
@@ -385,10 +408,22 @@ export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptio
         </td>
       )}
 
-      {/* 客户订单号（只读，来自订单状态表，内容与订单状态表一致；中屏起隐藏） */}
+      {/* 客户订单号（只读，来自订单状态表，内容与订单状态表一致；中屏起隐藏）
+          + 情况备注（只读，撤销C/悬挂P/善后S 的说明文字，与订单状态表同一列的呈现方式一致，
+          编辑入口仍然只在订单状态表的"编辑订单"弹窗） */}
       {customerNoCol && (
         <td className="max-w-0 overflow-hidden px-2 py-2">
-          <ReadOnlyText value={record.orderCustomerNo} fallback={customerNoFallback} />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <ReadOnlyText value={record.orderCustomerNo} fallback={customerNoFallback} />
+            {record.orderSubStatus && orderSubStatusRemark && (
+              <span
+                className={`block truncate px-0.5 text-[10px] leading-4 ${getOrderSubStatusRemarkClass(record)}`}
+                title={orderSubStatusRemark}
+              >
+                {orderSubStatusRemark}
+              </span>
+            )}
+          </div>
         </td>
       )}
 
