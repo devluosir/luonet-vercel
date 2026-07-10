@@ -153,7 +153,8 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
     unit: 'mm',
     format: 'a4',
     putOnlyUsedFonts: true,
-    floatPrecision: 16
+    floatPrecision: 16,
+    compress: true
   }) as unknown as ExtendedJsPDF;
 
   try {

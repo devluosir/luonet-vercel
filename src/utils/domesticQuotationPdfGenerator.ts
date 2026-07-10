@@ -374,7 +374,13 @@ export async function generateDomesticQuotationPDF(
     throw new Error('PDF generation is only available in client-side environment');
   }
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) as unknown as ExtendedJsPDF;
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+    putOnlyUsedFonts: true,
+    compress: true
+  }) as unknown as ExtendedJsPDF;
   await ensurePdfFont(doc);
 
   const pageWidth = doc.internal.pageSize.getWidth();

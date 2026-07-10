@@ -72,7 +72,14 @@ export const generateQuotationPDF = async (
 
     // 创建PDF文档
     const docCreationId = startTimer('doc-creation');
-    const doc = new jsPDF() as unknown as ExtendedJsPDF;
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      putOnlyUsedFonts: true,
+      floatPrecision: 16,
+      compress: true
+    }) as unknown as ExtendedJsPDF;
     endTimer(docCreationId, 'doc-creation');
 
     // 字体策略：预览和导出都使用中文字体，确保中文正常显示

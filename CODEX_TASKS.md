@@ -1309,6 +1309,61 @@ mergeFieldsOnly(d1Records: InquiryRecord[]): InquiryRecord[] {
 
 **Status:** completed
 
+## TASK-129：7 个 PDF 生成器加 `compress: true`，降低文件体积
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+**背景来源**：用户反馈"现在每个生成的文件都有 600K 左右"，要求分析最佳可控文件大小。
+
+### 背景
+
+TASK-106/107 已经把表头从整张横幅图（`header-bilingual.jpg` ~92KB / `header-english.png` ~24KB）换成 logo 图标+矢量文字（~13KB），并确认 `putOnlyUsedFonts` 选项差异只有 2.2KB、不是体积瓶颈（当时的测试场景没有实际用到粗体）。这两个任务完成后用户仍然反馈单份 PDF 在 ~600KB 左右，说明真正的瓶颈没有被排除。
+
+用沙箱内独立 jsPDF 2.5.2 复现脚本（与真实 `invoicePdfGenerator.ts` 一致的用法：同时注册 `NotoSansSC-Regular.ttf`/`NotoSansSC-Bold.ttf` 两个完整字体文件，且文字内容里真的切换过 `bold`，因为发票/报价单的金额合计、表头等确实用粗体）测出：
+
+| 配置 | 体积 |
+|---|---|
+| `putOnlyUsedFonts:true`，无 `compress` | 545.1 KB（与用户反馈的"~600K"吻合） |
+| `putOnlyUsedFonts:true` + `compress:true` | 98.7 KB |
+
+只加一个 `compress:true`（jsPDF 内置基于 pako 的标准 PDF 流压缩，字体/内容流按 FlateDecode 压缩，所有 PDF 阅读器原生支持，不影响字体渲染或图片内容），体积降了约 82%。这是 TASK-106 里没有测试过的选项（TASK-106 只排除了 `putOnlyUsedFonts`），风险低、改动小。
+
+### Files in scope
+
+- `src/utils/invoicePdfGenerator.ts`（约 151-157 行，`new jsPDF({...})`）——已有 `putOnlyUsedFonts`/`floatPrecision`，补 `compress: true`
+- `src/utils/quotationPdfGenerator.ts`（约第 75 行，`new jsPDF()` 无参数）——补整个 options 对象：`{ orientation: 'portrait', unit: 'mm', format: 'a4', putOnlyUsedFonts: true, floatPrecision: 16, compress: true }`（原来完全没传 options，等于全部用 jsPDF 默认值，顺带把 `putOnlyUsedFonts` 也一起补上，跟其它生成器保持一致）
+- `src/utils/domesticQuotationPdfGenerator.ts`（约第 377 行）——现有 options 里补 `putOnlyUsedFonts: true, compress: true`
+- `src/utils/purchasePdfGenerator.ts`（约 58-62 行）——现有 options 里补 `putOnlyUsedFonts: true, compress: true`
+- `src/utils/packingPdfGenerator.ts`（约 194-200 行）——已有 `putOnlyUsedFonts`/`floatPrecision`，补 `compress: true`
+- `src/utils/shippingMarksPdfGenerator.ts`（约 24-30 行）——已有 `putOnlyUsedFonts`/`floatPrecision`，补 `compress: true`
+- `src/utils/orderConfirmationPdfGenerator.ts`（约 82-88 行）——已有 `putOnlyUsedFonts`/`floatPrecision`，补 `compress: true`
+
+### Acceptance criteria
+
+- 7 个生成器的 `new jsPDF({...})` 调用都带上 `compress: true`。
+- `quotationPdfGenerator.ts`/`domesticQuotationPdfGenerator.ts`/`purchasePdfGenerator.ts` 顺带补上缺失的 `putOnlyUsedFonts: true`（不改变现有 `floatPrecision`/`orientation`/`unit`/`format` 等已有参数取值）。
+- 不改变任何视觉排版、字体、表头逻辑、印章图片——纯粹是 jsPDF 构造参数改动。
+- 生成流程（`ensurePdfFont`/`registerChineseFonts`/`autoTable`/`addImage` 调用顺序）不变。
+
+### Non-goals / 红线
+
+- 不做字形子集化（只嵌入实际用到的汉字），那是更大的改造（需要 fontkit/subset-font），本任务只做 `compress:true` 这一层。
+- 不改动 TASK-106/107 已经做完的 logo 表头逻辑（`pdfHeaderBlock.ts`/`companyLetterhead.ts`）。
+- 不改动字体文件本身（`public/fonts/NotoSansSC-*.ttf(.gz)`、`src/lib/embedded-resources.ts`）。
+- 不改动 `pdfFontHealthcheck.ts`（诊断工具，本来就已经是 `compress:true`，不受影响）。
+
+### 执行记录
+
+- 7 个文件的 `new jsPDF({...})` 全部加了 `compress: true`；`quotationPdfGenerator.ts`（原来 `new jsPDF()` 完全没传参）、`domesticQuotationPdfGenerator.ts`、`purchasePdfGenerator.ts`（原来都没有 `putOnlyUsedFonts`）顺带补上了 `putOnlyUsedFonts: true`，其余已有的 `orientation`/`unit`/`format`/`floatPrecision` 取值一律保留不变。
+- 未改动表头、字体注册、`autoTable`、印章图片等任何业务逻辑，只动了 jsPDF 构造参数。
+
+### 验证
+
+- `npx tsc --noEmit`（全项目）通过。
+- `npx eslint`（7 个改动文件）无输出。
+- 沙箱内用真实字体文件（`public/fonts/NotoSansSC-Regular.ttf`/`Bold.ttf`）+ jsPDF 2.5.2 复现一份跟 `invoicePdfGenerator.ts` 用法一致、真的切换过粗体的模拟发票：`putOnlyUsedFonts:true` 无 `compress` 时 545.1KB，加 `compress:true` 后 98.7KB，降幅约 82%（与本次改动前的诊断结论一致）。
+- **待用户验证**：在真实环境分别生成一份发票/报价单/内销合同/采购单/装箱单/唛头/销售确认 PDF，确认能正常打开、内容和排版无变化，且体积明显下降（预期从 ~600KB 降到 100~150KB 区间，具体数值取决于每份单据实际的表格行数/条款长度）。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

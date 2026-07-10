@@ -58,7 +58,9 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: 'a4'
+    format: 'a4',
+    putOnlyUsedFonts: true,
+    compress: true
   }) as unknown as ExtendedJsPDF;
 
   // 添加中文字体
