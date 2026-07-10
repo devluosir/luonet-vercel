@@ -17,7 +17,7 @@ import { DeliveryStatusCell } from './DeliveryStatusCell';
 
 function getRowBgClass(record: InquiryRecord): string {
   if (record.orderSubStatus === 'cancelled') {
-    return 'bg-gray-100 hover:bg-gray-200/80 dark:bg-gray-800/75 dark:hover:bg-gray-700/80';
+    return 'bg-gray-300 hover:bg-gray-400/70 dark:bg-gray-700 dark:hover:bg-gray-600/80';
   }
   if (record.orderSubStatus === 'suspended') {
     return 'bg-green-100 hover:bg-green-200/75 dark:bg-green-950/45 dark:hover:bg-green-900/45';
