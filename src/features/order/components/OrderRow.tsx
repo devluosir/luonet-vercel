@@ -32,6 +32,8 @@ function getRowBgClass(record: InquiryRecord): string {
 // 其余任何文字（含用户自己写的说明，比如"合同确认中"）都视同"备货"阶段，保持"进行中"的粉色，
 // 不能因为不匹配 备货/交货 前缀就退化成普通灰色（那样会被误判为已完成，见 isInProgressOrder）
 function getRowTextClass(record: InquiryRecord): string {
+  // 撤销订单：不再看执行情况文字，整行统一黑色字（配合 getRowBgClass 的灰底）
+  if (record.orderSubStatus === 'cancelled') return 'text-gray-900 dark:text-gray-100';
   const status = record.orderDeliveryStatus?.trim() ?? '';
   if (status.startsWith('交货')) return 'text-blue-600 dark:text-blue-400';
   if (status.startsWith('发票')) return 'text-gray-900 dark:text-gray-100';
