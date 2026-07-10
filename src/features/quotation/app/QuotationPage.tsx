@@ -799,7 +799,6 @@ export default function QuotationPage() {
                           {[
                             { value: 'none', label: '无' },
                             { value: 'shanghai', label: '上海' },
-                            { value: 'hongkong', label: '香港' },
                           ].map((option) => (
                             <button
                               key={option.value}

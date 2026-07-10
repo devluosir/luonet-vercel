@@ -1536,6 +1536,136 @@ const stampY = Math.max(y - 2, Math.min(y + cellPadding - 2, pageBottom - stampH
 - 解码 `embedded-resources.ts` 里的新 base64 字段，逐字节 `cmp` 对比跟磁盘上的压缩后 PNG 完全一致。
 - **待用户验证**：生成一份用上海印章、一份用香港印章的 PDF，确认盖章视觉效果（清晰度、颜色）与之前一致，且文件体积按预期减小（上海印章文档减少约 33KB，香港印章文档减少约 11.5KB，在 TASK-129 的 `compress:true` 之上叠加）。
 
+## TASK-133：产品购销合同（内销合同）印章改成先画，文字盖在印章上层
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+**背景来源**：用户反馈"产品购销合同的 pdf 的印章，没有在文字下层"——TASK-131 只修了印章的 Y 坐标（不再偏下），但没改绘制顺序，印章其实还是在 `autoTable` 画完供需方文字之后才画，盖在文字上层，跟 TASK-130（销售确认书）要求的"印章在文字下方"不一致。
+
+### 背景
+
+`drawPartyTable()` 原来的顺序是：`doc.autoTable(...)` 画供需方表格（文字+边框）→ 再 `doc.addImage()` 画印章。jsPDF 是顺序绘制模型，后画的盖住先画的重叠区域，所以印章必然叠在文字上层。
+
+TASK-131 把印章定位公式从"依赖 autoTable 画完之后才知道的 `finalY`"（`finalY - stampHeight - 4`）改成了"只依赖 autoTable 开始画之前就已知道的 `y`/`cellPadding`/`pageBottom`"（`Math.max(y-2, Math.min(y+cellPadding-2, pageBottom-stampHeight))`）——这意味着印章位置不再需要等表格画完才能算出来，具备了"提前到 autoTable 之前画"的条件，但那次改动只顺手改了位置公式，没有同步把绘制顺序也换过来。
+
+### 修复方案与踩坑
+
+把印章绘制块整体移到 `doc.autoTable(...)` 调用之前。但移动之后用沙箱复现测试发现一个新问题：jspdf-autotable 的 `grid` 主题默认给单元格铺一层**不透明白色底**（`fillColor: 255`，来自 `node_modules/jspdf-autotable` 的 `getTheme('grid')` 定义），如果印章先画、表格照旧不改样式，表格自己的白底会把已经画好的印章大半块整片盖掉（沙箱截图验证：印章只剩表格边框以外没被白底覆盖的那一小截）。
+
+修复：在 `doc.autoTable(...)` 的 `styles` 里显式加 `fillColor: false`（透明），去掉这层不透明白底——页面本来就是白色，视觉上没有任何变化，但能让底下的印章透出来，只有文字和表格边框画在印章上层。
+
+### Files in scope
+
+- `src/utils/domesticQuotationPdfGenerator.ts`（`drawPartyTable()`）：印章绘制块移到 `doc.autoTable(...)` 之前；`styles` 里新增 `fillColor: false`。
+
+### Acceptance criteria
+
+- 印章挤压/叠加在供需方信息文字上时，文字始终在印章上层清晰可读（不再被印章盖住）。
+- 印章位置（TASK-131）、透明度（0.82）、图片本身（TASK-132）均不变。
+- 表格边框、文字颜色等视觉效果与之前一致（`fillColor:false` 只是去掉一层视觉上等同于白色背景的不透明填充，页面底色本来就是白色，非重叠区域看起来没有变化）。
+
+### Non-goals / 红线
+
+- 不改动 TASK-130 处理的 `orderConfirmationPdfGenerator.ts`（不同文件，那边用的是 emitText/redrawTextOverStamp 方案，因为那边文字是逐个 `doc.text()` 调用、不是 autoTable）。
+- 不改动印章定位公式（TASK-131）、印章图片（TASK-132）、透明度数值。
+
+### 验证
+
+- `npx tsc --noEmit`（全项目）通过；`npx eslint src/utils/domesticQuotationPdfGenerator.ts` 无输出。
+- 沙箱内用真实的行高计算参数 + 一个实心填充圆模拟印章（比空心描边更接近真实印章的墨色浓度）跑了三组对照，`pdftoppm` 渲染核对：① 印章先画 + 不加 `fillColor:false` → 白底把印章压在表格范围内的部分整片抹掉，证实了这个坑确实存在；② 印章先画 + `fillColor:false`（本次实际采用的修复）→ 印章完整可见，文字清晰叠在印章上层；③ 旧行为（表格先画、印章后画）→ 印章下方的文字被印章盖住看不清，对照确认了用户反馈的问题。
+- **待用户验证**：生成一份供需双方信息填写较多、印章会挤压叠加在文字上的产品购销合同 PDF，确认所有文字清晰可读，印章视觉效果不变。
+
+## TASK-134：产品购销合同设置里去掉"香港"印章选项
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+**背景来源**：用户要求把产品购销合同页面设置里的香港印章选项去掉。
+
+### 背景
+
+`src/features/quotation/app/QuotationPage.tsx` 里"印章：无/上海/香港"这组按钮（约 798-824 行）只在 `(data.domesticDocType ?? 'contract') === 'contract'` 时渲染，即只在产品购销合同（跟内销报价单共用同一个页面，用 `domesticDocType` 区分）这个文档类型下出现，正是用户说的"产品购销合同页面的设置"。
+
+### 执行记录
+
+- `src/features/quotation/app/QuotationPage.tsx`（约 799-802 行）：按钮选项数组里删掉 `{ value: 'hongkong', label: '香港' }`，只保留"无"/"上海"两个选项。
+- 只改了这一处 UI 选项列表，没有改 `templateConfig.stampType` 的类型定义（仍然是 `'none' | 'shanghai' | 'hongkong'`，见 `src/types/quotation.ts`）、没有改 `domesticQuotationPdfGenerator.ts` 里对 `hongkong` 类型的渲染支持——如果某份已保存的合同数据里 `stampType` 之前就存的是 `'hongkong'`，这次改动不会主动把它清掉，只是设置面板里不再能选到这个选项。
+
+### Files in scope
+
+- `src/features/quotation/app/QuotationPage.tsx`（印章选项按钮组，约 799-802 行）
+
+### Acceptance criteria
+
+- 产品购销合同（`domesticDocType === 'contract'`）设置面板的印章按钮组只显示"无"/"上海"。
+- 内销报价单（`domesticDocType !== 'contract'`）本来就不显示这组按钮，不受影响。
+- 不影响其它文档类型（销售确认书、发票、装箱单、采购单）各自独立的印章设置。
+
+### Non-goals / 红线
+
+- 不改动 `types/quotation.ts` 里 `stampType` 的类型定义（仍保留 `'hongkong'` 作为合法值，避免影响已保存数据的类型兼容性）。
+- 不改动 `domesticQuotationPdfGenerator.ts` 对香港印章的渲染逻辑（万一已有数据是 `hongkong`，PDF 仍然能正常生成，只是新数据没法从 UI 选到这个值）。
+- 不改动其它 4 个文档类型（发票/装箱单/采购单/销售确认书）各自的香港印章选项——用户只提到产品购销合同这一个页面。
+
+### 验证
+
+- `npx tsc --noEmit`（全项目）通过；`npx eslint src/features/quotation/app/QuotationPage.tsx` 无输出。
+- 代码走读确认这是仓库里唯一一处"产品购销合同"专属的印章选项 UI（`grep 香港/hongkong` 全仓库确认无其它同类选择器引用这段代码）。
+- **待用户验证**：打开产品购销合同页面设置，确认印章选项只剩"无"/"上海"。
+
+## TASK-135：修复 TASK-132 引入的回归——香港印章 4-bit PNG 导致 jsPDF 渲染失败，PDF 里看不到章
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+**背景来源**：用户反馈"凡有显示香港印章的地方，选中后，却在 pdf 中看不到香港印章"——这是 TASK-132 引入的回归，本任务是那个任务的修正。
+
+### 背景（根因）
+
+TASK-132 把 `stamp-hongkong.png` 用 `convert -colors 16` 量化调色板颜色数来减小体积，只验证了"颜色数越少、RMSE 越小、肉眼看不出差别"，没有验证**jsPDF 是否真的能正常解码渲染这张图**——这是一个疏漏，直接用真实的 `embedded-resources.ts` 数据在 jsPDF 里跑一遍 `addImage` 才发现问题，之前的验证方式（`identify`/`cmp`/RMSE 对比）都不会暴露这个坑。
+
+实测复现：`doc.addImage('data:image/png;base64,'+hongkongStamp的真实数据, 'PNG', ...)` 直接抛异常 `offset is out of bounds`，`stamp-shanghai.png` 用同样方式测试完全正常。排查发现根因是 PNG 的调色板位深（bit depth）：
+
+- ImageMagick 的 `-colors N` 会自动选择"刚好够用"的最小位深——16 色恰好能用 4 bit 存下（2⁴=16），ImageMagick 就把 `stamp-hongkong.png` 编码成了 **4-bit 索引色 PNG**（`stamp-shanghai.png` 量化到 24 色，5 bit 才够，PNG 规范里位深只有 1/2/4/8/16 几档，只能往上取整到 8 bit，所以shanghai 保住了 8-bit，侥幸没触发这个坑）。
+- jsPDF 内置的 PNG 解码器不支持 4-bit 索引色（8/2/1-bit 或真彩色能正常解，4-bit 这一档会导致解码时按字节对齐算错行偏移，抛 `offset is out of bounds`），这是 jsPDF 自身 PNG 解析器的已知局限，不是这次改动能绕开的运行时环境问题。
+
+排查时顺带确认了本次改动前就有的 `logoIcon`（TASK-107）和现在的 `stamp-shanghai.png` 都是 8-bit，不受影响，只有 `stamp-hongkong.png` 踩中了这个坑。
+
+### 修复方案
+
+不再让 ImageMagick 自由选择位深——只要颜色数选在 17-256 区间（迫使编码器至少用 8-bit），就能既拿到调色板量化的体积收益、又避开 4-bit 解码坑。把 `stamp-hongkong.png` 从 16 色（4-bit，6,761 字节，但导致渲染失败）改成 **24 色（8-bit，7,934 字节）**——跟 `stamp-shanghai.png` 用同一个颜色数档位，体积只比之前的 4-bit 版本大约 1.1KB，仍然比 TASK-132 之前的原始 256 色版本（18,285 字节）小 57%。
+
+注：曾尝试过用 `-define png:bit-depth=8 -define png:color-type=3` 强制显式指定位深/颜色类型来保留 16 色的体积优势，但这个组合会破坏 tRNS 透明通道——渲染出来整张图背景变成不透明的浅灰蓝色色块（而不是透明），比 4-bit 崩溃更隐蔽也更糟（会被误判为"图能显示，只是背景有点怪"而不是直接报错）。最终放弃这个思路，改用最简单可靠的"选一个自然落在 8-bit 的颜色数"方案。
+
+### 执行记录
+
+- `public/images/stamp-hongkong.png`：6,761 字节（4-bit，有问题）→ 7,934 字节（8-bit，正常），尺寸仍是 400×169。
+- 重新跑 `node scripts/embed-resources.js` 重新生成 `src/lib/embedded-resources.ts`。
+- 用真实的 `embedded-resources.ts` 里的 `hongkongStamp`/`shanghaiStamp` 数据在 jsPDF 里各跑一次 `addImage`，确认都不再抛异常。
+- 解码新生成的 `embedded-resources.ts` 里的 `hongkongStamp` 字段，逐字节 `cmp` 对比确认跟磁盘上的新 PNG 完全一致。
+
+### Files in scope
+
+- `public/images/stamp-hongkong.png`（二进制替换）
+- `src/lib/embedded-resources.ts`（`node scripts/embed-resources.js` 自动重新生成）
+
+### Acceptance criteria
+
+- `stamp-hongkong.png` 恢复为 8-bit 索引色 PNG，`doc.addImage()` 加载不抛异常。
+- 香港印章在实际 PDF 里能正常显示（透明背景、颜色跟之前一致）。
+- 体积仍然比 TASK-132 之前的原始版本小（57% 而不是 63%，因为放弃了 4-bit 但仍保留调色板量化的收益）。
+
+### Non-goals / 红线
+
+- 不改动 `stamp-shanghai.png`（TASK-132 那版 24 色本来就是 8-bit，没有这个问题）。
+- 不改动 `logoIcon`、字体文件（不受影响）。
+- 不改动印章在各 PDF 生成器里的绘制逻辑（排布问题是 TASK-130/131/133 处理的，跟这次的图片解码问题是两回事）。
+
+### 验证
+
+- `npx tsc --noEmit`（全项目）通过。
+- 用真实 `embedded-resources.ts` 数据在 jsPDF 里实际跑 `addImage`（而不是只测图片文件本身的 identify/RMSE）——这次改成了以"jsPDF 能不能真正加载"作为验收标准，而不只是"文件体积和视觉 RMSE 达标"，弥补 TASK-132 验证方式的疏漏。
+- 解码新 `embedded-resources.ts` 里的字段，逐字节比对确认跟磁盘文件一致。
+- **待用户验证**：在真实环境生成一份选中香港印章的 PDF（发票/采购单/装箱单唛头/销售确认书等任意支持香港印章的单据类型），确认印章能正常显示。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

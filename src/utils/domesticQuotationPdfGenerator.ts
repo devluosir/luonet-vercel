@@ -310,39 +310,11 @@ async function drawPartyTable(
   }
   doc.setFontSize(bodyFontSize); // 恢复，避免测量时的 setFontSize 影响后续绘制
 
-  // lineHeightFactor 是 doc 级别的全局设置（jspdf-autotable 内部按 doc.getLineHeightFactor()
-  // 计算单元格行距），画完这张表要恢复原值，避免影响后面画的页码等其它内容
-  const previousLineHeightFactor = doc.getLineHeightFactor();
-  doc.setLineHeightFactor(lineHeightFactor);
-
-  doc.autoTable({
-    startY: y,
-    body: [[sellerText, buyerText]],
-    theme: 'grid',
-    margin: { left: margin, right: margin },
-    styles: {
-      font: 'NotoSansSC',
-      fontStyle: 'normal',
-      fontSize: bodyFontSize,
-      cellPadding,
-      textColor: [20, 20, 20],
-      lineColor: [90, 90, 90],
-      lineWidth: 0.2,
-      valign: 'top',
-    },
-    columnStyles: {
-      0: { cellWidth: (pageWidth - margin * 2) / 2 },
-      1: { cellWidth: (pageWidth - margin * 2) / 2 },
-    },
-    didParseCell: (hookData) => {
-      hookData.cell.styles.font = 'NotoSansSC';
-    },
-  });
-
-  doc.setLineHeightFactor(previousLineHeightFactor);
-
-  const finalY = doc.lastAutoTable.finalY;
-
+  // 印章必须先画、供需方文字后画，文字才会叠在印章上层（章在文字下方）——jsPDF 是顺序绘制
+  // 模型，谁后画谁盖住先画的重叠区域。这里改成印章先画，是因为 TASK-131 把印章定位公式
+  // 从"按表格底边往上量"（依赖 autoTable 画完之后才知道的 finalY）改成了"按表格顶边往下量"
+  // （只依赖 autoTable 开始画之前就已知道的 y/cellPadding/pageBottom），所以印章位置不再需要
+  // 等 autoTable 画完才能算出来，可以提前到 autoTable 之前画，让后画的文字自然盖在印章上层。
   // 是否盖章只由"印章：无/上海/香港"这一个选择器决定，不再叠加 showStamp 开关
   // （原来两个控件都要打开才会出章，容易选了印章样式却忘记开开关，一直不出章）
   try {
@@ -370,6 +342,44 @@ async function drawPartyTable(
   } catch (error) {
     console.warn('[DomesticQuotationPDF] 印章加载失败', error);
   }
+
+  // lineHeightFactor 是 doc 级别的全局设置（jspdf-autotable 内部按 doc.getLineHeightFactor()
+  // 计算单元格行距），画完这张表要恢复原值，避免影响后面画的页码等其它内容
+  const previousLineHeightFactor = doc.getLineHeightFactor();
+  doc.setLineHeightFactor(lineHeightFactor);
+
+  doc.autoTable({
+    startY: y,
+    body: [[sellerText, buyerText]],
+    theme: 'grid',
+    margin: { left: margin, right: margin },
+    styles: {
+      font: 'NotoSansSC',
+      fontStyle: 'normal',
+      fontSize: bodyFontSize,
+      cellPadding,
+      textColor: [20, 20, 20],
+      lineColor: [90, 90, 90],
+      lineWidth: 0.2,
+      valign: 'top',
+      // 'grid' 主题默认给单元格铺一层不透明白色底（fillColor: 255），现在印章改成先画、
+      // 表格后画，这层白底会整片盖住已经画好的印章——显式关掉背景色（transparent），
+      // 页面本来就是白色，视觉上没有任何变化，但能让印章透过单元格露出来，只有文字和
+      // 边框画在印章上层，而不是被整片白底一起盖住。
+      fillColor: false,
+    },
+    columnStyles: {
+      0: { cellWidth: (pageWidth - margin * 2) / 2 },
+      1: { cellWidth: (pageWidth - margin * 2) / 2 },
+    },
+    didParseCell: (hookData) => {
+      hookData.cell.styles.font = 'NotoSansSC';
+    },
+  });
+
+  doc.setLineHeightFactor(previousLineHeightFactor);
+
+  const finalY = doc.lastAutoTable.finalY;
 
   return finalY + 6;
 }
