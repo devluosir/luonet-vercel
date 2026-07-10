@@ -1364,6 +1364,121 @@ TASK-106/107 已经把表头从整张横幅图（`header-bilingual.jpg` ~92KB / 
 - 沙箱内用真实字体文件（`public/fonts/NotoSansSC-Regular.ttf`/`Bold.ttf`）+ jsPDF 2.5.2 复现一份跟 `invoicePdfGenerator.ts` 用法一致、真的切换过粗体的模拟发票：`putOnlyUsedFonts:true` 无 `compress` 时 545.1KB，加 `compress:true` 后 98.7KB，降幅约 82%（与本次改动前的诊断结论一致）。
 - **待用户验证**：在真实环境分别生成一份发票/报价单/内销合同/采购单/装箱单/唛头/销售确认 PDF，确认能正常打开、内容和排版无变化，且体积明显下降（预期从 ~600KB 降到 100~150KB 区间，具体数值取决于每份单据实际的表格行数/条款长度）。
 
+## TASK-130：销售确认书印章"挤压覆盖文字"改为印章在文字下方
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+**背景来源**：用户发来一份"SALES CONFIRMATION"截图——Notes 条款很长时，印章会挤进已经画完的文字区域，且看起来印章盖住了文字。用户明确要求：这种"印章与文字重叠以省一页"的效果本身是他想要的（"这效果挺好"），但必须保证重叠时印章在文字下方、文字始终在印章上层可读。
+
+### 背景
+
+`orderConfirmationPdfGenerator.ts` 里印章一共有 3 处放置逻辑，前两处已经是"印章先画、文字后画"的正确顺序：
+
+1. `stampWillBeAlone` 分支（约 461-491 行）：内容能放进当前页但加上印章放不下时，印章提前画在 Notes/Bank/PaymentTerms **之前**，文字随后正常绘制、天然盖在印章上层——顺序正确。
+2. 3 处正常情况（远早于印章挤压场景）不涉及重叠。
+
+但还有 2 处是"文字已经画完、印章再挤进来"，顺序刚好反过来（印章在文字之上）：
+
+3. 约 779-800 行：Notes/Bank/PaymentTerms **全部画完之后**才检查剩余空间，若不够，`adjustedY = currentY - stampHeight - 20`，把印章画到已经画完的文字区域——此时 `doc.addImage` 晚于文字的 `doc.text`，印章盖住文字。
+4. 约 803-836 行"正常情况"分支内部，`stampY + stampHeight > pageBottom` 且 `currentY > margin + 20` 时同样会 `stampY = Math.max(margin + 50, currentY - stampHeight - 20)`，同样的挤压覆盖问题。
+
+用户截图里 Notes 条款异常长（远超单页），触发的正是第 3 处。jsPDF 是顺序绘制模型（谁后画谁盖住先画的重叠区域），只要文字已经先画完，就没有办法把印章"插队"到文字下面——除非在印章画完之后，把落在印章范围内的文字重新画一遍盖回印章上层。
+
+### 修复方案
+
+不删除"重叠省页"的效果（用户明确要保留），而是保证重叠时的层级正确：
+
+- 新增 `contentTextRuns` 数组 + `emitText()` 包装函数：Notes、Bank Information、Payment Terms 三段的每一次 `doc.text()` 调用改用 `emitText()`，除了正常绘制文字，同时记录 `{text, x, y, page, fontName, fontStyle, fontSize, color}`（`doc.getFont()`/`getFontSize()`/`getTextColor()` 都是 jsPDF 2.5.2 原生支持的方法，已用沙箱脚本验证过 `getTextColor()` 返回的十六进制颜色可以直接传回 `setTextColor()` 还原）。
+- 新增 `redrawTextOverStamp(stampPage, stampY, stampHeight)`：在印章 `addImage` 之后调用，找出 `contentTextRuns` 里跟印章同一页、且 y 坐标落在印章 `[stampY-1, stampY+stampHeight+1]` 范围内的记录，按记录下来的字体/字号/颜色原样重新 `doc.text()` 一遍，画完后把 `doc.setFont`/`setFontSize`/`setTextColor` 恢复成重画前的状态（避免影响后面的页码等内容）。
+- 在两处挤压分支（779-800 行的 `adjustedY`、803-836 行嵌套的 `stampY = Math.max(...)`）的 `doc.addImage()` 之后，各插入一次 `redrawTextOverStamp()` 调用。
+- 不改动第 1 处已经正确的 `stampWillBeAlone` 提前放置逻辑。
+
+### Files in scope
+
+- `src/utils/orderConfirmationPdfGenerator.ts`——新增 `contentTextRuns`/`emitText`/`redrawTextOverStamp`（约 checkAndAddPage 定义之后）；Notes（约 511/532/536 行）、Bank Information（约 556/569/571 行）、Payment Terms（约 599/612/632/636/640/656/660/664/685/690/702/720/724/728/748/752/756 行，约 20 处）的 `doc.text()` 改为 `emitText()`；两处挤压分支各插入 `redrawTextOverStamp()` 调用。
+
+### Acceptance criteria
+
+- Notes 很长导致印章挤进已画文字区域时，文字在印章之上清晰可读（不再被印章盖住）。
+- `stampWillBeAlone` 提前放置场景（印章在文字之前画）视觉效果不变。
+- 正常情况（印章画在空白区、不重叠）视觉效果不变。
+- 不影响页码、印章本身透明度（0.9）等其它现有行为。
+
+### Non-goals / 红线
+
+- 不删除"印章与文字重叠以省一页"的效果本身——这是用户明确要保留的。
+- 不改动 `domesticQuotationPdfGenerator.ts` 里类似的印章叠加供需方表格文字的逻辑（那是故意用透明度模拟盖章效果、不是本次截图反馈的场景），除非用户后续单独要求。
+- 不改动印章图片本身（`shanghaiStamp`/`hongkongStamp`）、印章透明度数值。
+- 不改动 Notes/Bank/PaymentTerms 的分页、换行、字号压缩等既有排版逻辑，只是把绘制文字的方式从直接 `doc.text()` 改成"画 + 记录位置"的 `emitText()`，视觉结果不变。
+
+### 执行记录
+
+- `src/utils/orderConfirmationPdfGenerator.ts`：`ExtendedJsPDF` 类型补了 `getFont`/`getFontSize`/`getTextColor`（项目用的 `@types/jspdf` 没收录这几个方法，但 jsPDF 2.5.2 运行时支持，用沙箱脚本验证过 `getTextColor()` 返回的十六进制颜色能直接传回 `setTextColor()` 还原，做法跟 TASK-108 补 `getLineHeightFactor`/`setLineHeightFactor` 是同一惯例）。
+- 新增 `contentTextRuns`/`emitText`/`redrawTextOverStamp` 三个局部辅助（`checkAndAddPage` 定义之后）。
+- Notes（3 处）、Bank Information（3 处）、Payment Terms（14 处，含单条款/多条款两种布局分支）共 20 处 `doc.text()` 改为 `emitText()`。
+- 两处印章挤压分支（`adjustedY` 分支、"正常情况"分支内 `stampY + stampHeight > pageBottom` 且当前页有内容时的嵌套挤压子分支）的 `doc.addImage()` 之后各插入一次 `redrawTextOverStamp()` 调用；后者额外加了 `stampOverlapsContent` 标志，只在真正发生挤压重叠时才触发重画，正常不重叠的路径（新开一页、印章画在空白区）不受影响。
+- 未改动 `stampWillBeAlone` 提前放置分支（本来就是印章先画、文字后画，顺序已经正确）。
+
+### 验证
+
+- `npx tsc --noEmit`（全项目）通过。
+- `npx eslint src/utils/orderConfirmationPdfGenerator.ts` 无输出。
+- 沙箱内写了一份独立复现脚本：不引入 Next.js 路径别名/浏览器环境依赖，直接用 jsPDF + 项目里新增的 `emitText`/`redrawTextOverStamp` 同一套逻辑（逐字复制），画 12 行模拟 Notes 文字，再在文字中段画一个半透明蓝底红圈的色块模拟印章（验证的是"绘制顺序 + 透明度合成"这个通用机制，不依赖印章图片具体内容）。对比两份 PDF 用 `pdftoppm` 渲染成 PNG：未修复版本里被色块覆盖的第 7-11 行文字明显被冲淡、难以辨认；修复版本里同样被色块覆盖的文字保持跟其它行一样清晰的黑色实色，印章视觉上确实"沉"到了文字下层。
+- **待用户验证**：在真实环境生成一份 Notes 很长、会触发印章挤压重叠的销售确认书 PDF，确认印章挤压场景下所有文字（含 Bank Info/Payment Terms 如果恰好是挤压时的最后内容）清晰可读，且印章本身视觉效果（透明度、位置）与之前一致。
+
+## TASK-131：产品购销合同（内销合同）印章"偏下"——从底边锚点改为顶边锚点
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+**背景来源**：用户发来一份"产品购销合同"截图——供需方信息表里印章位置明显偏下，圆章大半跑到表格边框外面的空白区域，没有压在"单位名称(章)"公司名那一行上。用户同时重申：印章要在文字下方（TASK-130 的同一要求）。
+
+### 背景
+
+`domesticQuotationPdfGenerator.ts` 的 `drawPartyTable()`（约 223-365 行）原来的印章定位公式：
+
+```ts
+const stampY = Math.max(y + 10, finalY - stampHeight - 4);
+```
+
+这是"按表格底边往上量"的锚点，写这行代码时对应的是 TASK-108 之前"单位名称(章)"单独占一行的旧版表格。TASK-108 把供需双方信息表从 7 行拆分表合并成 1 行 2 列（6 项信息用 `\n` 堆进同一个单元格，"单位名称(章)"只是这个单元格的第一行），但没有同步更新印章定位公式，导致两个问题（用沙箱按截图里的真实数据——供方姓名/地址/电话有值、需方全空——复现验证过）：
+
+1. **锚点跟着单元格总高度走**：字段越多、单元格越高，`finalY`（表格底边）越往下，印章就被推得越靠下，容易盖到"纳税人识别号"这类末尾字段而不是公司名。
+2. **`y + 10` 下限在单元格矮的时候反而帮倒忙**：这次截图对应的场景里，供方内容不算多（公司名、地址、电话各占约 1 行，需方全空），整张表格只有约 25mm 高，但上海印章尺寸是 34×34mm——本身就比这行矮的表格高。旧公式在这种情况下会算出 `stampY` 比表格底边还低，实测印章底边越出表格边框约 19mm，看起来章大半悬空在表格外面，就是用户截图里的"偏下"。
+
+### 修复方案
+
+`src/utils/domesticQuotationPdfGenerator.ts`（约 353-361 行）：
+
+```ts
+const stampY = Math.max(y - 2, Math.min(y + cellPadding - 2, pageBottom - stampHeight));
+```
+
+改成"按表格顶边往下量"：优先把印章顶部贴在单元格顶部内侧（`y + cellPadding - 2`，正好压住"单位名称(章)"这一行），跟单元格总高度解耦——不管后面堆了几项信息，印章始终锚定在公司名那一行附近。印章物理尺寸比一行文字高本来就是常态，允许印章下半部分探出表格底边（贴近真实盖章效果，其它生成器也是类似做法），但用 `pageBottom`（`drawPartyTable` 内已有的、给页码留出安全距离的下边界，见 267-268 行 `bottomReserve=14`）兜底，保证印章不会探到页码区域。`y - 2` 防止印章顶部超出表格上边框太多。
+
+### Files in scope
+
+- `src/utils/domesticQuotationPdfGenerator.ts`（`drawPartyTable()` 内印章定位公式，约 353-361 行）
+
+### Acceptance criteria
+
+- 印章始终压在"单位名称(章)"公司名这一行附近，不再随字段数量/单元格高度往下漂移。
+- 印章允许探出表格底边（真实盖章效果），但不会探到页码区域。
+- 印章透明度（0.82）、印章图片本身、`stampX` 水平位置不变。
+- TASK-130 的要求同时满足：印章仍然是先画在文字之前（`drawPartyTable` 里印章在 `autoTable` 之后画，本来就是印章盖在文字上层，这是本文件故意用透明度模拟的盖章效果，跟 TASK-130 处理的销售确认书场景一致，本次不涉及顺序改动，只改位置）。
+
+### Non-goals / 红线
+
+- 不改动 `stampWidth`/`stampHeight`/`stampX`/印章透明度（0.82）。
+- 不改动供需双方信息表本身的行高压缩算法（TASK-108 已经调好）。
+- 不改动 `orderConfirmationPdfGenerator.ts`（TASK-130 已处理，跟这次是不同文件）。
+
+### 验证
+
+- `npx tsc --noEmit`（全项目）通过。
+- `npx eslint src/utils/domesticQuotationPdfGenerator.ts` 无输出。
+- 沙箱内用截图同款数据（供方姓名/地址/电话有值，需方全空）复现 `drawPartyTable` 的行高计算 + 印章定位逻辑，`pdftoppm` 渲染对比：旧公式印章圆心落在"电话/纳税人识别号"附近、底边越出表格边框约 19mm；新公式印章顶部压在"单位名称(章)"公司名这一行、底边仍在页码安全区之内。
+- **待用户验证**：在真实环境生成一份供需双方信息填写情况不同（供方详细/需方空白、双方都详细、双方都简略等）的产品购销合同 PDF，确认印章始终压在公司名附近、不越出页码区域。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

@@ -19,6 +19,11 @@ type ExtendedJsPDF = jsPDF & {
   setGState: (gState: unknown) => void;
   getNumberOfPages: () => number;
   getImageProperties: (image: string) => ImageProperties;
+  // @types/jspdf（项目里用的这份 DefinitelyTyped 类型定义）没收录这三个方法，
+  // 但 jsPDF 2.5.2 运行时实际支持（用于 emitText/redrawTextOverStamp 记录并还原文字样式）
+  getFont: () => { fontName: string; fontStyle: string };
+  getFontSize: () => number;
+  getTextColor: () => string;
 }
 
 // 货币符号映射
@@ -118,6 +123,64 @@ export const generateOrderConfirmationPDF = async (
     }
     return y;
   };
+
+  // 印章可能需要"挤"进 Notes/Bank/Payment Terms 已经画完的区域（为了不多占一整页）。
+  // jsPDF 是顺序绘制模型，后画的会盖住先画的重叠区域——为了保证印章叠加时始终在文字下方，
+  // 这里记录 Notes/Bank/Payment Terms 每一次 doc.text() 调用的位置和样式，
+  // 等印章真的需要挤进已画内容时，把落在印章范围内的文字原样在印章之上重画一遍。
+  type TrackedTextRun = {
+    text: string | string[];
+    x: number;
+    y: number;
+    page: number;
+    fontName: string;
+    fontStyle: string;
+    fontSize: number;
+    color: string;
+  };
+  const contentTextRuns: TrackedTextRun[] = [];
+
+  const emitText = (text: string | string[], x: number, y: number) => {
+    doc.text(text as string, x, y);
+    const font = doc.getFont();
+    contentTextRuns.push({
+      text,
+      x,
+      y,
+      page: doc.getNumberOfPages(),
+      fontName: font.fontName,
+      fontStyle: font.fontStyle,
+      fontSize: doc.getFontSize(),
+      color: doc.getTextColor(),
+    });
+  };
+
+  // 在印章（已经画到 stampY ~ stampY+stampHeight 区间）之上，重新画一遍落在这个区间内的文字，
+  // 确保文字始终在印章上层、清晰可读，而不是被印章盖住。
+  const redrawTextOverStamp = (stampPage: number, stampY: number, stampHeight: number) => {
+    const overlapTop = stampY - 1;
+    const overlapBottom = stampY + stampHeight + 1;
+    const matches = contentTextRuns.filter(
+      (run) => run.page === stampPage && run.y >= overlapTop && run.y <= overlapBottom
+    );
+    if (matches.length === 0) return;
+
+    const restoreFont = doc.getFont();
+    const restoreFontSize = doc.getFontSize();
+    const restoreColor = doc.getTextColor();
+
+    for (const run of matches) {
+      doc.setFont(run.fontName, run.fontStyle);
+      doc.setFontSize(run.fontSize);
+      doc.setTextColor(run.color);
+      doc.text(run.text as string, run.x, run.y);
+    }
+
+    doc.setFont(restoreFont.fontName, restoreFont.fontStyle);
+    doc.setFontSize(restoreFontSize);
+    doc.setTextColor(restoreColor);
+  };
+
     let startY = margin;
 
     // 读取页面列显示偏好，与页面表格保持一致
@@ -508,7 +571,7 @@ export const generateOrderConfirmationPDF = async (
       }
       doc.setFontSize(9);
       doc.setFont('NotoSansSC', 'bold');
-      doc.text('Notes:', leftMargin, currentY);
+      emitText('Notes:', leftMargin, currentY);
       currentY += 5;
 
       doc.setFont('NotoSansSC', 'normal');
@@ -529,11 +592,11 @@ export const generateOrderConfirmationPDF = async (
         currentY = checkAndAddPage(currentY, estimatedHeight);
 
         // 添加编号
-        doc.text(numberText, leftMargin, currentY);
+        emitText(numberText, leftMargin, currentY);
 
         // 渲染内容行
         wrappedText.forEach((textLine: string, lineIndex: number) => {
-          doc.text(textLine, leftMargin + numberWidth, currentY + (lineIndex * 5));
+          emitText(textLine, leftMargin + numberWidth, currentY + (lineIndex * 5));
         });
 
         // 更新Y坐标到最后一行之后
@@ -553,7 +616,7 @@ export const generateOrderConfirmationPDF = async (
       currentY += 5; // 减少银行信息标题前的间距
       doc.setFontSize(9);
       doc.setFont('NotoSansSC', 'bold');
-      doc.text('Bank Information:', leftMargin, currentY);
+      emitText('Bank Information:', leftMargin, currentY);
       currentY += 5;
 
       const bankInfo = [
@@ -566,9 +629,9 @@ export const generateOrderConfirmationPDF = async (
 
       bankInfo.forEach(info => {
         doc.setFont('NotoSansSC', 'bold');
-        doc.text(info.label, leftMargin, currentY);
+        emitText(info.label, leftMargin, currentY);
         doc.setFont('NotoSansSC', 'normal');
-        doc.text(info.value, leftMargin + doc.getTextWidth(info.label) + 2, currentY);
+        emitText(info.value, leftMargin + doc.getTextWidth(info.label) + 2, currentY);
         currentY += 5;
       });
       currentY += 3; // 增加银行信息与付款条款之间的间距
@@ -596,7 +659,7 @@ export const generateOrderConfirmationPDF = async (
 
       // 根据条款数量决定使用单数还是复数形式
       const titleText = totalTerms === 1 ? 'Payment Term: ' : 'Payment Terms:';
-      doc.text(titleText, margin, currentY);
+      emitText(titleText, margin, currentY);
 
       doc.setFontSize(8);
       doc.setFont('NotoSansSC', 'normal');
@@ -609,7 +672,7 @@ export const generateOrderConfirmationPDF = async (
           const additionalTerm = data.additionalPaymentTerms?.trim() || '';
           const titleWidth = doc.getTextWidth('Payment Term:');
           const spacing = 5; // 设置合适的间距
-          doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
+          emitText(additionalTerm, margin + titleWidth + spacing, currentY);
           currentY += 5;
         } else if (data.showMainPaymentTerm) {
           // 构建付款方式文本
@@ -629,15 +692,15 @@ export const generateOrderConfirmationPDF = async (
           const titleWidth = doc.getTextWidth('Payment Term:');
           const spacing = 5; // 设置合适的间距
 
-          doc.text(term1Parts[0], margin + titleWidth + spacing, currentY);
+          emitText(term1Parts[0], margin + titleWidth + spacing, currentY);
 
           // 日期显示为红色
           doc.setTextColor(255, 0, 0);
-          doc.text(data.paymentDate, margin + titleWidth + spacing + firstPartWidth, currentY);
+          emitText(data.paymentDate, margin + titleWidth + spacing + firstPartWidth, currentY);
 
           // 恢复黑色并绘制剩余部分
           doc.setTextColor(0, 0, 0);
-          doc.text(term1Parts[1], margin + titleWidth + spacing + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
+          emitText(term1Parts[1], margin + titleWidth + spacing + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
 
           currentY += 5;
         } else if (data.showInvoiceReminder) {
@@ -653,15 +716,15 @@ export const generateOrderConfirmationPDF = async (
           const contractNoWidth = doc.getTextWidth(contractNo);
 
           // 绘制前缀（黑色）
-          doc.text(reminderPrefix, margin + titleWidth + spacing, currentY);
+          emitText(reminderPrefix, margin + titleWidth + spacing, currentY);
 
           // 绘制合同号（红色）
           doc.setTextColor(255, 0, 0);
-          doc.text(contractNo, margin + titleWidth + spacing + prefixWidth, currentY);
+          emitText(contractNo, margin + titleWidth + spacing + prefixWidth, currentY);
 
           // 绘制后缀（黑色）
           doc.setTextColor(0, 0, 0);
-          doc.text(reminderSuffix, margin + titleWidth + spacing + prefixWidth + contractNoWidth, currentY);
+          emitText(reminderSuffix, margin + titleWidth + spacing + prefixWidth + contractNoWidth, currentY);
 
           currentY += 5;
         }
@@ -682,12 +745,12 @@ export const generateOrderConfirmationPDF = async (
             const numberWidth = doc.getTextWidth(numberText);
 
             // 添加序号
-            doc.text(numberText, margin, currentY);
+            emitText(numberText, margin, currentY);
 
             // 处理长文本自动换行，使用定义好的 maxWidth
             const wrappedText = doc.splitTextToSize(term, maxWidth - numberWidth);
             wrappedText.forEach((line: string, lineIndex: number) => {
-              doc.text(line, margin + numberWidth, currentY + (lineIndex * 5));
+              emitText(line, margin + numberWidth, currentY + (lineIndex * 5));
             });
 
             // 更新Y坐标，并增加额外的行间距
@@ -699,7 +762,7 @@ export const generateOrderConfirmationPDF = async (
         // 显示标准付款条款
         if (data.showMainPaymentTerm) {
           // 绘制条款编号
-          doc.text(`${termIndex}.`, margin, currentY);
+          emitText(`${termIndex}.`, margin, currentY);
 
           // 绘制第一部分文本
           // 构建付款方式文本
@@ -717,15 +780,15 @@ export const generateOrderConfirmationPDF = async (
 
           // 处理长文本自动换行
           const wrappedText = doc.splitTextToSize(term1Parts[0], maxWidth - firstPartWidth);
-          doc.text(wrappedText[0], margin + numberWidth, currentY);
+          emitText(wrappedText[0], margin + numberWidth, currentY);
 
           // 日期显示为红色
           doc.setTextColor(255, 0, 0);
-          doc.text(data.paymentDate, margin + numberWidth + firstPartWidth, currentY);
+          emitText(data.paymentDate, margin + numberWidth + firstPartWidth, currentY);
 
           // 恢复黑色并绘制剩余部分
           doc.setTextColor(0, 0, 0);
-          doc.text(term1Parts[1], margin + numberWidth + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
+          emitText(term1Parts[1], margin + numberWidth + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
 
           currentY += termSpacing;
           termIndex++;
@@ -744,16 +807,17 @@ export const generateOrderConfirmationPDF = async (
           // 处理长文本自动换行，使用定义好的 maxWidth
           const wrappedPrefix = doc.splitTextToSize(reminderPrefix, maxWidth);
 
-          // 绘制前缀（黑色）
-          doc.text(wrappedPrefix, margin, currentY);
+          // 绘制前缀（黑色）——jsPDF 对字符串数组会用内部行距自动换行绘制多行，
+          // 这里只记录首行坐标用于印章重叠检测（这个分支只在"只剩合同号提醒一条条款"时触发，属于少见组合）
+          emitText(wrappedPrefix, margin, currentY);
 
           // 绘制合同号（红色）
           doc.setTextColor(255, 0, 0);
-          doc.text(contractNo, margin + prefixWidth, currentY);
+          emitText(contractNo, margin + prefixWidth, currentY);
 
           // 绘制后缀（黑色）
           doc.setTextColor(0, 0, 0);
-          doc.text(reminderSuffix, margin + prefixWidth + contractNoWidth, currentY);
+          emitText(reminderSuffix, margin + prefixWidth + contractNoWidth, currentY);
 
           currentY += 5;
         }
@@ -798,16 +862,22 @@ export const generateOrderConfirmationPDF = async (
 
           // 恢复透明度
           doc.restoreGraphicsState();
+
+          // 印章挤进了已经画完的文字区域（Notes/Bank/PaymentTerms），
+          // 把落在印章范围内的文字原样重画一遍，保证文字始终在印章上层、清晰可读
+          redrawTextOverStamp(doc.getNumberOfPages(), adjustedY, stampHeight);
         } else {
           // 正常情况下的印章位置处理
           let stampY = currentY + 5;
+          let stampOverlapsContent = false;
 
           // 如果印章会超出页面底部，添加新页面
           if (stampY + stampHeight > pageBottom) {
             // 在添加新页面之前，检查当前页是否已经有内容
             if (currentY > margin + 20) {
-              // 如果有内容，将印章放在当前页的合适位置
+              // 如果有内容，将印章放在当前页的合适位置（会与已画文字重叠）
               stampY = Math.max(margin + 50, currentY - stampHeight - 20);
+              stampOverlapsContent = true;
             } else {
               doc.addPage();
               stampY = margin;
@@ -830,6 +900,11 @@ export const generateOrderConfirmationPDF = async (
 
           // 恢复透明度
           doc.restoreGraphicsState();
+
+          if (stampOverlapsContent) {
+            // 同上：印章挤压覆盖了已画文字区域时，把文字重画在印章上层
+            redrawTextOverStamp(doc.getNumberOfPages(), stampY, stampHeight);
+          }
 
           // 更新当前Y坐标
           currentY = stampY + stampHeight + 5;

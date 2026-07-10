@@ -351,7 +351,17 @@ async function drawPartyTable(
       const stampWidth = data.templateConfig?.stampType === 'hongkong' ? 58 : 34;
       const stampHeight = data.templateConfig?.stampType === 'hongkong' ? 27 : 34;
       const stampX = margin + 34;
-      const stampY = Math.max(y + 10, finalY - stampHeight - 4);
+      // 印章要压在供方"单位名称(章)"这一行（合并单元格的第一行）附近，不能跟着单元格总高度走。
+      // TASK-108 把原来 7 行拆分表合并成 1 行 2 列后，供方/需方 6 项信息堆进了同一个单元格，
+      // "单位名称(章)"只是这个单元格的第一行——旧公式 `Math.max(y+10, finalY-stampHeight-4)`
+      // 是"按表格底边往上量"，字段越多/单元格越高，印章就越靠下，容易盖到"纳税人识别号"
+      // 而不是公司名；实测更常见的情况是单元格内容本来就不多（比如需方大半空着），
+      // 单元格总高度比印章本身还矮，这时 `y+10` 这个下限反而会把印章往下推，导致印章
+      // 底边跑到表格边框外一大截，看起来"偏下"（本次修复前用真实数据复现过 19mm 的超出）。
+      // 改成"从表格顶边往下量"，跟单元格实际高度解耦，印章始终贴着公司名这一行；
+      // 印章比单元格高本身是常见情况（章的物理尺寸本来就比一行签名字大），允许印章下半部分
+      // 略微探出表格底边（贴合真实盖章效果），但用 pageBottom 兜底，保证不会探到页码区域。
+      const stampY = Math.max(y - 2, Math.min(y + cellPadding - 2, pageBottom - stampHeight));
       doc.saveGraphicsState();
       doc.setGState(new GState({ opacity: 0.82 }));
       doc.addImage(stampImage, 'PNG', stampX, stampY, stampWidth, stampHeight);
