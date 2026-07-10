@@ -1,6 +1,6 @@
 # Current State
 
-最后更新：2026-07-09
+最后更新：2026-07-10
 当前分支：`main`
 当前提交：以 `git log -1 --oneline` 为准
 应用版本：`1.2.0`（`package.json`）
@@ -16,6 +16,7 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 
 - 前端：Next.js 14、React 18、TypeScript 5、Tailwind CSS 3；图表用 `recharts`（首页询价/订单趋势图，2026-07-09 新增，此前项目未装任何图表库）。
 - 主站：Vercel，香港 `hkg1` 区域。
+- Web App：根布局通过 `/static/manifest.json` 声明 PWA manifest，并提供多尺寸 favicon 与 Apple Touch Icon；manifest 图标路径、格式和尺寸与磁盘资源一致。
 - 用户和权限服务：Cloudflare Worker + D1，自定义域 `https://udb.luocompany.net`。
 - AI 邮件：DeepSeek Chat API，通过 `/api/generate` 调用。
 - PDF/Excel：前端生成；字体、头图、印章、logo 图标资源由 `scripts/embed-resources.js` 在构建时嵌入到 `src/lib/embedded-resources.ts`（该文件仍不手工编辑，改 `public/` 源文件后重跑脚本）。

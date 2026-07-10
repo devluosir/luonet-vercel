@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+#### 手机主屏幕图标修复（TASK-136）
+- **PWA 元数据**：根布局接入 Web App Manifest 和 Apple Touch Icon，避免添加到主屏幕时退回页面缩略图或占位图。
+- **图标一致性**：修正 Web 图标的真实格式和尺寸声明，并补齐 manifest 引用的 96×96 / 192×192 图标，消除图标资源 404。
+
 #### Sidebar 视觉密度优化
 - **桌面宽度**：展开态由 260px 收紧为 240px，主内容区偏移同步调整；收缩态保持 56px，移动端侧滑菜单保持 260px。
 - **菜单密度**：导航项由 44px / 15px 调整为 40px / 14px，图文间距由 12px 调整为 10px；20px 图标、12px 分组标题和既有配色保持不变。

@@ -85,12 +85,12 @@ export const getAllLogoPaths = (): string[] => {
 export const getManifestIcons = () => [
   {
     src: LOGO_CONFIG.web.favicon,
-    sizes: '16x16',
-    type: 'image/x-icon'
+    sizes: '192x192',
+    type: 'image/png'
   },
   {
     src: LOGO_CONFIG.web.icon,
-    sizes: '32x32',
+    sizes: '64x64',
     type: 'image/png'
   },
   {
@@ -101,6 +101,11 @@ export const getManifestIcons = () => [
   {
     src: LOGO_CONFIG.ios.icon72,
     sizes: '72x72',
+    type: 'image/png'
+  },
+  {
+    src: '/assets/logo/Assets.xcassets/AppIcon.appiconset/96.png',
+    sizes: '96x96',
     type: 'image/png'
   },
 
@@ -118,6 +123,12 @@ export const getManifestIcons = () => [
     src: LOGO_CONFIG.ios.icon152,
     sizes: '152x152',
     type: 'image/png'
+  },
+  {
+    src: '/assets/logo/Assets.xcassets/AppIcon.appiconset/192.png',
+    sizes: '192x192',
+    type: 'image/png',
+    purpose: 'any maskable'
   },
 
   {
@@ -142,8 +153,8 @@ export const getManifestIcons = () => [
 // 获取layout.tsx中使用的图标配置
 export const getLayoutIcons = () => ({
   icon: [
-    { url: LOGO_CONFIG.web.favicon },
-    { url: LOGO_CONFIG.web.icon, sizes: '32x32', type: 'image/png' },
+    { url: LOGO_CONFIG.web.favicon, sizes: '192x192', type: 'image/png' },
+    { url: LOGO_CONFIG.web.icon, sizes: '64x64', type: 'image/png' },
     { url: LOGO_CONFIG.ios.icon48, sizes: '48x48', type: 'image/png' },
     { url: LOGO_CONFIG.ios.icon72, sizes: '72x72', type: 'image/png' },
 
@@ -155,10 +166,10 @@ export const getLayoutIcons = () => ({
     { url: LOGO_CONFIG.ios.icon512, sizes: '512x512', type: 'image/png' }
   ],
   apple: [
-    { url: LOGO_CONFIG.web.appleIcon },
+    { url: LOGO_CONFIG.web.appleIcon, sizes: '180x180', type: 'image/png' },
     { url: LOGO_CONFIG.ios.icon120, sizes: '120x120', type: 'image/png' },
     { url: LOGO_CONFIG.ios.icon152, sizes: '152x152', type: 'image/png' },
     { url: LOGO_CONFIG.ios.icon167, sizes: '167x167', type: 'image/png' },
     { url: LOGO_CONFIG.ios.icon180, sizes: '180x180', type: 'image/png' }
   ]
-}); 
+});

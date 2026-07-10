@@ -1,6 +1,6 @@
 # CODEX_TASKS.md — 任务索引（精简）
 
-最后更新：2026-07-09
+最后更新：2026-07-10
 
 执行前阅读 `AGENTS.md`。当前事实以 `docs/core/CURRENT_STATE.md`、`docs/core/CHANGELOG.md` 为准。
 
@@ -1671,6 +1671,63 @@ TASK-132 把 `stamp-hongkong.png` 用 `convert -colors 16` 量化调色板颜色
 - 用真实 `embedded-resources.ts` 数据在 jsPDF 里实际跑 `addImage`（而不是只测图片文件本身的 identify/RMSE）——这次改成了以"jsPDF 能不能真正加载"作为验收标准，而不只是"文件体积和视觉 RMSE 达标"，弥补 TASK-132 验证方式的疏漏。
 - 解码新 `embedded-resources.ts` 里的字段，逐字节比对确认跟磁盘文件一致。
 - **待用户验证**：在真实环境生成一份选中香港印章的 PDF（发票/采购单/装箱单唛头/销售确认书等任意支持香港印章的单据类型），确认印章能正常显示。
+
+## TASK-136：手机"添加到主屏幕"图标不正确——`layout.tsx` 从未接入图标/manifest 元数据
+
+**状态**：已完成（待真机验证）
+**日期**：2026-07-10
+**背景来源**：用户反馈"在手机上将网页添加到桌面时，图标不能正确"。
+
+### 背景（根因）
+
+`src/lib/logo-config.ts` 里其实已经写好了 `getLayoutIcons()`（给 Next.js `metadata.icons` 用）和 `getManifestIcons()`（给 `manifest.json` 用）两个函数，但全仓库搜索确认**这两个函数从未被任何地方 import/调用**——纯死代码。`src/app/layout.tsx` 的 `export const metadata` 只有 `title` / `description` 两个字段，完全没有 `icons` 字段，也没有 `manifest` 字段。整个代码库里也没有任何手写的 `<link rel="manifest">` 或 `<link rel="apple-touch-icon">` 标签。
+
+`public/static/manifest.json` 文件本身是存在且内容完整的（12 个不同尺寸的图标条目），但因为没有任何地方引用它，浏览器渲染出的 `<head>` 里根本不包含指向它的 `<link rel="manifest">` 标签——对浏览器来说这个文件形同不存在。
+
+这解释了症状：
+- **iOS Safari**：「添加到主屏幕」在没有 `<link rel="apple-touch-icon">` 时会退化成截取当前页面内容生成一张缩略图当图标，或者退回一个通用占位图标，不会是 Luo & Company 的 logo。
+- **Android Chrome**：「添加到主屏幕」/ PWA 安装依赖 `<link rel="manifest">` 才能读到 manifest 里 192x192 / 512x512 那两个 `purpose: any maskable` 图标；没有这个 link 标签，Chrome 只能退回去猜测（通常是页面favicon 或某个显眼的 img），同样得到不正确的图标。
+
+顺带用脚本核对了一遍 `manifest.json` 引用的每个文件，发现同一批文件本身也有数据问题（不是这次的主因，但会让"接上 manifest 之后"的图标依然显示不对或部分尺寸缺失，一并列入本任务）：
+
+- `public/assets/logo/favicon.ico` 实际是一份被改了扩展名的 **PNG 数据**（`file` 识别为 `PNG image data, 192 x 192`），不是真正的 ICO 容器格式；`manifest.json` 里却把它标注成 `"sizes": "16x16", "type": "image/x-icon"`——声明尺寸和真实尺寸（192x192）不符，且 MIME 类型也名不副实。
+- `public/assets/logo/icon.png` 实际尺寸 64×64，`manifest.json` 里标注成 `"sizes": "32x32"`——同样不符。
+- `manifest.json` 里还有两条指向不存在文件的条目，加载会 404：
+  - `/assets/logo/Assets.xcassets/AppIcon.appiconset/96.png`
+  - `/assets/logo/Assets.xcassets/AppIcon.appiconset/192.png`
+- 反倒是 `public/assets/logo/apple-icon.png`（`LOGO_CONFIG.web.appleIcon`，`getLayoutIcons()` 里 apple 数组的第一项）文件本身是存在的，只是从未被接到 `metadata.icons.apple`。
+
+`src/app/favicon.ico`（Next.js 文件约定，自动识别为标签页 favicon）本身能正常工作，不受这次改动影响，不用动。
+
+### Files in scope
+
+- `src/app/layout.tsx`：`metadata` 导出补上 `icons`（复用 `getLayoutIcons()`）和 `manifest: '/static/manifest.json'` 两个字段。
+- `src/lib/logo-config.ts`：`getManifestIcons()` / `getLayoutIcons()` 里的 `sizes` 字段要跟对应文件的真实像素尺寸一致；移除或修正指向不存在文件（96.png / 192.png）的条目。
+- `public/assets/logo/favicon.ico`：转成真正的 ICO 容器格式（可用现有 `icon.png` 或 appiconset 里的小尺寸图重新生成），或者如果保留现状，manifest 里对它的 `sizes`/`type` 标注要如实反映它现在其实是 192x192 PNG。两种做法二选一，但不能再让"声明尺寸"和"实际尺寸"对不上。
+- `public/assets/logo/icon.png`：同上，调整图片本身尺寸使其匹配声明的 32x32，或者反过来把声明改成实际的 64x64，二选一，保持一致即可。
+- `public/static/manifest.json`：如果是从 `getManifestIcons()` 生成/同步的，确认改完 `logo-config.ts` 后重新生成一份并落盘；如果是手写维护的独立文件，直接手改保持和 `getManifestIcons()` 一致。
+- 缺失的 96.png / 192.png：可以从 `Assets.xcassets/AppIcon.appiconset/1024.png`（或其他高分辨率源图）用 `convert`/`sips` 之类工具 resize 补齐两个尺寸，或者干脆从 manifest 条目里删掉这两条——两种做法都可以，选一个能让「manifest 里列出的每个文件都真实存在」成立的方案即可。
+
+### Acceptance criteria
+
+- 页面渲染出的 `<head>` 里包含 `<link rel="manifest" href="/static/manifest.json">`，以及至少一组 `<link rel="apple-touch-icon" ...>`（可以是多个不同尺寸）。可以用 `npm run build && npm run start` 后 `curl localhost:3000 | grep -i "manifest\|apple-touch-icon"` 或者浏览器查看源代码确认。
+- `manifest.json` 里每一条 `icons[].src` 指向的文件都真实存在（无 404）。
+- `manifest.json` 里每一条 `icons[].sizes` 都跟对应文件的真实像素尺寸完全一致（不能再出现之前 `favicon.ico` 声明 16x16 实际 192x192、`icon.png` 声明 32x32 实际 64x64 这种不符）。
+- **待用户验证（无法在沙箱里做真机测试）**：iOS Safari 和 Android Chrome 各自实际执行一次「添加到主屏幕」，确认桌面上出现的图标是 Luo & Company 的 logo，不是页面截图缩略图或通用占位图标。
+
+### Non-goals / 红线
+
+- 不重新设计 logo 视觉本身，只修图标引用路径、声明尺寸、缺失文件这几类"元数据对不上"的问题。
+- 不改动 `src/app/favicon.ico`（Next.js 文件约定的标签页 favicon，工作正常，跟"添加到主屏幕"图标是两回事）。
+- 不改动 `Assets.xcassets` / `android/mipmap-*` 目录下已有的原生 App 图标资源内容本身——这些目录是给原生 iOS/Android App 打包用的，网页这次只是复用同一批文件做引用，除非某个尺寸确实缺失需要补齐，不要连带重新生成整套已存在的文件。
+
+### 验证
+
+- `npx tsc --noEmit` 通过。
+- `npx eslint`（改动的文件）无输出。
+- 用脚本核对 `manifest.json` 每条 `icons` 的 `src` 文件是否存在、`sizes` 是否与文件真实像素尺寸一致（沙箱里可以用 Python Pillow 批量核对，前面诊断阶段已经写过一次类似脚本，可以直接复用思路）。
+- `npm run build` 跑通（沙箱如遇历史已知的超时问题，按 TASK-103 的做法在 45s 内跑到编译阶段即可，建议用户本地或 CI 补跑一次完整 build 确认）。
+- **待用户验证**：真机 iOS Safari + Android Chrome 各做一次「添加到主屏幕」，确认图标正确。
 
 ## 已关闭 / 不做
 
