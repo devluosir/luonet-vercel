@@ -294,10 +294,10 @@ export function AppSidebar({
               {visibleItems.map((item) => {
                 const Icon   = item.icon;
                 const active = isItemActive(item, pathname, tab, docType);
-                const navItemClassName = `flex h-11 items-center rounded-[10px] text-[15px] font-medium transition-colors ${
+                const navItemClassName = `flex h-10 items-center rounded-[10px] text-sm font-medium transition-colors ${
                   isCollapsed
                     ? 'justify-center px-0 mx-1'
-                    : 'gap-3 px-3'
+                    : 'gap-2.5 px-3'
                 } ${
                   active
                     ? 'bg-sidebar-item-active-bg text-sidebar-item-active-text'
