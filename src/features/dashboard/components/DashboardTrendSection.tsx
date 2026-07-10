@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { InquiryOrderTrendChart } from './InquiryOrderTrendChart';
 import type { Granularity, TrendPoint } from '../utils/inquiryStats';
 import type { TrendSource } from '../hooks/useInquiryOrderStats';
@@ -14,18 +13,27 @@ interface DashboardTrendSectionProps {
   onGranularityChange: (granularity: Granularity) => void;
   inquiryData: TrendPoint[];
   purchaseData: TrendPoint[];
+  /** 当前激活的 tab（只在两个权限都有时才有 tab 可切换，由父级 DashboardPage 统一管理，
+   *  这样首页"本周/本月"统计区域才能跟趋势图 tab 保持同一个数据来源） */
+  activeSource: TrendSource;
+  onActiveSourceChange: (source: TrendSource) => void;
 }
 
 const TAB_LABELS: Record<TrendSource, string> = {
-  inquiry: '询价订单趋势',
-  purchase: '采购询价订单趋势',
+  inquiry: '总询价订单统计图',
+  purchase: '采购部询价订单统计图',
+};
+
+const QUOTED_LINE_LABELS: Record<TrendSource, string> = {
+  inquiry: '已报价(总)',
+  purchase: '已报价(采购部)',
 };
 
 /**
- * 首页趋势图区域（TASK-113）：
- * - 只有 inquiry 权限 → 只显示询价订单趋势图，无 tab
- * - 只有 purchaseRegistration 权限 → 只显示采购询价订单趋势图，无 tab
- * - 两个权限都有 → 显示 tab 切换，默认询价订单趋势图
+ * 首页趋势图区域（TASK-113，命名/图例细化见后续调整记录）：
+ * - 只有 inquiry 权限 → 只显示"总询价订单统计图"，无 tab
+ * - 只有 purchaseRegistration 权限 → 只显示"采购部询价订单统计图"，无 tab
+ * - 两个权限都有 → 显示 tab 切换，默认"总询价订单统计图"
  * - 两个都没有 → 整块不渲染，不留空白占位
  *
  * 粒度切换（天/周/月/季/年度）两个 tab 共用同一份状态（由父级 DashboardPage 管理），
@@ -38,9 +46,9 @@ export function DashboardTrendSection({
   onGranularityChange,
   inquiryData,
   purchaseData,
+  activeSource,
+  onActiveSourceChange,
 }: DashboardTrendSectionProps) {
-  const [activeSource, setActiveSource] = useState<TrendSource>('inquiry');
-
   if (!inquiryVisible && !purchaseVisible) return null;
 
   // 只有一个权限：直接展示对应图表，无 tab
@@ -52,7 +60,7 @@ export function DashboardTrendSection({
         onGranularityChange={onGranularityChange}
         data={inquiryData}
         title={TAB_LABELS.inquiry}
-        quotedLineLabel="已报价"
+        quotedLineLabel={QUOTED_LINE_LABELS.inquiry}
       />
     );
   }
@@ -65,7 +73,7 @@ export function DashboardTrendSection({
         onGranularityChange={onGranularityChange}
         data={purchaseData}
         title={TAB_LABELS.purchase}
-        quotedLineLabel="已报价（供应商）"
+        quotedLineLabel={QUOTED_LINE_LABELS.purchase}
       />
     );
   }
@@ -77,7 +85,7 @@ export function DashboardTrendSection({
         <button
           key={source}
           type="button"
-          onClick={() => setActiveSource(source)}
+          onClick={() => onActiveSourceChange(source)}
           className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
             activeSource === source
               ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-900 dark:text-blue-400'
@@ -97,7 +105,7 @@ export function DashboardTrendSection({
       onGranularityChange={onGranularityChange}
       data={activeSource === 'inquiry' ? inquiryData : purchaseData}
       titleSlot={tabSlot}
-      quotedLineLabel={activeSource === 'inquiry' ? '已报价' : '已报价（供应商）'}
+      quotedLineLabel={QUOTED_LINE_LABELS[activeSource]}
     />
   );
 }

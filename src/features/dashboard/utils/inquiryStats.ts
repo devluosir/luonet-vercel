@@ -54,6 +54,30 @@ function isSameMonth(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 }
 
+/** 该日期所在自然周的周一（本地时区，周一为一周起点，与下面 ISO 周号定义一致） */
+function startOfWeek(date: Date): Date {
+  const day = date.getDay(); // 0=周日..6=周六
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  return startOfDay(new Date(date.getFullYear(), date.getMonth(), date.getDate() + diffToMonday));
+}
+
+/** date 是否落在以 weekStart（必须是某周的周一）开始的那一周内 */
+function isInWeekStartingAt(date: Date, weekStart: Date): boolean {
+  const endExclusive = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 7);
+  return date >= weekStart && date < endExclusive;
+}
+
+/** ISO 8601 周号（周一为一周第一天，跨年边界按 ISO 规则处理，即"第 1 周"是含当年首个周四的那一周） */
+function getISOWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = (d.getUTCDay() + 6) % 7; // 周一=0
+  d.setUTCDate(d.getUTCDate() - dayNum + 3); // 移到本周的周四
+  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  const firstDayNum = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNum + 3);
+  return 1 + Math.round((d.getTime() - firstThursday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+}
+
 /** 解析 [m.D] / m.D 格式为 {month, day}，均为 1-based；解析失败返回 null */
 function parseShortDate(value?: string): { month: number; day: number } | null {
   if (!value) return null;
@@ -170,6 +194,44 @@ export function countOrdersInMonth(records: InquiryRecord[], monthAnchor: Date):
   }).length;
 }
 
+/** 已报价数量（本月），field 区分客户视角/供应商视角；用 getLatestQuotedDate 保证同一条记录只计 1 次 */
+export function countQuotedInMonth(
+  records: InquiryRecord[],
+  monthAnchor: Date,
+  field: QuotedStatusField = 'quotedStatuses'
+): number {
+  return records.filter((r) => {
+    const quotedDate = getLatestQuotedDate(r, field);
+    return quotedDate !== null && isSameMonth(quotedDate, monthAnchor);
+  }).length;
+}
+
+export function countInquiriesInWeek(records: InquiryRecord[], weekAnchor: Date): number {
+  const weekStart = startOfWeek(weekAnchor);
+  return records.filter((r) => isInWeekStartingAt(getInquiryCreatedDate(r), weekStart)).length;
+}
+
+/** 已报价数量（本周），field 区分客户视角/供应商视角；用 getLatestQuotedDate 保证同一条记录只计 1 次 */
+export function countQuotedInWeek(
+  records: InquiryRecord[],
+  weekAnchor: Date,
+  field: QuotedStatusField = 'quotedStatuses'
+): number {
+  const weekStart = startOfWeek(weekAnchor);
+  return records.filter((r) => {
+    const quotedDate = getLatestQuotedDate(r, field);
+    return quotedDate !== null && isInWeekStartingAt(quotedDate, weekStart);
+  }).length;
+}
+
+export function countOrdersInWeek(records: InquiryRecord[], weekAnchor: Date): number {
+  const weekStart = startOfWeek(weekAnchor);
+  return records.filter((r) => {
+    const confirmed = getOrderConfirmDate(r);
+    return confirmed !== null && isInWeekStartingAt(confirmed, weekStart);
+  }).length;
+}
+
 interface Bucket {
   label: string;
   matches: (date: Date) => boolean;
@@ -187,12 +249,13 @@ function buildBuckets(granularity: Granularity, bucketCount: number, now: Date):
   }
 
   if (granularity === 'week') {
+    // 自然周（周一～周日），对齐"本周"统计口径；横轴显示 ISO 周号（第 N 周），不再是"M/D"日期
+    const currentWeekStart = startOfWeek(now);
     for (let i = bucketCount - 1; i >= 0; i -= 1) {
-      const end = startOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i * 7));
-      const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - 6);
-      const endExclusive = new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1);
+      const start = new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth(), currentWeekStart.getDate() - i * 7);
+      const endExclusive = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7);
       buckets.push({
-        label: `${start.getMonth() + 1}/${start.getDate()}`,
+        label: `第${getISOWeekNumber(start)}周`,
         matches: (x) => x >= start && x < endExclusive,
       });
     }

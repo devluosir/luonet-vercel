@@ -25,16 +25,17 @@ interface InquiryOrderTrendChartProps {
   granularity: Granularity;
   onGranularityChange: (granularity: Granularity) => void;
   data: TrendPoint[];
-  /** 图表标题，默认"询价 / 订单趋势"；采购视角由调用方传入不同标题 */
+  /** 图表标题，默认"总询价订单统计图"；采购视角由调用方传入不同标题 */
   title?: string;
   /** 用标题区域左侧插槽替换默认标题——用于同时具备两个权限时插入 tab 切换按钮（TASK-113） */
   titleSlot?: React.ReactNode;
-  /** "已报价"这条线的图例名称，默认"已报价"；采购视角可传"已报价（供应商）"区分 */
+  /** "已报价"这条线的图例名称，默认"已报价(总)"；采购视角由调用方传入"已报价(采购部)" */
   quotedLineLabel?: string;
 }
 
 /**
- * 首页询价/订单趋势图：可切换 天/周/月/季/年度 粒度，三条线（询价数量、已报价数量、订单数量）。
+ * 首页询价/订单统计图：可切换 天/周/月/季/年度 粒度，三条线。图例顺序固定为
+ * 已报价 → 订单数量 → 询价数量（首页细化需求指定的顺序，不是默认的 recharts 声明顺序）。
  * 仅在用户拥有对应权限时渲染（由调用方通过 `visible` 控制）。TASK-113 起支持询价/采购两套数据源复用同一组件。
  */
 export function InquiryOrderTrendChart({
@@ -42,9 +43,9 @@ export function InquiryOrderTrendChart({
   granularity,
   onGranularityChange,
   data,
-  title = '询价 / 订单趋势',
+  title = '总询价订单统计图',
   titleSlot,
-  quotedLineLabel = '已报价',
+  quotedLineLabel = '已报价(总)',
 }: InquiryOrderTrendChartProps) {
   if (!visible) return null;
 
@@ -89,14 +90,7 @@ export function InquiryOrderTrendChart({
               labelClassName="text-gray-700"
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Line
-              type="monotone"
-              dataKey="inquiryCount"
-              name="询价数量"
-              stroke="#ec4899"
-              strokeWidth={2}
-              dot={false}
-            />
+            {/* 图例顺序：已报价 → 订单数量 → 询价数量（首页细化需求指定顺序，不是 recharts 默认声明顺序） */}
             <Line
               type="monotone"
               dataKey="quotedCount"
@@ -108,8 +102,16 @@ export function InquiryOrderTrendChart({
             <Line
               type="monotone"
               dataKey="orderCount"
-              name="订单数量"
+              name="订单数量(总)"
               stroke="#10b981"
+              strokeWidth={2}
+              dot={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="inquiryCount"
+              name="询价数量(总)"
+              stroke="#ec4899"
               strokeWidth={2}
               dot={false}
             />

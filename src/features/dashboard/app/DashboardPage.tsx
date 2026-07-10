@@ -11,13 +11,12 @@ import { usePermissionRefresh } from '@/hooks/usePermissionRefresh';
 // 导入新的模块化组件
 import { DashboardDocuments } from '@/features/dashboard/components/DashboardDocuments';
 import { DashboardSuccessMessage } from '@/features/dashboard/components/DashboardSuccessMessage';
-import { StatsCards } from '@/features/dashboard/components/StatsCards';
 import { InquiryOrderStats } from '@/features/dashboard/components/InquiryOrderStats';
 import { DashboardTrendSection } from '@/features/dashboard/components/DashboardTrendSection';
 import { useDashboardState } from '@/features/dashboard/hooks/useDashboardState';
 import { useDashboardPermissions } from '@/features/dashboard/hooks/useDashboardPermissions';
 import { useDashboardDocuments } from '@/features/dashboard/hooks/useDashboardDocuments';
-import { useInquiryOrderStats } from '@/features/dashboard/hooks/useInquiryOrderStats';
+import { useInquiryOrderStats, type TrendSource } from '@/features/dashboard/hooks/useInquiryOrderStats';
 import type { Granularity } from '@/features/dashboard/utils/inquiryStats';
 // 调试组件已移除
 
@@ -49,20 +48,26 @@ export default function DashboardPage() {
     setTypeFilter,
     showAllFilters,
     setShowAllFilters,
-    todayCounts,
     updateDocumentCounts: _updateDocumentCounts
   } = useDashboardDocuments(permissionMap, mounted);
 
   // 使用权限刷新Hook
   const { refresh: _refreshPermissions } = usePermissionRefresh();
 
-  // 询价/订单统计 + 趋势图（inquiry 权限→询价订单趋势；purchaseRegistration 权限→采购询价订单趋势；
-  // 两者都有时首页趋势图区域会显示 tab 切换，见 DashboardTrendSection，TASK-113）
+  // 询价/订单统计 + 趋势图（inquiry 权限→总询价订单统计图；purchaseRegistration 权限→采购部询价订单统计图；
+  // 两者都有时首页趋势图区域会显示 tab 切换，见 DashboardTrendSection，TASK-113）。
+  // trendSource 是"当前激活哪张表"的唯一状态源，趋势图 tab 和上方"本周/本月"统计区域共用同一个值，
+  // 保证切换 tab 时两块内容一起联动（首页细化需求）。
   const [trendGranularity, setTrendGranularity] = useState<Granularity>('month');
+  const [trendSource, setTrendSource] = useState<TrendSource>('inquiry');
   const hasInquiryAccess = permissionMap.permissions.inquiry;
   const hasPurchaseAccess = permissionMap.permissions.purchaseRegistration;
+  // 只有一个权限时没有 tab 可切，统计区域固定跟着那一个权限对应的表，不受 trendSource 默认值影响
+  const effectiveTrendSource: TrendSource =
+    hasInquiryAccess && hasPurchaseAccess ? trendSource : hasPurchaseAccess ? 'purchase' : 'inquiry';
   const inquiryOrderStats = useInquiryOrderStats(hasInquiryAccess, trendGranularity, 'inquiry');
   const purchaseOrderStats = useInquiryOrderStats(hasPurchaseAccess, trendGranularity, 'purchase');
+  const activeOrderStats = effectiveTrendSource === 'purchase' ? purchaseOrderStats : inquiryOrderStats;
 
   // 初始化逻辑
   useEffect(() => {
@@ -119,16 +124,14 @@ export default function DashboardPage() {
           onClose={() => setShowSuccessMessage(false)}
         />
 
-        {(permissionMap.accessibleDocumentTypes.length > 0 || hasInquiryAccess) && (
+        {(hasInquiryAccess || hasPurchaseAccess) && (
           <div className="mb-4 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <StatsCards counts={todayCounts} loading={!mounted || isPermissionLoading} permissionMap={permissionMap} />
-
             <InquiryOrderStats
-              visible={hasInquiryAccess}
-              loading={!mounted || isPermissionLoading || !inquiryOrderStats.mounted}
-              today={inquiryOrderStats.today}
-              month={inquiryOrderStats.month}
-              showTopDivider={permissionMap.accessibleDocumentTypes.length > 0}
+              visible
+              loading={!mounted || isPermissionLoading || !activeOrderStats.mounted}
+              week={activeOrderStats.week}
+              month={activeOrderStats.month}
+              source={effectiveTrendSource}
             />
           </div>
         )}
@@ -140,6 +143,8 @@ export default function DashboardPage() {
           onGranularityChange={setTrendGranularity}
           inquiryData={inquiryOrderStats.trend}
           purchaseData={purchaseOrderStats.trend}
+          activeSource={trendSource}
+          onActiveSourceChange={setTrendSource}
         />
 
         <DashboardDocuments

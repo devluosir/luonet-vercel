@@ -621,6 +621,19 @@ TASK-109 已经做了 `ForeignQuotationIcon`/`ForeignContractIcon`/`DomesticQuot
 - 用沙箱 `npx tsx` 跑了一遍独立断言脚本（写完即删——但沙箱这个项目挂载不支持删除文件，脚本已清空成 0 字节文件 `verify_task113_tmp.ts` 留在仓库里，**需要用户手动删除**）验证：① 同一条记录两个不同日期的 `quoted` 状态，`getLatestQuotedDate` 正确返回较晚的日期，不是较早或求和；② 只有 `unavailable` 类型的记录返回 `null`；③ `quotedStatuses` 为空但 `purchaseQuotedStatuses` 有值时，两个字段读取互不干扰；④ 跨年推算（询价 2025-12-20 + 报价 `[1.5]`）正确算成 2026-01-05；⑤ `buildTrendData` 输出的每个桶都带 `quotedCount` 字段。全部通过。
 - **未做**：4 种权限组合（只 inquiry / 只 purchaseRegistration / 两者都有 / 两者都无）未用真实账号登录人工核对；5 个粒度切换未在浏览器里实测出图；已报价线未抽真实记录核对分桶结果；询价订单趋势图和采购询价订单趋势图的询价/订单两条线"数值应相同"这一推论未用真实数据验证（逻辑上必然相同，因为读的是同一个 `getInquiryCreatedDate`/`getOrderConfirmDate`，但沙箱没有真实业务数据可比对）。以上建议用户在真实环境验证。
 
+**追加调整（首页细化，2026-07-10，同一会话由 Claude 直接实现）**：用户看过首页后提出四点细化需求，均已实现：
+
+1. **去掉"今日单据"统计**：`DashboardPage.tsx` 删除 `<StatsCards>` 引用，`StatsCards.tsx` 变成孤儿文件（同 TASK-112 的 `DashboardModules.tsx` 等，沙箱不支持删除文件，需用户手动删除，见下方清单）。
+2. **图表改名**：`DashboardTrendSection.tsx` 的 `TAB_LABELS`（连带单权限时的 `title`）从"询价订单趋势"/"采购询价订单趋势"改成"总询价订单统计图"/"采购部询价订单统计图"；`InquiryOrderTrendChart.tsx` 默认 `title` 同步改名。
+3. **"今日"统计区改成"本周+本月"，且随图表 tab 联动**：`inquiryStats.ts` 新增 `countInquiriesInWeek`/`countQuotedInWeek(field)`/`countOrdersInWeek`/`countQuotedInMonth(field)`（月的已报价此前没有对应函数，一并补上），周的判定用自然周（周一～周日，`startOfWeek`）；`useInquiryOrderStats.ts` 把原来的 `today` 换成 `week`（类型 `InquiryOrderWeekStats`），`month` 补上 `quotedCount` 字段，`week`/`month`/`trend` 三组现在统一用同一个 `quotedStatusField`（由 `source` 参数决定）。`InquiryOrderStats.tsx` 去掉 `showTopDivider`（StatsCards 没了，不再需要顶部分隔线判断），"今日" label 改"本周"，"本月"行补一个"已报价"chip，新增 `source` prop 用于让"询价/已报价"跳转 `/inquiry` 还是 `/purchase-registration`、"订单"跳转 `/order` 还是 `/purchase-order-table`（spec 没明确要求换链接，但数据来源换了、链接不换会点过去对不上，判断属于同一个改动的应有之义）。**联动机制**：`DashboardTrendSection.tsx` 原来内部自己 `useState` 管理 tab，改成受控组件（`activeSource`/`onActiveSourceChange` 由父级传入），`DashboardPage.tsx` 新增 `trendSource` 状态作为唯一数据源，同时喂给趋势图 tab 和上方统计区域（`effectiveTrendSource` 变量处理"只有一个权限时没有 tab、固定用那个权限对应的表"这一分支）。
+4. **周视图横轴显示周数 + 图例改名和排序**：`inquiryStats.ts` 新增 ISO 8601 周号算法 `getISOWeekNumber`（周一起始，含当年首个周四的那一周是第 1 周），`buildBuckets` 的 `'week'` 分支从"以今天为终点的滚动 7 天窗口、标签是 M/D"改成"自然周（周一~周日）、标签是`第N周`"——这个改动顺带让"周"粒度的桶边界和"本周"统计口径完全一致（之前两者定义不一样，只是没人注意到）。`InquiryOrderTrendChart.tsx` 三条 `<Line>` 改了声明顺序（已报价 → 订单数量 → 询价数量，对应图例从上到下的顺序）和图例文案（`询价数量(总)`/`订单数量(总)` 硬编码在两种图表里都不变；`已报价` 这条线通过 `quotedLineLabel` prop 区分`已报价(总)`/`已报价(采购部)`，默认值和 `DashboardTrendSection.tsx` 里的 `QUOTED_LINE_LABELS` 常量同步更新）。
+
+验证：`npx tsc --noEmit`、`npx eslint`（改动 + 新增文件）均无输出；`npm run build` 沙箱 45s 超时内跑到 Next.js 编译阶段未见报错。用 `npx tsx` 跑了一遍独立断言脚本（同样清空成 0 字节文件 `verify_task_refine_tmp.ts` 留在仓库，**需要用户手动删除**）验证：① 本周创建的询价被 `countInquiriesInWeek` 计入本周、上周的不计入；② 本周确认的订单被 `countOrdersInWeek` 计入；③ `countQuotedInWeek` 按 `field` 参数正确区分客户/供应商视角，不会互相污染；④ `countQuotedInMonth` 对本周内的报价也正确计入本月；⑤ `buildTrendData` 的 `week` 粒度标签匹配 `第N周` 格式，且连续 12 个桶周号递增合理（实测输出"第17周...第28周"，与当前日期 2026-07-10 吻合）。**未做**：未用真实浏览器验证 tab 切换时统计区域是否正确联动刷新；未验证"本周"统计在跨自然周边界（比如周日晚上到周一）时是否正确翻篇（逻辑上应该没问题，但没有构造这类边界用例）；周号算法未测试跨年边界（比如 12 月底到 1 月初的周号是否符合 ISO 标准的"归属哪一年"规则）。以上建议用户在真实环境验证。
+
+**沙箱遗留、需要用户手动清理**（同一批，本次会话新增）：
+- `src/features/dashboard/components/StatsCards.tsx` — 现在完全没有地方引用了，可以删除（`useDashboardDocuments.ts` 只 `import type { StatCounts }`，删除 `StatsCards.tsx` 前需要把这个类型挪到别处或一并去掉该 import）。
+- `verify_task_refine_tmp.ts`（仓库根目录）— 已清空为 0 字节，纯粹是沙箱验证脚本的残留。
+
 ### 背景
 
 TASK-110 已经做了首页"询价 / 订单趋势"折线图（`InquiryOrderTrendChart.tsx` + `useInquiryOrderStats.ts` + `inquiryStats.ts`），数据源是 `useInquiryStore` 里的 `InquiryRecord[]`，画询价数量、订单数量两条线，仅在用户有 `inquiry` 权限时显示。
