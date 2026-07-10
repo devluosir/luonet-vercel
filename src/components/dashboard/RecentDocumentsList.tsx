@@ -84,8 +84,8 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       return [
         { label: 'QTN', value: 'quotation', color: 'blue' },
         { label: 'SC', value: 'confirmation', color: 'green' },
-        { label: '内销报价', value: 'domestic-quotation', color: 'blue' },
-        { label: '内销合同', value: 'domestic-contract', color: 'green' },
+        { label: 'IQTN', value: 'domestic-quotation', color: 'blue' },
+        { label: 'ISC', value: 'domestic-contract', color: 'green' },
         { label: 'PL', value: 'packing', color: 'teal' },
         { label: 'INV', value: 'invoice', color: 'purple' },
         { label: 'PO', value: 'purchase', color: 'orange' },
@@ -102,10 +102,10 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       availableTypes.push({ label: 'SC', value: 'confirmation', color: 'green' });
     }
     if (documentTypePermissions['domestic-quotation']) {
-      availableTypes.push({ label: '内销报价', value: 'domestic-quotation', color: 'blue' });
+      availableTypes.push({ label: 'IQTN', value: 'domestic-quotation', color: 'blue' });
     }
     if (documentTypePermissions['domestic-contract']) {
-      availableTypes.push({ label: '内销合同', value: 'domestic-contract', color: 'green' });
+      availableTypes.push({ label: 'ISC', value: 'domestic-contract', color: 'green' });
     }
     if (documentTypePermissions.packing) {
       availableTypes.push({ label: 'PL', value: 'packing', color: 'teal' });
@@ -295,8 +295,8 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       'all': '所有类型',
       'quotation': 'QTN',
       'confirmation': 'SC',
-      'domestic-quotation': '内销报价',
-      'domestic-contract': '内销合同',
+      'domestic-quotation': 'IQTN',
+      'domestic-contract': 'ISC',
       'packing': 'PL',
       'invoice': 'INV',
       'purchase': 'PO'
