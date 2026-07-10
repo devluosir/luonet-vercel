@@ -68,7 +68,8 @@ export default function CustomerPage() {
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [editingConsignee, setEditingConsignee] = useState<Consignee | null>(null);
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
+  // 进入页面默认只看 New 类客户（用户明确要求，2026-07-10）；all/A/B/C/Blacklist 仍可手动切换
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('New');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
 
@@ -214,7 +215,8 @@ export default function CustomerPage() {
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
     setSearch('');
-    setCategoryFilter('all');
+    // 切回客户 tab 时也回到默认的 New 类；其余 tab 不用这个筛选，值本身无所谓
+    setCategoryFilter(tab === 'customers' ? 'New' : 'all');
   };
 
   const isEditing = !!(editingCustomer || editingSupplier || editingConsignee);

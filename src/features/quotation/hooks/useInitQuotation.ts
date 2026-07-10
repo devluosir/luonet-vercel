@@ -10,6 +10,11 @@ export function useInitQuotation() {
   const pathname = usePathname();
   const { setTab, setData, setEditId, setNotesConfig, updateData } = useQuotationStore();
   const initialized = useRef(false);
+  // 记录"已应用过"的 docType 值：避免同一个 URL docType 被重复应用而覆盖用户随后在页面内的手动切换
+  // （见下方 searchParams 监听 effect）；不再通过删除 URL 上的 docType 参数来做"一次性指令"，
+  // 因为 AppSidebar.tsx 的 isItemActive 依赖 URL 的 tab/docType 判断当前激活菜单项，删掉会导致
+  // 点击"内销合同"后菜单高亮跳回"内销报价"（2026-07-10 用户报告的 bug）。
+  const lastAppliedDocTypeRef = useRef<string | null>(null);
 
   // 初始化标签页和编辑ID
   useEffect(() => {
@@ -59,19 +64,22 @@ export function useInitQuotation() {
     // 不知道 URL 上的 docType（该逻辑只在页面首次挂载的初始化 effect 里读取过一次）。
     // 这里补一次显式覆盖 + 同步对应的默认条款配置，确保同一页面内切换
     // （如"新建"浮动菜单里 内销报价 ⇄ 内销合同，页面本身不重新挂载）也能正确生效。
+    // 用 lastAppliedDocTypeRef 判断"是否为新的 docType 值"，避免同一个值被反复应用而
+    // 覆盖用户随后在页面内的手动切换（原来靠删除 URL 参数实现"只应用一次"，
+    // 但那样会让 AppSidebar 读不到 docType，菜单高亮跟着跳回"内销报价"，见上方注释）。
     const domesticDocType = getDomesticDocTypeFromSearchParams(searchParams || undefined);
-    if (tab === 'domestic' && domesticDocType) {
+    if (tab === 'domestic' && domesticDocType && domesticDocType !== lastAppliedDocTypeRef.current) {
       updateData({ domesticDocType });
       setNotesConfig(domesticDocType === 'contract' ? DOMESTIC_NOTES_CONFIG : DOMESTIC_QUOTATION_NOTES_CONFIG);
+      lastAppliedDocTypeRef.current = domesticDocType;
     }
-    // 更新URL参数以持久化tab状态；docType 只是一次性指令（用于指定初始单据类型），
-    // 应用后从 URL 移除，避免用户后续在页面内手动切换类型后，浏览器前进/后退等场景
-    // 又把已经消费过的旧 docType 重新触发一次、覆盖用户的手动选择
+    // 更新 URL 参数以持久化 tab/docType 状态——两者都保留在 URL 上（不再删除 docType），
+    // 供 AppSidebar.tsx 的 isItemActive 判断当前激活菜单项。
     if (typeof window !== 'undefined' && tab) {
       const url = new URL(window.location.href);
       url.searchParams.set('tab', tab);
       if (domesticDocType) {
-        url.searchParams.delete('docType');
+        url.searchParams.set('docType', domesticDocType);
       }
       window.history.replaceState(null, '', url.toString());
     }

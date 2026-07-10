@@ -736,6 +736,123 @@ TASK-110 已经做了首页"询价 / 订单趋势"折线图（`InquiryOrderTrend
 
 **Status:** completed
 
+## TASK-115：点击"内销合同"菜单后侧边栏高亮跳回"内销报价"
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 背景
+
+用户反馈：点击侧边栏"内销合同"，页面正确切换到内销合同视图，但菜单高亮又跳回"内销报价"。
+
+根因在 `src/features/quotation/hooks/useInitQuotation.ts` 的 searchParams 监听 effect：`docType` 被设计成"一次性指令"，应用到 Zustand store 后就用 `url.searchParams.delete('docType')` + `window.history.replaceState(...)` 把它从 URL 上删掉（本意是防止浏览器前进/后退等场景把已消费过的旧 docType 重新触发、覆盖用户后续在页面内的手动切换）。但 Next.js 会 patch `window.history.replaceState`，使其同步更新 `useSearchParams()`/`usePathname()`（`app-router.js` 里 `applyUrlFromHistoryPushReplace`），因此这次"删除"会在同一个 tick 内让 `AppSidebar.tsx` 观察到的 URL 从 `?tab=domestic&docType=contract` 变成 `?tab=domestic`（没有 docType）。`AppSidebar.tsx` 的 `isItemActive` 依赖 `docType === 'contract'` 判断"内销合同"是否激活，docType 一旦被删除就退回到默认分支，导致"内销报价"（`docType !== 'contract'` 为真）被错误高亮。
+
+### 执行记录
+
+- `useInitQuotation.ts`：新增 `lastAppliedDocTypeRef` 记录"已应用过的 docType 值"，把原来"应用后删除 URL 参数"的一次性语义改成"值不同才重新应用"——`domesticDocType !== lastAppliedDocTypeRef.current` 才调用 `updateData`/`setNotesConfig`，同一个 docType 值重复触发 effect 时会被跳过，不会覆盖用户随后在页面内的手动切换（原来靠删参数防的就是这个）。
+- URL 同步逻辑改为 `url.searchParams.set('tab', tab)` + `url.searchParams.set('docType', domesticDocType)`（不再 `delete`），docType 持续留在 URL 上，供 `AppSidebar.tsx`/`MobileBottomTab.tsx` 判断当前激活菜单项。
+
+### 非目标
+
+- 未改动 `AppSidebar.tsx` 的 `isItemActive` 本身——问题根因在 URL 参数被过早删除，不在判定逻辑。
+- 未处理"用户在页面内手动切换报价⇄合同（不通过侧边栏点击）后，侧边栏高亮不会跟着变"这个预置差异——该手动切换只更新 Zustand store，不回写 URL，属于此前就存在、本次未被用户报告的独立行为，如需要侧边栏也跟着联动，需要额外让页面内切换同步 `router.replace`，建议另开任务处理。
+
+### 验证
+
+- `npx tsc --noEmit`、`npx eslint`（`useInitQuotation.ts`）均无输出。
+- 未做真实浏览器点击验证（沙箱无法登录测试账号），建议用户实测：依次点击"外贸报价"→"内销报价"→"内销合同"→"内销报价"，每次确认页面内容和侧边栏高亮一致；并验证进入内销合同页面后，若页面内有手动切换单据类型的按钮，切换后侧边栏高亮是否符合预期（见上方非目标说明的已知差异）。
+
+**Status:** completed
+
+## TASK-116：侧边栏收缩为图标导航时，鼠标悬浮没有浮动提示
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 背景
+
+用户反馈：侧边栏收缩成图标导航后，鼠标移到图标上没有浮动提示（tooltip）显示菜单名称。
+
+`AppSidebar.tsx` 里其实早就写了这个 tooltip（`absolute left-full ... group-hover/nav:opacity-100`），但一直不会显示——根因是 `<nav>` 容器为了在收缩/展开宽度过渡时不出现横向滚动条，设了 `overflow-x-hidden`；tooltip 用 `absolute` 定位、`left-full` 伸到导航项右侧（收缩态图标条很窄，tooltip 必然超出 nav 的横向边界），直接被 `overflow-x-hidden` 裁掉，从未真正渲染出来过。
+
+### 执行记录
+
+- `AppSidebar.tsx`：把 tooltip 从"挂在每个导航项内部、absolute 定位"改成"整个组件只有一份、`fixed` 定位"——新增 `tooltip` state（`{id, label, top, left}`），导航项外层 `div` 在收缩态时绑定 `onMouseEnter`/`onMouseLeave`，进入时用 `getBoundingClientRect()` 读取该图标的视口坐标算出 tooltip 应该出现的位置（`top` 取图标垂直居中，`left` 取图标右边缘 + 8px 间距），存进 state。tooltip 元素挪到 `<nav>` 外面（`</aside>` 内、用户菜单下方）单独渲染一份，用 `position: fixed` + 该坐标定位——`fixed` 只受 `transform`/`filter` 等属性的祖先裁剪，不受 `overflow-x-hidden` 影响，因此能正常伸出收缩态窄图标条之外。
+- `<nav>` 新增 `onScroll={hideTooltip}`，避免导航列表内容较多需要滚动时，tooltip 位置跟丢导航项、悬在错误位置。
+- 动效复用项目已有的 `animate-in fade-in-0` 工具类（`globals.css` 手写实现，`AppUserMenu.tsx` 下拉面板同款），不引入新依赖。
+
+### Files in scope
+
+- `src/components/layout/AppSidebar.tsx`
+
+### Non-goals / 红线
+
+- 未改动展开态的导航项样式/交互。
+- 未处理移动端（`MobileBottomTab.tsx`）——移动端侧边栏没有"收缩为图标"这个状态，本来就不需要 tooltip。
+
+### Verification steps
+
+- `npx tsc --noEmit`、`npx eslint`（`AppSidebar.tsx`）均无输出。
+- 未做真实浏览器验证（沙箱无法交互鼠标悬浮），建议用户实测：点击收起侧边栏按钮进入图标态，把鼠标移到任意图标上，确认 0.2s 内出现深色圆角提示条、文字是对应菜单名，移开后消失；滚动导航列表（如果条目多到需要滚动）时确认提示会跟着消失，不会悬在错误位置。
+
+**Status:** completed
+
+## TASK-117：首页「本周/本月」统计只保留「本月」+ 呈现优化
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 背景
+
+用户要求：首页询价/已报价/订单统计区域去掉"本周"，只保留"本月"，并优化一下呈现方式。
+
+### 执行记录
+
+- `InquiryOrderStats.tsx`：删除"本周"整组徽标和中间的竖分隔线，只保留"本月"一组三个 `StatChip`（询价/已报价/订单）；`week` prop 从组件接口中移除。呈现上把原来纯文字的"本月"标签换成浅灰底色圆角小标签（`rounded-md bg-gray-100 dark:bg-gray-700/50`），并把整行内边距从 `px-3 py-2.5` 放宽到 `px-4 py-3`、chip 间距从 `gap-x-0.5` 放宽到 `gap-x-2`——原来两组数字挤在一起用极小间距是为了塞下 6 个 chip，现在只有 3 个，松一点更耐看。
+- `DashboardPage.tsx`：调用处去掉 `week={activeOrderStats.week}` 这一行传参。
+- `useInquiryOrderStats.ts` 未改动——`week` 统计仍然会被计算并保留在 hook 返回值里（`InquiryOrderWeekStats` 类型、`countInquiriesInWeek`/`countQuotedInWeek`/`countOrdersInWeek` 等函数均未删除），只是首页不再渲染它。这样万一之后又要用回"本周"，不需要重新写计算逻辑；如果确认以后都不需要了，可以再单独清理这部分为死代码。
+
+### Files in scope
+
+- `src/features/dashboard/components/InquiryOrderStats.tsx`
+- `src/features/dashboard/app/DashboardPage.tsx`
+
+### Non-goals / 红线
+
+- 未删除 `useInquiryOrderStats.ts`/`inquiryStats.ts` 里的"本周"计算逻辑（`week` 字段、`countXInWeek` 系列函数）——只是不再在首页渲染，见上方执行记录说明的取舍。
+- 未改动趋势图的"周"粒度选项（`Granularity` 里的 `'week'`，用于横轴分桶显示"第N周"）——那是完全独立的功能（TASK-113），跟这次去掉的"本周统计徽标"没有关系。
+
+### Verification steps
+
+- `npx tsc --noEmit`、`npx eslint`（`InquiryOrderStats.tsx`/`DashboardPage.tsx`）均无输出。
+- 未做真实浏览器验证，建议用户确认首页统计区域只显示一行"本月 询价/已报价/订单"，视觉间距是否满意。
+
+**Status:** completed
+
+## TASK-118：客户管理页默认筛选 New 类 + 工具菜单 IMPA 排到最后
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 执行记录
+
+- `src/features/customer/app/CustomerPage.tsx`：`categoryFilter` 的 `useState` 初始值从 `'all'` 改成 `'New'`；`handleTabChange` 里原来无条件重置成 `'all'`，改成"切回客户 tab 时回到 `'New'`，其余 tab（供应商/收货人不用这个筛选）保持 `'all'`"，保证不管是首次进入页面还是从供应商/收货人 tab 切回来，客户列表默认都只看 New 类。分类筛选 UI/计数逻辑本身未改动。
+- `src/components/layout/AppSidebar.tsx`：`NAV_GROUPS` 里"工具"组的 `navGroupItems([...])` 顺序从 `['impa', 'clock', 'holidays', 'rmb', 'mail']` 改成 `['clock', 'holidays', 'rmb', 'mail', 'impa']`。
+- `src/components/layout/MobileBottomTab.tsx`：`TOOLS_LINKS` 数组同步调整成同样的顺序，保持桌面端/移动端"工具"菜单一致。
+
+### Files in scope
+
+- `src/features/customer/app/CustomerPage.tsx`
+- `src/components/layout/AppSidebar.tsx`
+- `src/components/layout/MobileBottomTab.tsx`
+
+### Verification steps
+
+- `npx tsc --noEmit`、`npx eslint`（三个改动文件）均无输出。
+- 未做真实浏览器验证，建议用户确认：进入 `/customer` 页面时"New"筛选按钮默认高亮、列表只显示 New 类客户；侧边栏和移动端"工具"分类里 IMPA物料 排在时区汇率/全球假日/RMB大写/AI 邮件之后。
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

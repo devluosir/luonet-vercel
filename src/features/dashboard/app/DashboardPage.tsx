@@ -129,7 +129,6 @@ export default function DashboardPage() {
             <InquiryOrderStats
               visible
               loading={!mounted || isPermissionLoading || !activeOrderStats.mounted}
-              week={activeOrderStats.week}
               month={activeOrderStats.month}
               source={effectiveTrendSource}
             />

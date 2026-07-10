@@ -96,11 +96,11 @@ const MANAGE_LINKS: MobileMenuLink[] = [
 ];
 
 const TOOLS_LINKS: MobileMenuLink[] = [
-  { id: 'impa', label: 'IMPA物料', path: 'https://impa.luocompany.com', icon: PackageSearch, moduleId: 'impa', external: true },
   { id: 'clock', label: '时区汇率', path: '/clock', icon: Clock, moduleId: 'clock' },
   { id: 'holidays', label: '全球假日', path: '/holidays', icon: CalendarDays, moduleId: 'holidays' },
   { id: 'rmb', label: 'RMB大写', path: '/rmb', icon: Banknote, moduleId: 'rmb' },
   { id: 'mail', label: 'AI 邮件', path: '/mail', icon: Mail, moduleId: 'ai-email' },
+  { id: 'impa', label: 'IMPA物料', path: 'https://impa.luocompany.com', icon: PackageSearch, moduleId: 'impa', external: true },
 ];
 
 const CATEGORY_DEFS: MobileCategory[] = [

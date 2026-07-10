@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -124,7 +125,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: 'tools',
     label: '工具',
-    items: navGroupItems(['impa', 'clock', 'holidays', 'rmb', 'mail']),
+    items: navGroupItems(['clock', 'holidays', 'rmb', 'mail', 'impa']),
   },
 ];
 
@@ -182,6 +183,21 @@ export function AppSidebar({
   // 移动端侧边栏（有 onClose）始终展开
   const isMobile = !!onClose;
   const isCollapsed = !isMobile && collapsed;
+
+  // 收缩态悬浮提示：用 fixed 定位 + 鼠标进入时读取图标的 getBoundingClientRect 单独渲染一个
+  // tooltip，不能像原来那样直接挂在导航项内部用 absolute 定位——nav 容器需要
+  // overflow-x-hidden 防止收缩/展开宽度过渡时出现横向滚动条，会把伸到 nav 外面的
+  // tooltip 一起裁掉，导致收缩态鼠标移上去完全看不到提示（2026-07-10 用户反馈）。
+  const [tooltip, setTooltip] = useState<{ id: string; label: string; top: number; left: number } | null>(null);
+
+  function showTooltip(itemId: string, label: string, target: HTMLElement) {
+    const rect = target.getBoundingClientRect();
+    setTooltip({ id: itemId, label, top: rect.top + rect.height / 2, left: rect.right + 8 });
+  }
+
+  function hideTooltip() {
+    setTooltip(null);
+  }
 
   function isVisible(item: SidebarItem) {
     if (!item.permissionKey) return true;
@@ -258,7 +274,8 @@ export function AppSidebar({
 
       {/* ── 导航列表 ── */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden"
-           style={{ padding: isCollapsed ? '16px 0' : '16px' }}>
+           style={{ padding: isCollapsed ? '16px 0' : '16px' }}
+           onScroll={hideTooltip}>
         {NAV_GROUPS.map((group) => {
           const visibleItems = group.items.filter(isVisible);
           if (visibleItems.length === 0) return null;
@@ -289,7 +306,12 @@ export function AppSidebar({
                 const iconClassName = `h-5 w-5 shrink-0 ${active ? 'text-sidebar-item-active-icon' : 'text-sidebar-item-icon'}`;
 
                 return (
-                  <div key={item.id} className="relative group/nav mb-0.5">
+                  <div
+                    key={item.id}
+                    className="relative group/nav mb-0.5"
+                    onMouseEnter={isCollapsed ? (e) => showTooltip(item.id, item.label, e.currentTarget) : undefined}
+                    onMouseLeave={isCollapsed ? hideTooltip : undefined}
+                  >
                     {/* 激活态左侧品牌蓝指示条 */}
                     {active && !isCollapsed && (
                       <span className="pointer-events-none absolute -left-4 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-item-active-indicator" />
@@ -320,18 +342,6 @@ export function AppSidebar({
                         )}
                       </Link>
                     )}
-
-                    {/* 收缩时的 tooltip */}
-                    {isCollapsed && (
-                      <div
-                        className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/nav:opacity-100 dark:bg-gray-700"
-                        role="tooltip"
-                      >
-                        {item.label}
-                        {/* 小三角 */}
-                        <span className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900 dark:border-r-gray-700" />
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -349,6 +359,19 @@ export function AppSidebar({
             placement="bottom-left"
             compact={isCollapsed}
           />
+        </div>
+      )}
+
+      {/* 收缩态悬浮提示：fixed 定位，不受 nav 的 overflow-x-hidden 裁剪影响 */}
+      {isCollapsed && tooltip && (
+        <div
+          className="animate-in fade-in-0 pointer-events-none fixed z-50 -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg dark:bg-gray-700"
+          style={{ top: tooltip.top, left: tooltip.left }}
+          role="tooltip"
+        >
+          {tooltip.label}
+          {/* 小三角 */}
+          <span className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900 dark:border-r-gray-700" />
         </div>
       )}
     </aside>
