@@ -1006,6 +1006,78 @@ TASK-116 修好了收缩态悬浮提示的可见性问题，但当时沿用的�
 
 **Status:** completed
 
+## TASK-123：采购订单表新增「内容描述」列 + 响应式列隐藏（中屏藏客户订单号，小屏再藏采购单号/确认日期）
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 背景
+
+`采购订单表`（`/purchase-order-table`）原来没有响应式断点机制（`PurchaseOrderTable.tsx` 固定 7~8 列，不随屏幕宽度变化），也没有"内容描述"列。用户要求：① 新增"内容描述"列；② "客户订单号"内容要跟订单状态表一致、且不可编辑（该列本来就已经是只读展示，直接复用）；③ 中屏（md）隐藏"客户订单号"；④ 小屏（sm）在此基础上再隐藏"采购单号"和"确认日期"。
+
+### 执行记录
+
+- 新建 `src/features/purchase-order-registration/utils/purchaseOrderTableLayout.ts`，仿照 `src/features/order/utils/orderTableLayout.ts` 同款模式：`PurchaseOrderTableBreakpoint`（`sm`/`md`/`lg`/`xl`）、`getVisibleColWidths(bp, canViewFinancials)`（四档 × 有无金额权限，共 8 组列宽百分比）、`showPurchaseOrderNoCol`/`showConfirmDateCol`（均为 `bp !== 'sm'`）、`showCustomerNoCol`（仅 `lg`/`xl`）。
+- `PurchaseOrderTable.tsx`：新增本地 `useBreakpoint()` hook（跟 `OrderTable.tsx` 完全一致的实现：`resize` 监听 + `window.innerWidth` 断点映射），表头新增"内容描述"列（订单编号之后），"采购单号"/"确认日期"/"客户订单号"三个表头改成按对应的 `show*Col(bp)` 条件渲染；把算好的 `bp` 传给每个 `PurchaseOrderRow`。
+- `PurchaseOrderRow.tsx`：新增 `bp` prop；新增"内容描述"只读单元格（`record.description`，纯 `<p>` 展示，不可编辑，字号跟随 TASK-121 统一的 13px，颜色跟随行状态色 `rowTextClass`）；"采购单号"（`EditableText`）、"确认日期"（`ReadOnlyText`）、"客户订单号"（`ReadOnlyText`）三个单元格分别包上 `purchaseOrderNoCol && (...)`/`confirmDateCol && (...)`/`customerNoCol && (...)` 条件渲染，单元格出现顺序跟表头一一对应。"客户订单号"本身逻辑未改动——原来就是 `ReadOnlyText` 只读展示、`fallback` 走跟订单状态表一致的 RFQ→PO 替换规则，天然满足"内容一致、不可编辑"的要求。
+- 各断点列数与新列宽数组一一核对过（sm 5~6 列、md 7~8 列、lg/xl 8~9 列，含/不含金额两种情况都对齐），未出现列宽数组长度和实际渲染列数不匹配的情况。
+
+### Files in scope
+
+- `src/features/purchase-order-registration/utils/purchaseOrderTableLayout.ts`（新增）
+- `src/features/purchase-order-registration/components/PurchaseOrderTable.tsx`
+- `src/features/purchase-order-registration/components/PurchaseOrderRow.tsx`
+
+### Non-goals / 红线
+
+- "金额"列的显隐仍然只受 `canViewFinancials` 权限控制，跟本次新增的响应式断点无关（沿用改动前的既有行为，未叠加断点隐藏）。
+- 未改动"客户订单号"本身的数据来源/替换逻辑（`record.orderCustomerNo` + RFQ→PO fallback）——只是给它包了一层断点可见性判断，内容渲染代码原样保留。
+- 未联动修改 `src/features/order/utils/orderTableLayout.ts`（订单状态表自己的响应式规则，TASK-122 刚调整过）——两个表现在各自独立一份布局工具文件，没有共享（沿用项目里 Order/PurchaseOrder 两套 Row/Table 组件一直是各自独立实现、不共享底层逻辑的既有惯例）。
+- 列宽百分比是估算重新分配，非精确计算，合计不严格等于 100%（延续 `orderTableLayout.ts` 的既有惯例）。
+
+### Verification steps
+
+- `npx tsc --noEmit`、`npx eslint`（三个改动/新增文件）均无输出。
+- 未做真实浏览器验证，建议用户把窗口分别缩到 <768px（sm）、768~1023px（md）、≥1024px（lg/xl）三档，确认：sm 只看到订单编号/内容描述/供应商/(金额)/交货日期/执行情况；md 在此基础上多出采购单号/确认日期，仍不显示客户订单号；lg/xl 全部列都显示。同时确认"内容描述"列在各断点下内容正确、不可点击编辑，"客户订单号"内容与订单状态表同一条记录展示的值一致。
+
+**Status:** completed
+
+## TASK-124：修复采购部登记/采购订单表看不到刚编辑的客户订单号（mergeFieldsOnly 缺 pending 保护）
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 背景
+
+用户反馈：同一条记录（FL2684，客户 SAAM）在`订单状态表`能看到"客户订单号"（`QUOTATION - RQVDC06133 - SAAM TAMOIO -FILIAL VIL...`），但在`采购订单表`该列是空的。两个表渲染这个字段的代码逻辑完全相同（`ReadOnlyText value={record.orderCustomerNo}`），排除了是渲染层的 bug，转向排查共享数据层 `useInquiryStore`。
+
+根因：`useInquirySync` 在 `mergeLocal:false` 模式（`/purchase-order-table`、`/purchase-registration` 两个页面都是这个模式，各自独立跑一次 30s/5min 周期同步）下走 `mergeFieldsOnly`，而不是 `/order` 用的、已经有 pending 同步保护的 `mergeFromD1`。用户在 `/order` 编辑 `orderCustomerNo` 后，写入是"本地先落盘 + 排队异步 PUT 到 D1"（fire-and-forget），如果这个 PUT 还没完成/失败重试中，此时 D1 上还是旧值。恰好这时候如果 `/purchase-order-table` 或 `/purchase-registration` 页面在后台也在跑自己的周期同步，`mergeFieldsOnly` 拉到的是 D1 的旧记录，且原来的实现完全没有检查这条记录是否有 pending 操作，就直接 `{...localRecord, ...d1Record}` 整条覆盖，把刚编辑的正确值从**共享**的 `useInquiryStore.records`（以及 localStorage 里的 `inquiry_records`）里冲掉了。因为 store 是全局共享的，冲掉之后不管哪个页面读，看到的都是被污染后的同一份记录——不是"两个表逻辑不一致"，是数据在中间被污染了。
+
+这跟项目里之前记录的 `bug_inquiry_sync_phantom_records.md`（fire-and-forget 同步静默失败）、`bug_inquiry_restricted_view_cache_corruption.md`（受限视图响应整条覆盖共享缓存冲掉字段）是同一类问题：只要哪个同步路径"整条覆盖"而不做 pending/字段级保护，就会把还没同步成功的本地编辑冲掉。
+
+### 执行记录
+
+- `src/features/inquiry/services/inquiry.service.ts` 的 `mergeFieldsOnly`：新增 `const pendingIds = this.getPendingSyncIds();`，对 d1Records 管道加 `.filter((record) => !pendingIds.has(record.id))`（有 pending 操作的记录不参与"用 D1 数据字段合并"这一步），并把这些记录的本地版本通过 `.concat(local.filter((record) => pendingIds.has(record.id) && record.status !== 'deleted'))` 原样带回最终结果（`mergeFieldsOnly` 是纯函数式的 `d1Records.filter().map()` 管道、不是 `mergeFromD1` 那种"以 local 为底的 Map 遍历"，如果只加 filter 不做这一步 concat，会导致有 pending 操作的记录直接从返回结果里消失，而这个返回值会整体替换 `useInquiryStore` 的 `records`）。
+- 本地 pending 记录里 `status === 'deleted'` 的不再带回列表，跟 d1Records 分支已有的 `record.status !== 'deleted'` 过滤保持一致，避免本地标记删除但还没同步成功的记录重新出现在列表里。
+- 确认 `/purchase-registration`（`PurchaseRegistrationPage.tsx`）和 `/purchase-order-table`（`PurchaseOrderRegistrationPage.tsx`）都是 `useInquirySync({ pushLocal: false, mergeLocal: false })`，两个页面都走 `mergeFieldsOnly`，本次修复对两者都生效；`/order`（`OrderPage.tsx`）用默认 `mergeLocal: true` 走 `mergeFromD1`，本来就有保护，未受影响、未改动。
+
+### Files in scope
+
+- `src/features/inquiry/services/inquiry.service.ts`（`mergeFieldsOnly` 函数）
+
+### Non-goals / 红线
+
+- 未改动 `mergeFromD1`、`patchInD1`、`pushLocalToD1`、`getPendingSyncIds` 等其它同步逻辑。
+- 未改动任何表格渲染代码（`OrderRow.tsx`/`PurchaseOrderRow.tsx`/`PurchaseRegistrationRow.tsx`）——问题root cause 确认在数据合并层，不在渲染层。
+- 未改动 `useInquirySync.ts` 的调用方式/参数（`pushLocal`/`mergeLocal` 语义不变）。
+
+### Verification steps
+
+- `npx tsc --noEmit` 通过；`npx eslint src/features/inquiry/services/inquiry.service.ts` 无输出。
+- 建议用户实测复现路径确认：在 `/order` 编辑某条记录的"客户订单号"，立刻切到 `/purchase-order-table` 或 `/purchase-registration`（尤其网络较慢或该记录同步曾失败过的情况下），确认该字段不再被清空/回退成旧值；也可以直接检查 FL2684 这条记录目前在两个表里"客户订单号"是否已经一致。
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

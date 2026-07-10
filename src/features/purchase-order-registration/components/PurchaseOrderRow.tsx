@@ -5,6 +5,12 @@ import { CalendarDays } from 'lucide-react';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { stripDateBrackets, normalizeShortDateInput } from '@/features/inquiry/utils/inquiryUtils';
 import { DeliveryStatusCell } from '@/features/order/components/DeliveryStatusCell';
+import {
+  type PurchaseOrderTableBreakpoint,
+  showConfirmDateCol,
+  showCustomerNoCol,
+  showPurchaseOrderNoCol,
+} from '../utils/purchaseOrderTableLayout';
 
 // ── 行颜色（与订单状态表 OrderRow 一致，两边展示的是同一个共享字段）───────────
 
@@ -286,16 +292,20 @@ function AmountEditCell({ editing, value, textClassName, onActivate, onSave, onC
 
 interface PurchaseOrderRowProps {
   record: InquiryRecord;
+  bp: PurchaseOrderTableBreakpoint;
   canViewFinancials: boolean;
   consigneeOptions: string[];
   onUpdate: (patch: Partial<InquiryRecord>) => void;
 }
 
-export function PurchaseOrderRow({ record, canViewFinancials, consigneeOptions, onUpdate }: PurchaseOrderRowProps) {
+export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptions, onUpdate }: PurchaseOrderRowProps) {
   const [activeField, setActiveField] = useState<EditField>(null);
   const activate = (f: EditField) => setActiveField(f);
   const cancel = () => setActiveField(null);
   const rowTextClass = getRowTextClass(record);
+  const purchaseOrderNoCol = showPurchaseOrderNoCol(bp);
+  const confirmDateCol = showConfirmDateCol(bp);
+  const customerNoCol = showCustomerNoCol(bp);
 
   // 客户订单号只读展示，fallback 逻辑与订单状态表一致（RFQ→PO）
   const customerNoFallback = (record.customerNo ?? '').replace(/RFQ/g, 'PO');
@@ -310,17 +320,24 @@ export function PurchaseOrderRow({ record, canViewFinancials, consigneeOptions, 
         </div>
       </td>
 
-      {/* 采购单号 */}
-      <td className="max-w-0 overflow-hidden px-1.5 py-2 sm:px-2">
-        <EditableText
-          editing={activeField === 'purchaseOrderNo'}
-          value={record.purchaseOrderNo}
-          placeholder="采购单号"
-          onActivate={() => activate('purchaseOrderNo')}
-          onSave={(val) => { setActiveField(null); onUpdate({ purchaseOrderNo: val }); }}
-          onCancel={cancel}
-        />
+      {/* 内容描述（只读，来自询报价登记/订单状态表共享的 description 字段，不可编辑） */}
+      <td className="max-w-0 overflow-hidden px-2 py-2">
+        <p className={`truncate text-[13px] ${rowTextClass}`} title={record.description}>{record.description}</p>
       </td>
+
+      {/* 采购单号：小屏隐藏 */}
+      {purchaseOrderNoCol && (
+        <td className="max-w-0 overflow-hidden px-1.5 py-2 sm:px-2">
+          <EditableText
+            editing={activeField === 'purchaseOrderNo'}
+            value={record.purchaseOrderNo}
+            placeholder="采购单号"
+            onActivate={() => activate('purchaseOrderNo')}
+            onSave={(val) => { setActiveField(null); onUpdate({ purchaseOrderNo: val }); }}
+            onCancel={cancel}
+          />
+        </td>
+      )}
 
       {/* 供应商 */}
       <td className="max-w-0 overflow-hidden px-1.5 py-2 sm:px-2">
@@ -359,15 +376,19 @@ export function PurchaseOrderRow({ record, canViewFinancials, consigneeOptions, 
         />
       </td>
 
-      {/* 确认日期（只读，来自订单状态表） */}
-      <td className="max-w-0 overflow-hidden whitespace-nowrap px-2 py-2">
-        <ReadOnlyText value={record.orderConfirmDate ? stripDateBrackets(record.orderConfirmDate) : undefined} placeholder="m.D" />
-      </td>
+      {/* 确认日期（只读，来自订单状态表；小屏隐藏） */}
+      {confirmDateCol && (
+        <td className="max-w-0 overflow-hidden whitespace-nowrap px-2 py-2">
+          <ReadOnlyText value={record.orderConfirmDate ? stripDateBrackets(record.orderConfirmDate) : undefined} placeholder="m.D" />
+        </td>
+      )}
 
-      {/* 客户订单号（只读，来自订单状态表） */}
-      <td className="max-w-0 overflow-hidden px-2 py-2">
-        <ReadOnlyText value={record.orderCustomerNo} fallback={customerNoFallback} />
-      </td>
+      {/* 客户订单号（只读，来自订单状态表，内容与订单状态表一致；中屏起隐藏） */}
+      {customerNoCol && (
+        <td className="max-w-0 overflow-hidden px-2 py-2">
+          <ReadOnlyText value={record.orderCustomerNo} fallback={customerNoFallback} />
+        </td>
+      )}
 
       {/* 执行情况（双向共享：orderDeliveryStatus/orderDeliveryConsignee） */}
       <td className="max-w-0 overflow-hidden px-1.5 py-2 sm:px-2">

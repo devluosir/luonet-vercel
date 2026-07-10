@@ -380,16 +380,28 @@ export const inquiryService = {
    * 可能是受限视图（字段被服务端裁剪），不能直接整条 save() 覆盖共享本地缓存
    * inquiry_records —— 否则会冲掉其它字段（quotedStatuses 等），导致询报价登记表
    * 读到缺字段的记录而崩溃。这里对已存在的本地记录做字段级合并，保留响应中缺失的字段。
+   *
+   * 2026-07-10 修复：跟 mergeFromD1 一样要跳过有 pending 同步操作的记录，否则会出现
+   * "订单状态表能看到刚编辑的客户订单号，采购订单表看不到"的问题——用户在 /order 编辑了
+   * orderCustomerNo，PUT 请求还在排队/失败重试中（本地已落盘，D1 还是旧数据），这时如果
+   * 打开 /purchase-order-table，它独立拉一次 D1（还是旧的、没有该字段），在没有 pendingIds
+   * 保护的情况下会用 D1 的旧值覆盖本地这条记录，把刚编辑的值从共享 store 里冲掉，导致两个
+   * 页面读到的是同一份被污染后的记录（不是两边渲染逻辑不一致，是共享数据被覆盖了）。
    */
   mergeFieldsOnly(d1Records: InquiryRecord[]): InquiryRecord[] {
     const local = this.getAll();
     const localMap = new Map(local.map((record) => [record.id, record]));
+    const pendingIds = this.getPendingSyncIds();
     return d1Records
       .filter((record) => record.status !== 'deleted')
+      .filter((record) => !pendingIds.has(record.id))
       .map((record) => {
         const localRecord = localMap.get(record.id);
         return localRecord ? { ...localRecord, ...record } : record;
       })
+      // 有 pending 同步操作的记录：原样保留本地版本（不参与上面基于 d1Records 的字段合并），
+      // 跟 mergeFromD1 的 pendingIds 保护语义一致；本地已标记删除的不再带回列表
+      .concat(local.filter((record) => pendingIds.has(record.id) && record.status !== 'deleted'))
       .sort((a, b) => b.inquiryNo.localeCompare(a.inquiryNo));
   },
 
