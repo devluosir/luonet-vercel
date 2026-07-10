@@ -1479,6 +1479,63 @@ const stampY = Math.max(y - 2, Math.min(y + cellPadding - 2, pageBottom - stampH
 - 沙箱内用截图同款数据（供方姓名/地址/电话有值，需方全空）复现 `drawPartyTable` 的行高计算 + 印章定位逻辑，`pdftoppm` 渲染对比：旧公式印章圆心落在"电话/纳税人识别号"附近、底边越出表格边框约 19mm；新公式印章顶部压在"单位名称(章)"公司名这一行、底边仍在页码安全区之内。
 - **待用户验证**：在真实环境生成一份供需双方信息填写情况不同（供方详细/需方空白、双方都详细、双方都简略等）的产品购销合同 PDF，确认印章始终压在公司名附近、不越出页码区域。
 
+## TASK-132：印章 PNG 调色板量化瘦身，不影响观感
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+**背景来源**：用户要求检查印章图片本身能否在不影响观感的前提下再压缩，减小最终 PDF 体积（延续 TASK-129/130/131 这一轮 PDF 体积/印章排查）。
+
+### 背景
+
+`public/images/stamp-shanghai.png`（350×347）和 `stamp-hongkong.png`（400×169）都已经是索引色（PNG colorType=3，带 tRNS 透明通道）——`scripts/compress-stamps.js` 显示这两个文件之前已经被压缩过一轮（resize + 索引色）。但两者调色板条目数仍偏大：shanghai 165 色、hongkong 256 色（满编）。用 ImageMagick 试了两组优化：
+
+1. **无损重新压缩**（同调色板，只是加大 deflate 压缩强度）：shanghai 63,702→62,582 字节、hongkong 18,285→18,052 字节，几乎无收益（~1-2%）——说明瓶颈不在压缩强度，而在调色板本身太大。
+2. **降低调色板颜色数**（`convert -colors N`，只减少颜色数量，不改变像素尺寸）：这两张图实际内容只是红/蓝墨迹 + 透明背景，颜色数量本来就很有限，多出来的调色板条目基本都是抗锯齿边缘上的过渡色。测了多档颜色数，并用 `compare -metric RMSE` 量化每一档跟原图的像素差异（0-1 归一化，越接近 0 差异越小）：
+
+   | 文件 | 颜色数 | 文件大小 | 相对原图 RMSE |
+   |---|---|---|---|
+   | shanghai | 16 | 25.6KB | 4.80% |
+   | shanghai | **24** | **30.9KB** | **4.48%** |
+   | shanghai | 32 | 32.3KB | 4.10% |
+   | hongkong | 8 | 5.1KB | 2.76% |
+   | hongkong | **16** | **6.8KB** | **2.33%** |
+   | hongkong | 24 | 7.7KB | 2.20% |
+
+   所有档位的 RMSE 都在 2-5% 区间（都是抗锯齿边缘的细微色阶差异），渲染成图肉眼对比看不出差别。选了留有余量的一档而不是最激进的一档：shanghai 24 色、hongkong 16 色。
+
+### 执行记录
+
+- `public/images/stamp-shanghai.png`：63,702 字节 → 30,949 字节（-51.4%），尺寸仍是 350×347，24 色索引色 + 透明通道。
+- `public/images/stamp-hongkong.png`：18,285 字节 → 6,761 字节（-63.0%），尺寸仍是 400×169，16 色索引色 + 透明通道。
+- 跑 `node scripts/embed-resources.js` 重新生成 `src/lib/embedded-resources.ts`：文件从 28,275,884 字节降到 28,216,852 字节（-59,032 字节，跟两张图 base64 编码后的体积差正好对上）。用脚本从新生成的 `embedded-resources.ts` 里把 `shanghaiStamp`/`hongkongStamp` 两个 base64 字段解码还原成 PNG，逐字节 `cmp` 对比确认跟压缩后的源图完全一致，排除编码写入过程出错的可能。
+- 清理了本次排查过程中不小心创建在仓库目录里的几个临时复现脚本（`pdftest_tmp.js`/`pdftest2_tmp.js`/`pdftest3_tmp.js`/`party_repro_tmp.js`/`party_repro2_tmp.js`/`stamp_repro_tmp.js`）——发现这几个文件被仓库自带的版本快照机制自动提交过（`git log` 能看到 `v26.7.10.0.17`/`v26.7.10.0.18` 两次自动提交包含了它们），本次会话结束时已删除，工作区里已经没有这几个文件。
+
+### Files in scope
+
+- `public/images/stamp-shanghai.png`（二进制替换）
+- `public/images/stamp-hongkong.png`（二进制替换）
+- `src/lib/embedded-resources.ts`（`node scripts/embed-resources.js` 自动重新生成，不手改）
+
+### Acceptance criteria
+
+- 两张印章图片素材尺寸（350×347 / 400×169）不变，只是调色板颜色数减少。
+- `embedded-resources.ts` 里 `shanghaiStamp`/`hongkongStamp` 字段解码后跟对应源 PNG 文件字节级一致。
+- 印章在 PDF 里的显示尺寸、位置、透明度不受影响（`addImage` 按固定 `stampWidth`/`stampHeight` 缩放，跟源图像素尺寸无关）。
+
+### Non-goals / 红线
+
+- 不改动 `logoIcon`（TASK-107 已经优化过的表头 logo）、两个 NotoSansSC 字体文件——本次只处理印章两张图。
+- 不改动 `scripts/compress-stamps.js`（之前那版压缩脚本留着做参考，没有整合本次的调色板量化步骤，如果以后要重新生成需要手动跑 `convert -colors N`，未来如果这个诉求变得常态化可以考虑补进脚本里，本次没有改脚本）。
+- 不改动印章在各 PDF 生成器里的绘制逻辑（TASK-130/TASK-131 已处理的排布问题不受影响）。
+
+### 验证
+
+- `npx tsc --noEmit`（全项目）通过；`npx eslint scripts/embed-resources.js` 无输出。
+- `identify` 确认两张图替换后像素尺寸未变。
+- 用 ImageMagick `compare -metric RMSE` 量化了多档颜色数下跟原图的像素差异，选定档位的 RMSE 均在 2-5%（抗锯齿边缘色阶差异，非可见瑕疵）；沙箱内直接查看图片确认肉眼看不出跟原图的差别。
+- 解码 `embedded-resources.ts` 里的新 base64 字段，逐字节 `cmp` 对比跟磁盘上的压缩后 PNG 完全一致。
+- **待用户验证**：生成一份用上海印章、一份用香港印章的 PDF，确认盖章视觉效果（清晰度、颜色）与之前一致，且文件体积按预期减小（上海印章文档减少约 33KB，香港印章文档减少约 11.5KB，在 TASK-129 的 `compress:true` 之上叠加）。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |
