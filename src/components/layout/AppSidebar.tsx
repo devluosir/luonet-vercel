@@ -362,16 +362,15 @@ export function AppSidebar({
         </div>
       )}
 
-      {/* 收缩态悬浮提示：fixed 定位，不受 nav 的 overflow-x-hidden 裁剪影响 */}
+      {/* 收缩态悬浮提示：fixed 定位，不受 nav 的 overflow-x-hidden 裁剪影响；
+          配色改用 sidebar-* token（与菜单本体同一套中性设计），不再用通用的深色气泡样式 */}
       {isCollapsed && tooltip && (
         <div
-          className="animate-in fade-in-0 pointer-events-none fixed z-50 -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg dark:bg-gray-700"
+          className="animate-in fade-in-0 pointer-events-none fixed z-50 -translate-y-1/2 whitespace-nowrap rounded-md border border-sidebar-border bg-sidebar-bg px-2.5 py-1.5 text-xs font-medium text-sidebar-item-text shadow-lg"
           style={{ top: tooltip.top, left: tooltip.left }}
           role="tooltip"
         >
           {tooltip.label}
-          {/* 小三角 */}
-          <span className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900 dark:border-r-gray-700" />
         </div>
       )}
     </aside>

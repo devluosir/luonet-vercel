@@ -261,17 +261,18 @@ export const InvoicePage = () => {
                   <button
                     type="button"
                     onClick={toggleSettings}
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                    title="Settings"
                   >
-                    <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <Settings className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                   </button>
                 </div>
               </div>
 
-              {/* 设置面板 */}
+              {/* 设置面板：间距与 quotation/packing/purchase 三个单据页面统一，不再单独用 mb-8 */}
               <CollapsibleSection
                 isOpen={showSettings}
-                contentClassName="px-4 sm:px-6 py-2 mb-8"
+                contentClassName="px-4 sm:px-6 pt-3 pb-4"
               >
                 <SettingsPanel />
               </CollapsibleSection>

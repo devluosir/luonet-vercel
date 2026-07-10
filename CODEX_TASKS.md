@@ -853,6 +853,74 @@ TASK-110 已经做了首页"询价 / 订单趋势"折线图（`InquiryOrderTrend
 
 **Status:** completed
 
+## TASK-119：侧边栏悬浮提示改用 sidebar 设计 token 配色
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 背景
+
+TASK-116 修好了收缩态悬浮提示的可见性问题，但当时沿用的是通用深色气泡样式（`bg-gray-900 dark:bg-gray-700` + 白字 + 小三角），跟 TASK-114/115 定的 Sidebar 中性配色系统（`sidebar-bg`/`sidebar-border`/`sidebar-item-text` 等 token）不是一套东西。用户要求悬浮提示也套用同一套颜色设计规则。
+
+### 执行记录
+
+- `AppSidebar.tsx`：tooltip 容器从 `bg-gray-900 dark:bg-gray-700 text-white` 改成 `border border-sidebar-border bg-sidebar-bg text-sidebar-item-text`——浅底色 + 细边框 + 中性文字，跟菜单本体、组标签、"本月"徽标共用同一套 token，深色模式也自动跟随（CSS 变量本身已经处理了 light/dark，不用再写 `dark:` 变体）。
+- 去掉了原来配合深色气泡的小三角指示（`border-r-gray-900`），改成浅底带边框的卡片式提示（跟 Notion/Linear 的 tooltip 观感一致，没有三角指示反而更干净），边框本身已经能起到视觉指向作用。
+
+### Files in scope
+
+- `src/components/layout/AppSidebar.tsx`
+
+### Verification steps
+
+- `npx tsc --noEmit`、`npx eslint`（`AppSidebar.tsx`）均无输出。
+- 未做真实浏览器验证，建议用户确认：收缩态鼠标移到图标上，提示框是浅色底+细边框（不再是黑底白字），Light/Dark 两种模式下都跟侧边栏本体配色协调。
+
+**Status:** completed
+
+## TASK-120：统一各单据页面「设置」区域展开间距与呈现
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 背景
+
+用户要求统一 报价单/内销报价合同（`QuotationPage.tsx`）、箱单发票（`PackingForm.tsx`）、财务发票（`InvoicePage.tsx`）、采购订单（`PurchaseForm.tsx`）四个单据页面的"设置"折叠面板风格，尤其是展开后跟上下元素的间距。
+
+排查发现：四个面板本体卡片样式（`bg-blue-50 border rounded-lg p-3 shadow-sm`）其实已经一致，真正不统一的是外层 `CollapsibleSection` 的 `contentClassName` 和跟下一个区域之间的间距处理方式，四家各不相同：
+- Quotation：`contentClassName="px-4 sm:px-6 py-3 mb-4"`，下方"客户信息区域"用 `showSettings ? 'py-2' : 'py-4'` 三元表达式反向补偿——两处耦合，脆弱且间距会随展开/收起状态变化。
+- Packing：`contentClassName="px-4 sm:px-6 py-2"`（无下边距），下方"基本信息区域"固定 `py-4 sm:py-6`，本身没问题但跟其他三家的量级不统一。
+- Invoice：`contentClassName="px-4 sm:px-6 py-2 mb-8"`——`mb-8`（32px）明显偏大，且下方"基础信息区域"完全没有自己的上边距，展开态间距过宽、跟其余三家不成比例。
+- Purchase：`contentClassName="px-4 sm:px-6 py-6"`（24px，无下边距），中间还夹了几行没有任何内容的空 JSX 行（`{}`之间纯空行，不产生任何实际间距，属于死代码）。
+
+### 执行记录
+
+- 四个页面的 `CollapsibleSection`（Quotation/Invoice/Purchase 在页面组件里，Packing 在其 `SettingsPanel.tsx` 内部自己包了一层）统一改成同一个 `contentClassName="px-4 sm:px-6 pt-3 pb-4"`——面板内容离上面工具栏 12px，离下面区域 16px，展开态收起态间距一致（`pb-4` 属于会被 grid-template-rows 裁剪掉的内容区域，收起时自动归零，不用另外写条件判断）。
+- `QuotationPage.tsx`：去掉"客户信息区域"的 `showSettings ? 'py-2' : 'py-4'` 三元耦合，改成固定 `py-4`，不再随设置面板展开/收起变化。
+- `InvoicePage.tsx`：去掉 `mb-8`；顶部工具栏本身自带 `mb-6`，收起态基线间距已经足够，不需要再给"基础信息区域"额外加上边距。顺带修了设置按钮本身两处跟其余三个页面不一致的地方：缺 `title="Settings"`（无障碍/悬浮提示缺失）、hover/图标颜色用的是 `dark:hover:bg-gray-700/50`/`dark:text-gray-400`，跟另外三个页面统一用的 `dark:hover:bg-[#3A3A3C]`/`dark:text-[#98989D]` 不一致，已对齐。
+- `PurchaseForm.tsx`：删掉设置面板和主内容区域之间几行没有实际作用的空 JSX 行；下方"主内容区域"本身已是固定 `p-4 sm:p-6`，不用改。
+- Packing/Purchase 的下方区域原本就是固定 padding（不随展开态变化），未改动，只统一了设置面板自身的 `contentClassName`。
+
+### Files in scope
+
+- `src/features/quotation/app/QuotationPage.tsx`
+- `src/features/packing/components/SettingsPanel.tsx`
+- `src/features/invoice/app/InvoicePage.tsx`
+- `src/features/purchase/components/PurchaseForm.tsx`
+
+### Non-goals / 红线
+
+- 未改动四个 `SettingsPanel.tsx` 组件内部的表单项布局/配色（本来就已经一致：`bg-blue-50 dark:bg-blue-950/30 border rounded-lg p-3 shadow-sm` + 选项按钮统一用 `bg-[#007AFF]` 高亮）。
+- 未统一四个页面设置按钮本身的尺寸（Quotation 工具栏 4 个按钮共用 `p-1.5`，其余三个页面只有 2 个按钮用 `p-2`——这是每个页面自己工具栏内部的一致性，跨页面统一会破坏页面内部的视觉平衡，只对齐了颜色/title 这类明显的不一致项）。
+- Purchase 的 `SettingsPanel.tsx` 本身内容为空（"设置选项已移至相应位置"占位文案）——不在本次范围内调整其内容。
+
+### Verification steps
+
+- `npx tsc --noEmit`、`npx eslint`（四个改动文件）均无输出。
+- 未做真实浏览器验证，建议用户逐个打开四个单据页面，点击设置按钮展开/收起，确认面板跟上方工具栏、下方内容区域的间距观感一致。
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

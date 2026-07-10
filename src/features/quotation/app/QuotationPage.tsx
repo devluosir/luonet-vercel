@@ -716,10 +716,10 @@ export default function QuotationPage() {
                 </div>
               </div>
 
-              {/* 设置面板 */}
+              {/* 设置面板：展开/收起时与上下元素的间距统一用 pt-3 pb-4（见各单据页面共用规范） */}
               <CollapsibleSection
                 isOpen={showSettings}
-                contentClassName="px-4 sm:px-6 py-3 mb-4"
+                contentClassName="px-4 sm:px-6 pt-3 pb-4"
               >
                 {isDomesticQuotation ? (
                   <div className="rounded-lg border border-blue-200/50 bg-blue-50 p-3 text-xs shadow-sm dark:border-blue-800/50 dark:bg-blue-950/30">
@@ -893,10 +893,9 @@ export default function QuotationPage() {
                 )}
               </CollapsibleSection>
 
-              {/* 客户信息区域 */}
-              <div className={`px-4 sm:px-6 ${
-                showSettings ? 'py-2' : 'py-4'
-              }`}>
+              {/* 客户信息区域：固定 py-4，不再随 showSettings 变化——展开态的额外间距已经由
+                  上面 CollapsibleSection 的 pb-4 提供，两处不再耦合 */}
+              <div className="px-4 sm:px-6 py-4">
                 {isDomesticQuotation ? (
                   <DomesticCustomerInfo data={data} onChange={updateData} />
                 ) : (

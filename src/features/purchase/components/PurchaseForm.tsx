@@ -78,17 +78,13 @@ export default function PurchaseForm() {
 
   return (
     <>
-      {/* 设置面板 */}
+      {/* 设置面板：间距与 quotation/packing/invoice 三个单据页面统一 */}
       <CollapsibleSection
         isOpen={showSettings}
-        contentClassName="px-4 sm:px-6 py-6"
+        contentClassName="px-4 sm:px-6 pt-3 pb-4"
       >
         <SettingsPanel data={data} onDataChange={updateData} />
       </CollapsibleSection>
-
-
-
-
 
       {/* 主内容区域 */}
       <div className="p-4 sm:p-6 space-y-6">

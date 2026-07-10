@@ -59,7 +59,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   return (
     <CollapsibleSection
       isOpen={isVisible}
-      contentClassName="px-4 sm:px-6 py-2"
+      contentClassName="px-4 sm:px-6 pt-3 pb-4"
     >
       <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50 rounded-lg p-3 shadow-sm">
 
