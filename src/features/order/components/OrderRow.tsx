@@ -398,13 +398,14 @@ interface OrderRowProps {
   canViewFinancials: boolean;
   consigneeOptions: string[];
   onUpdate: (patch: Partial<InquiryRecord>) => void;
+  onOpenEdit?: (record: InquiryRecord) => void;
   canBatchEdit?: boolean;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
 }
 
 export function OrderRow({
-  record, bp, canViewFinancials, consigneeOptions, onUpdate,
+  record, bp, canViewFinancials, consigneeOptions, onUpdate, onOpenEdit,
   canBatchEdit = false, selected = false, onToggleSelect,
 }: OrderRowProps) {
   const customerCol = showCustomerCol(bp);
@@ -447,9 +448,20 @@ export function OrderRow({
         </td>
       )}
 
-      {/* 订单编号 + 询价编号 */}
+      {/* 订单编号 + 询价编号：点击打开"编辑订单"弹窗 */}
       <td className="max-w-0 overflow-hidden px-2 py-2 sm:px-3">
-        <div className="flex min-w-0 flex-col gap-0.5" title={`${record.orderNo ?? ''} ${record.inquiryNo}`}>
+        <div
+          role={onOpenEdit ? 'button' : undefined}
+          tabIndex={onOpenEdit ? 0 : undefined}
+          onClick={() => onOpenEdit?.(record)}
+          onKeyDown={(e) => {
+            if (onOpenEdit && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpenEdit(record); }
+          }}
+          className={`flex min-w-0 flex-col gap-0.5 rounded px-0.5 -mx-0.5 ${
+            onOpenEdit ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5' : ''
+          }`}
+          title={`${record.orderNo ?? ''} ${record.inquiryNo}${onOpenEdit ? '（点击编辑订单）' : ''}`}
+        >
           <OrderNoText record={record} textClassName={rowTextClass} />
           <span className="block truncate font-mono text-[10px] text-gray-400 dark:text-gray-500">{record.inquiryNo}</span>
         </div>

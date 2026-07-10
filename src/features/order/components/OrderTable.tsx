@@ -17,6 +17,7 @@ import {
   showCustomerCol,
   showLgCols,
 } from '../utils/orderTableLayout';
+import { OrderEditModal } from './OrderEditModal';
 import { OrderRow } from './OrderRow';
 
 export type SortField = 'orderNo' | 'deliveryDate';
@@ -82,6 +83,7 @@ export function OrderTable({
   const confirmDateCol = showConfirmDateCol(bp);
   const lgCols = showLgCols(bp);
   const adminCols = showAdminCols(bp, canViewFinancials);
+  const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
   const allIds = records.map((r) => r.id);
   const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
   const someSelected = allIds.some((id) => selectedIds.has(id)) && !allSelected;
@@ -116,6 +118,7 @@ export function OrderTable({
   }
 
   return (
+    <>
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <table className="w-full table-fixed">
         <colgroup>
@@ -193,6 +196,7 @@ export function OrderTable({
               canViewFinancials={canViewFinancials}
               consigneeOptions={consigneeOptions}
               onUpdate={(patch) => onUpdate(record.id, patch)}
+              onOpenEdit={setEditingRecord}
               canBatchEdit={canBatchEdit}
               selected={selectedIds.has(record.id)}
               onToggleSelect={onToggleSelect}
@@ -201,5 +205,14 @@ export function OrderTable({
         </tbody>
       </table>
     </div>
+    <OrderEditModal
+      isOpen={editingRecord !== null}
+      record={editingRecord}
+      canViewFinancials={canViewFinancials}
+      consigneeOptions={consigneeOptions}
+      onClose={() => setEditingRecord(null)}
+      onSave={(id, patch) => onUpdate(id, patch)}
+    />
+    </>
   );
 }

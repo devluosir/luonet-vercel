@@ -14,7 +14,6 @@ import type {
   CustomerQuoteStatus,
   InquiryBasicInput,
   InquiryRecord,
-  OrderSubStatus,
   SupplierQuoteStatus,
 } from '../types';
 import {
@@ -99,8 +98,6 @@ export function InquiryFormModal({
   const [newContactName, setNewContactName] = useState('');
   const [description, setDescription] = useState('');
   const [orderNo, setOrderNo] = useState('');
-  const [orderSubStatus, setOrderSubStatus] = useState<OrderSubStatus | undefined>(undefined);
-  const [orderSubStatusRemark, setOrderSubStatusRemark] = useState('');
   const [isInquiryNoManual, setIsInquiryNoManual] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
 
@@ -139,8 +136,6 @@ export function InquiryFormModal({
     setNewContactName('');
     setDescription(record?.description ?? '');
     setOrderNo(record?.orderNo ?? '');
-    setOrderSubStatus(record?.orderSubStatus);
-    setOrderSubStatusRemark(record?.orderSubStatusRemark ?? '');
     setIsInquiryNoManual(mode === 'edit');
     setIsUrgent(urgent);
     // 新增模式：初始化两个默认供应商；编辑模式：从记录读取
@@ -301,10 +296,12 @@ export function InquiryFormModal({
       contactId: contactId || undefined,
       description: description.trim(),
       orderNo: orderNo.trim() || undefined,
-      orderSubStatus: orderNo.trim() ? orderSubStatus : undefined,
-      orderSubStatusRemark: orderNo.trim() && orderSubStatus
-        ? orderSubStatusRemark.trim() || undefined
-        : undefined,
+      // 订单编号被清空（订单撤回成询价）时，一并清掉订单状态标记——这两个字段本身已经
+      // 移到订单状态表的"编辑订单"弹窗编辑（2026-07-10），这里不再提供编辑入口，只在
+      // 撤回订单号这一种场景下做防御性清理，避免撤销C/悬挂P/善后S 残留成看不见的脏数据。
+      ...(!orderNo.trim() && record?.orderSubStatus
+        ? { orderSubStatus: undefined, orderSubStatusRemark: undefined }
+        : {}),
     };
     if (!payload.inquiryNo || !payload.inquirer || !payload.customerNo) return;
 
@@ -531,46 +528,16 @@ export function InquiryFormModal({
                     placeholder="FL2601（询价确认为订单后填写）"
                   />
                 </div>
-                {/* 辙销C / 悬挂P / 善后S — 仅在有订单编号时显示，互斥单选，再次点击取消 */}
-                {orderNo.trim() && <div className="mt-2 flex items-center gap-1.5">
-                  {(
-                    [
-                      { val: 'cancelled', label: '辙销C' },
-                      { val: 'suspended', label: '悬挂P' },
-                      { val: 'followup',  label: '善后S' },
-                    ] as const
-                  ).map(({ val, label }) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setOrderSubStatus((prev) => (prev === val ? undefined : val))}
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
-                        orderSubStatus === val
-                          ? 'bg-red-500 text-white'
-                          : 'border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500 dark:border-gray-700 dark:hover:border-red-700 dark:hover:text-red-400'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>}
-                {orderNo.trim() && orderSubStatus && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="shrink-0 text-xs font-medium text-gray-400 dark:text-gray-500">
-                      情况备注
+                {/* 撤销C/悬挂P/善后S + 情况备注已移到订单状态表的"编辑订单"弹窗编辑（2026-07-10），
+                    这里只做只读提示，避免用户找不到入口 */}
+                {orderNo.trim() && record?.orderSubStatus && (
+                  <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                    当前订单状态标记：
+                    <span className="font-semibold text-red-500">
+                      {record.orderSubStatus === 'cancelled' ? '辙销C' : record.orderSubStatus === 'suspended' ? '悬挂P' : '善后S'}
                     </span>
-                    <input
-                      value={orderSubStatusRemark}
-                      onChange={(e) => setOrderSubStatusRemark(e.target.value)}
-                      className={
-                        'min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm ' +
-                        'text-gray-700 outline-none placeholder:text-gray-300 ' +
-                        'focus:border-red-300 focus:ring-1 focus:ring-red-100 ' +
-                        'dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-600 dark:focus:border-red-700'
-                      }
-                      placeholder="简要说明当前情况，例如客户暂缓、等待确认、需善后处理"
-                    />
-                  </div>
+                    ，如需修改请在订单状态表中点击该记录编辑
+                  </p>
                 )}
               </div>
             )}

@@ -1078,6 +1078,47 @@ TASK-116 修好了收缩态悬浮提示的可见性问题，但当时沿用的�
 
 **Status:** completed
 
+## TASK-125：订单状态表新增"编辑订单"弹窗，订单状态标记编辑从编辑询价迁移过来
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 背景
+
+撤销C/悬挂P/善后S + 情况备注这几个字段描述的是"订单本身的状态"，但原来只能在询报价登记的"编辑询价"弹窗里编辑，跟询价阶段的信息（联络人、客户询价编号等）混在一起，概念上不对口，用户在订单状态表里也看不到编辑入口。用户要求把这部分编辑挪到订单状态表，通过点击每一行"订单编号+询价编号"这个原本纯只读的区域弹出"编辑订单"弹窗，弹窗里既展示来自询价的只读信息，也能编辑订单相关字段。
+
+设计阶段跟用户确认了两个关键范围问题：① 弹窗要不要顺带集中编辑订单状态表里已经支持行内点击编辑的其它字段（交货/确认日期/客户订单号/执行情况/金额/回款月份/到账金额）——用户选择"弹窗集中编辑全部订单字段，行内编辑保留"，即弹窗和行内点击编辑并存，不是互斥关系；② 订单编号（orderNo）本身——把询价"转成"订单或撤回——放在哪编辑，用户选择维持现状，仍只在"编辑询价"弹窗编辑。
+
+### 执行记录
+
+- 新建 `src/features/order/components/OrderEditModal.tsx`：弹窗分三块——①"来自询价（只读）"信息卡（订单编号/询价编号/客户询价编号/联络人/内容简述，纯展示，附一行提示"订单编号如需修改或撤回，请在询报价登记表的编辑询价中操作"）；②"订单信息"可编辑区（交货日期/确认日期用 `DateField` 本地组件，文本输入 + 原生日期选择器叠加，逻辑参考 `OrderRow.tsx` 的 `DatePickerCell` 但始终展开、不需要点击激活；客户订单号文本输入；执行情况文本输入 + 复用 `DeliveryStatusCell.tsx` 导出的 `STATUS_PRESETS` 预设按钮 + 收货人下拉；金额/回款月份/到账金额仅 `canViewFinancials` 为真时显示，金额用 `AmountField` 本地组件复刻 `AmountCell` 的货币符号切换+两位小数逻辑）；③"订单状态标记"区（撤销C/悬挂P/善后S 互斥单选 + 情况备注，UI 直接照搬原来在 `InquiryFormModal.tsx` 里的实现）。保存时一次性把这些字段合并成一个 patch 通过 `onSave(id, patch)` 交给上层，日期字段保存前统一走 `normalizeShortDateInput` 加回方括号，跟行内编辑单元格的存储格式保持一致。
+- `src/features/order/components/OrderRow.tsx`：新增可选 prop `onOpenEdit`；原来纯展示的"订单编号+询价编号" `<div>` 包一层 `role="button"` + 点击/回车触发 `onOpenEdit(record)`，加 hover 底色提示可点击，`title` 附加"（点击编辑订单）"提示。
+- `src/features/order/components/OrderTable.tsx`：新增 `editingRecord` 本地 state，渲染时把 `onOpenEdit={setEditingRecord}` 传给每个 `OrderRow`；表格外层包一层 Fragment，加一个 `<OrderEditModal>` 常驻渲染，`isOpen={editingRecord !== null}`，`onSave` 直接调用外部传入的 `onUpdate(id, patch)`（跟行内编辑走同一个更新函数，最终都落到 `useInquiryStore.updateRecord`）。
+- `src/features/inquiry/components/InquiryFormModal.tsx`：移除 `orderSubStatus`/`orderSubStatusRemark` 两个本地 state 和对应的"撤销C/悬挂P/善后S"按钮组 + "情况备注"输入框 UI；保留"订单编号"输入框不变（维持在询价侧编辑的决定）。`handleSubmit` 的 payload 不再主动设置这两个字段（未编辑过的字段不参与 patch，不会覆盖订单状态表那边刚保存的值），只保留一条防御性清理：如果这次提交把订单编号清空（订单撤回成询价）且记录原来有 `orderSubStatus`，才顺带把这两个字段一起清掉，避免撤销/悬挂/善后标记变成看不见的脏数据残留在没有订单号的记录上。原来的"辙销C/悬挂P/善后S"按钮位置替换成一段只读提示文字：有订单号且已有 `orderSubStatus` 时显示"当前订单状态标记：XX，如需修改请在订单状态表中点击该记录编辑"，避免用户在询价弹窗里找不到这几个字段就以为丢失了。
+- `src/features/inquiry/types/index.ts` 未改动——`InquiryBasicInput` 仍然保留 `orderSubStatus`/`orderSubStatusRemark` 作为可选字段（用于上面那条防御性清理场景），只是 `InquiryFormModal.tsx` 不再提供编辑 UI，两者是"类型允许传，但这个表单不主动传"的关系。
+
+### Files in scope
+
+- `src/features/order/components/OrderEditModal.tsx`（新增）
+- `src/features/order/components/OrderRow.tsx`
+- `src/features/order/components/OrderTable.tsx`
+- `src/features/inquiry/components/InquiryFormModal.tsx`
+
+### Non-goals / 红线
+
+- 未改动 `src/features/inquiry/types/index.ts` 的字段结构，`InquiryRecord` 上所有相关字段（orderDeliveryDate/orderConfirmDate/orderCustomerNo/orderDeliveryStatus/orderDeliveryConsignee/orderAmount/orderPaymentDate/orderReceivedAmount/orderSubStatus/orderSubStatusRemark）本来就已存在，无需 D1 迁移。
+- 未移除订单状态表任何行内单元格点击编辑（交货/确认日期/客户订单号/执行情况/金额/回款月份/到账金额）——弹窗和行内编辑是并存关系，这是设计阶段用户明确选择的范围，不是本次的"重构掉行内编辑"。
+- 未改动订单编号（orderNo）的编辑位置——仍然只在"编辑询价"弹窗，"编辑订单"弹窗里订单编号是只读展示。
+- 未触碰采购订单表（`PurchaseOrderRow.tsx`/`PurchaseOrderTable.tsx`）——用户这次只提到订单状态表，采购订单表要不要加同样的"编辑订单"弹窗入口是后续可选项，不在本次范围内。
+- 未改动批量选择模式（`canBatchEdit`）下的行为——"订单编号+询价编号"单元格在批量模式下依然可以点击打开编辑弹窗，跟其它单元格现有的行内编辑权限保持一致（未额外加权限/模式互斥判断）。
+
+### Verification steps
+
+- `npx tsc --noEmit`、`npx eslint`（四个改动/新增文件）均无输出。
+- 未做真实浏览器验证，建议用户实测：① 在订单状态表点击某条记录"订单编号+询价编号"区域，确认弹出"编辑订单"，只读信息区显示的订单编号/询价编号/客户询价编号/联络人/内容简述与该记录一致；② 在弹窗里编辑交货日期/确认日期/客户订单号/执行情况/金额/回款月份/到账金额，保存后确认对应行内单元格同步更新；③ 在弹窗里切换撤销C/悬挂P/善后S 并填写情况备注，保存后确认整行变灰底黑字（撤销）或对应背景色（悬挂/善后），行内客户订单号下方能看到情况备注小字；④ 打开该记录的"编辑询价"弹窗，确认订单编号仍可编辑，撤销/悬挂/善后按钮已消失，改成一行只读提示文字（如果记录当前有状态标记的话）；⑤ 在编辑询价里把订单编号清空保存，确认订单状态表里这条记录消失，且如果之后重新填回同一个订单编号，原来的状态标记不会奇怪地自动复现（因为清空时已经顺带清掉了）。
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |
