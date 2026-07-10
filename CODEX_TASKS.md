@@ -919,6 +919,10 @@ TASK-116 修好了收缩态悬浮提示的可见性问题，但当时沿用的�
 - `npx tsc --noEmit`、`npx eslint`（四个改动文件）均无输出。
 - 未做真实浏览器验证，建议用户逐个打开四个单据页面，点击设置按钮展开/收起，确认面板跟上方工具栏、下方内容区域的间距观感一致。
 
+**追加修正（2026-07-10，同一会话）**：用户截图反馈财务发票页面设置展开后，跟上方标题栏的间距明显比其他三个页面更大。原因是当时只统一了 `CollapsibleSection` 自身的 `contentClassName`，漏看了 Invoice 的标题栏容器本身还多叠加了一层 `mb-6`（`InvoicePage.tsx` 标题栏 div：`-mx-4 md:-mx-8 px-4 md:px-8 pb-6 mb-6 border-b`）——`pb-6`（24px，header 内部标题到分割线的距离）之外又加了一个 `mb-6`（24px，分割线到设置面板的距离），比 Quotation（`p-3 sm:p-4` 单层 12~16px）、Packing/Purchase（`p-4 sm:p-6` 单层 16~24px）多出一整倍。去掉这个多余的 `mb-6`，把 `pb-6` 改成 `pb-4 sm:pb-6`，跟 Packing/Purchase 的 header 量级对齐，分割线之后紧接着由 `CollapsibleSection` 自己的 `pt-3` 提供间距，不再重复叠加。`npx tsc --noEmit`/`npx eslint` 均无输出。
+
+**追加修正 2（2026-07-10，同一会话）**：用户又指出发票页面"客户信息/单号"这块区域有底框（`bg-gray-50/50 dark:bg-gray-800/20 rounded-xl border ... p-4`），而 Quotation（`CustomerInfoCompact`）、Packing（`BasicInfoSection`）对应区域都是直接铺在卡片背景上、没有单独的底框。`InvoiceInfoCompact` 组件本身只是 `grid grid-cols-12 gap-3`，不依赖外层的背景/边框，去掉包裹的底框 div，外层直接改成跟 Packing 一致的 `px-4 sm:px-6 py-4 sm:py-6`（保留原有 `mb-8` 不变，这次只针对"有没有底框"这一点，不涉及间距数值）。`npx tsc --noEmit`/`npx eslint` 均无输出。
+
 **Status:** completed
 
 ## 已关闭 / 不做

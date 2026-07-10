@@ -212,8 +212,9 @@ export const InvoicePage = () => {
           {/* 主卡片容器 */}
           <PageCard padding="md">
             <form onSubmit={handleSubmit}>
-              {/* 标题和工具栏 */}
-              <div className="flex items-center justify-between -mx-4 md:-mx-8 px-4 md:px-8 pb-6 mb-6 border-b border-gray-100 dark:border-[#3A3A3C]">
+              {/* 标题和工具栏：底部间距对齐 quotation/packing/purchase 三个页面的 header（p-3~p-6 量级），
+                  原来额外叠加的 mb-6 是间距明显偏大的根因（2026-07-10 用户反馈发票页面设置展开后离标题栏更远） */}
+              <div className="flex items-center justify-between -mx-4 md:-mx-8 px-4 md:px-8 pb-4 sm:pb-6 border-b border-gray-100 dark:border-[#3A3A3C]">
                 <div className="flex items-center gap-4">
                   <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
                     Invoice Generator
@@ -277,14 +278,13 @@ export const InvoicePage = () => {
                 <SettingsPanel />
               </CollapsibleSection>
 
-              {/* 基础信息区域 */}
-              <div className="mb-8">
-                <div className="bg-gray-50/50 dark:bg-gray-800/20 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-                  <InvoiceInfoCompact
-                    data={data}
-                    onChange={updateData}
-                  />
-                </div>
+              {/* 基础信息区域：去掉底框，跟 quotation/packing 的客户信息区域一样直接铺在卡片背景上
+                  （2026-07-10 用户反馈发票页面这块有底框、跟其他单据页面不一致） */}
+              <div className="px-4 sm:px-6 py-4 sm:py-6 mb-8">
+                <InvoiceInfoCompact
+                  data={data}
+                  onChange={updateData}
+                />
               </div>
 
               {/* 商品表格 */}
