@@ -5,7 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2026-07-09
+## [Unreleased] - 2026-07-10
+
+### Changed
+
+#### Sidebar 视觉密度优化
+- **桌面宽度**：展开态由 260px 收紧为 240px，主内容区偏移同步调整；收缩态保持 56px，移动端侧滑菜单保持 260px。
+- **菜单密度**：导航项由 44px / 15px 调整为 40px / 14px，图文间距由 12px 调整为 10px；20px 图标、12px 分组标题和既有配色保持不变。
+- **一致性**：同步更新 `sidebarCollapse` 展开宽度常量、CSS 首屏默认变量、单元测试和 `SIDEBAR_DESIGN_SPEC.md`。
 
 ### Security
 

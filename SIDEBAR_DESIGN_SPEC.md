@@ -15,7 +15,7 @@
 |---|---|
 | Background | `#FAFBFC`（Light）/ `#1C1C1E`（Dark，即 `--app-dark-base`） |
 | Border Right | `#E5E7EB`（Light）/ `rgba(255,255,255,0.08)`（Dark） |
-| Width | 260px（收缩态 3.5rem / 56px） |
+| Width | 桌面展开态 240px；桌面收缩态 3.5rem / 56px；移动端侧滑菜单 260px |
 | Padding | 16px（导航区四周内边距） |
 
 ### Section Title（组标签，如"新单据""登记表"）
@@ -32,12 +32,13 @@
 
 | 属性 | 值 |
 |---|---|
-| Height | 44px |
+| Height | 40px |
 | Border Radius | 10px |
 | Horizontal Padding | 12px |
 | Icon Size | 20px |
 | Icon Stroke Width | 1.75px |
-| Font Size | 15px |
+| Icon / Text Gap | 10px |
+| Font Size | 14px |
 | Font Weight | 500 |
 
 #### 交互状态
@@ -82,8 +83,8 @@ Dark 模式下 Normal 文字 `#D1D5DB`、图标 `#94A3B8`；Hover 背景 `rgba(2
   --color-warning: #F59E0B;
   --color-danger: #EF4444;
 
-  --sidebar-width: 260px;
-  --sidebar-margin: 260px;
+  --sidebar-width: 240px;
+  --sidebar-margin: 240px;
 }
 
 html.dark {
@@ -136,8 +137,8 @@ colors: {
 
 ```tsx
 // 菜单项
-const navItemClassName = `flex h-11 items-center rounded-[10px] text-[15px] font-medium transition-colors ${
-  isCollapsed ? 'justify-center px-0 mx-1' : 'gap-3 px-3'
+const navItemClassName = `flex h-10 items-center rounded-[10px] text-sm font-medium transition-colors ${
+  isCollapsed ? 'justify-center px-0 mx-1' : 'gap-2.5 px-3'
 } ${
   active
     ? 'bg-sidebar-item-active-bg text-sidebar-item-active-text'
@@ -188,4 +189,6 @@ Dark 模式数值为本次新设计（用户仅给出 Light 规范），沿用�
 
 ## 6. 范围说明
 
-本规范已应用于全部菜单入口：桌面端左侧 Sidebar（`AppSidebar.tsx`）、其内嵌的用户菜单（`AppUserMenu.tsx`），以及移动端底部导航（`MobileBottomTab.tsx`，含顶层五个入口和各分类下拉子菜单）。此前 Phase 6 的逐项彩色图标方案（`src/constants/menuIconColors.ts`）已全面停用，该文件已无引用方，等待手动删除。
+本规范已应用于全部菜单入口：桌面端左侧 Sidebar（`AppSidebar.tsx`）、其内嵌的用户菜单（`AppUserMenu.tsx`），以及移动端底部导航（`MobileBottomTab.tsx`，含最多六个顶层入口和各分类下拉子菜单）。此前 Phase 6 的逐项彩色图标方案已全面停用，原 `src/constants/menuIconColors.ts` 已删除。
+
+尺寸规格中，240px 展开宽度和 40px / 14px 菜单项仅用于桌面端 Sidebar；移动端侧滑菜单为保证触控和内容容纳能力，继续保持 260px 宽度。

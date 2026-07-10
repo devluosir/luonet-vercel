@@ -152,6 +152,7 @@ theme-config
 
 ## 前端交互与主题现状
 
+- 桌面端左侧 Sidebar 展开宽度为 240px、收缩宽度为 56px；导航项采用 40px 高度、14px/500 字体、20px 图标和 10px 图文间距。移动端侧滑菜单独立保持 260px 宽度。
 - 全局反馈入口为 `src/components/ui/Toast.tsx`，支持 success / error / warning / info / loading、更新已有 toast、promise-style 流程、hover 暂停、Esc 关闭最新一条和最多 4 条堆叠。
 - 全局二次确认入口为 `src/components/ui/ConfirmDialog.tsx`。纯提示类反馈使用 Toast，需要用户决策的危险操作使用 ConfirmDialog。
 - 主题系统只保留明暗模式，不再提供 `classic` / `colorful` 按钮主题；配置写入 `theme-config`，并兼容旧 `themeConfig`。
@@ -159,7 +160,7 @@ theme-config
 - Dashboard 模块卡片使用静态 Tailwind 背景类（浅色 `bg-*-50`，深色 `dark:bg-*-500/10`），不再依赖运行时 CSS 变量注入或 `!important` 覆盖。
 - 用户菜单个人信息子菜单的「账户工具」包含主题紧凑切换和权限刷新图标按钮；权限刷新通过 `usePermissionRefresh.ts` 调用 `/api/auth/force-refresh-session`。
 - 预加载只保留真实阶段：静态资源到 50%，PDF 字体到 100%；空实现的表单页 / 脚本样式阶段已移除。完成后用户菜单中的预加载行直接隐藏，不再显示「资源已预加载 (100%)」（详见 `docs/features/PRELOAD_FEATURE.md`）。
-- 用户菜单个人信息子菜单在 <640px 屏幕下改为在按钮下方原地展开，避免移动端 220px 侧边栏空间不足导致子菜单溢出可视区域；`sm` 及以上保持原有向右弹出。
+- 用户菜单个人信息子菜单在 <640px 屏幕下改为在按钮下方原地展开，避免移动端侧滑菜单空间有限导致子菜单溢出可视区域；`sm` 及以上保持原有向右弹出。
 - 移动端侧边栏和整体布局容器改用 `.app-h-dvh`（`100vh` 回退 + `100dvh` 覆盖），修复移动浏览器地址栏显示时固定侧边栏底部（用户菜单）被压到可视区域外的问题。
 - 移动端底部导航（`src/components/layout/MobileBottomTab.tsx`，`md:hidden`）为：首页（直达链接）+ 新建 / 登记 / 管理 / 工具 / 我（浮动子菜单），共最多 6 个入口。「新建」子项复用 `dashboardModules.ts` 的 `QUICK_CREATE_MODULES`；「登记/管理/工具」子项与桌面端 `AppSidebar.tsx` 的 `NAV_ITEMS` 保持同一套 id 和权限 moduleId（「工具」现含 AI 邮件，moduleId `ai-email`，与桌面 tools 分组对齐）；权限过滤后子项全空则对应分类入口隐藏，「首页」「我」固定常驻不受权限过滤。「我」菜单含关于、个人信息、管理后台（仅 `user.isAdmin`，跳转 `/admin`，与桌面端一致）、退出登录。
 - 移动端汉堡菜单（`AppTopBar.tsx` 的 `onMenuClick` 按钮）改为只在 768–1024px（`md`–`lg`）之间显示（`hidden md:flex lg:hidden`）。原因：<768px 已由底部 6 个入口（含首页/AI邮件）覆盖全部导航；768–1024px 之间桌面侧边栏（`lg:flex`）和底部导航都不显示，此按钮是该区间唯一导航入口，不能整体移除。

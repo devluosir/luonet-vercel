@@ -711,6 +711,12 @@ TASK-110 已经做了首页"询价 / 订单趋势"折线图（`InquiryOrderTrend
 - `src/constants/menuIconColors.ts` 至此已无任何引用方（`AppSidebar.tsx`/`AppUserMenu.tsx`/`MobileBottomTab.tsx` 均已切到 `sidebar-*` token）；用户已手动删除该文件，`tsc`/`eslint` 复查均通过。
 - 验证：`npx tsc --noEmit`、`npx eslint`（`MobileBottomTab.tsx` + 删除 `menuIconColors.ts` 后）均无输出。未做：移动端真机/浏览器视觉走查未执行，建议用户实测。
 
+**追加调整 2（2026-07-10）**：根据实际宽屏截图优化桌面 Sidebar 的视觉密度：
+- 桌面展开宽度从 260px 收紧为 240px，`--sidebar-width`、`--sidebar-margin`、`SIDEBAR_WIDTH_EXPANDED` 和测试断言同步更新；收缩态仍为 56px。
+- 导航项从 44px 高 / 15px 字号调整为 40px 高 / 14px 字号，图文间距从 12px 调整为 10px；图标仍为 20px，组标签仍为 12px。
+- 移动端侧滑菜单继续使用 260px，不跟随桌面端缩窄。
+- 验证：`src/utils/__tests__/sidebarCollapse.test.ts` 4 项测试通过，`git diff --check` 通过。
+
 ### Files in scope
 
 - `src/app/globals.css`
@@ -732,7 +738,7 @@ TASK-110 已经做了首页"询价 / 订单趋势"折线图（`InquiryOrderTrend
 - `npx tsc --noEmit` — 通过
 - `npx eslint`（改动文件）— 通过
 - `npm run build` — 45 秒沙箱超时前未见报错（既有限制，见 TASK-109/110）
-- 待用户在浏览器人工核对：Light/Dark 两种模式下侧边栏配色、激活态指示条、收缩/展开切换、260px 宽度是否符合预期
+- 待用户在浏览器人工核对：Light/Dark 两种模式下侧边栏配色、激活态指示条、收缩/展开切换，以及桌面 240px / 移动端侧滑 260px 宽度是否符合预期
 
 **Status:** completed
 
