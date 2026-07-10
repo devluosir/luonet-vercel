@@ -692,6 +692,50 @@ TASK-110 已经做了首页"询价 / 订单趋势"折线图（`InquiryOrderTrend
 
 **Status:** completed
 
+## TASK-114：Sidebar 重新设计——企业级中性风格（MS365/Linear/Notion/Stripe Dashboard）
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+
+**背景**：用户在批准并验证 TASK-109 之后的"菜单图标彩色化"（逐项专属彩色图标，见 `src/constants/menuIconColors.ts`）之上，又提出完全反向的设计要求——放弃彩色图标，改用企业级中性配色方案（80% 中性色 + 15% 品牌色 + 5% 功能色），并给出了精确到像素/hex 的设计规范。本任务**只针对桌面端左侧 Sidebar（`AppSidebar.tsx`）及其内嵌的用户菜单（`AppUserMenu.tsx`）**生效；移动端底部导航 `MobileBottomTab.tsx` 用户没有提及"Sidebar"这个词，且是完全独立的组件，本次未改动，仍保留 Phase 6 的彩色图标方案。
+
+**执行记录**：
+- 新增侧边栏专属 CSS 变量（`src/app/globals.css` `:root` + `html.dark`）：`--sidebar-bg`、`--sidebar-border`、`--sidebar-section-title`、`--sidebar-item-text`、`--sidebar-item-icon`、`--sidebar-item-hover-bg`、`--sidebar-item-active-bg`、`--sidebar-item-active-text`、`--sidebar-item-active-icon`、`--sidebar-item-active-indicator`，以及 `--color-success/warning/danger`。Light 值按用户给定 hex 原样落地；Dark 值为新设计（用户只给了 Light 规范），沿用项目既有 `--app-dark-base`/`--app-dark-surface` 基调，激活态改用更亮的 `#60A5FA`（blue-400）保证暗色背景下的可读对比度。
+- `--sidebar-width`/`--sidebar-margin` 默认值从 `220px` 改为 `260px`，同步更新 `src/utils/sidebarCollapse.ts` 的 `SIDEBAR_WIDTH_EXPANDED` 常量、`src/utils/__tests__/sidebarCollapse.test.ts` 的 3 处断言、`AppSidebar.tsx` 移动端 overlay 的 `w-[220px]`→`w-[260px]`，以及 `AppUserMenu.tsx` 里引用 220px 的注释。
+- `tailwind.config.ts` `theme.extend.colors` 新增 `sidebar.*`（映射到上述 CSS 变量，shadcn 风格的 token-over-CSS-var 用法，深浅色自动切换不需要额外写 `dark:` 变体）和 `status.success/warning/danger`。
+- `AppSidebar.tsx`：移除 Phase 6 的 `MENU_ICON_COLORS`/`DEFAULT_MENU_ICON_COLOR` 引用；导航项改为统一规格——高度 44px（`h-11`）、圆角 10px、水平内边距 12px、图标 20px（`h-5 w-5`，`strokeWidth=1.75`）、字号 15px/字重 500；默认态图标/文字读 `sidebar-item-icon`/`sidebar-item-text`（灰），激活态背景 `sidebar-item-active-bg`、文字/图标 `sidebar-item-active-text`/`sidebar-item-active-icon`（品牌蓝），并在激活项左侧加 3px 圆角蓝色指示条（收缩态不显示，避免和收缩窄轨道的定位冲突）。组标签样式改为 12px/600/大写/`sidebar-section-title` 色，组间距用 `mt-6`（24px）取代原来的分隔线。容器背景/边框改用 `sidebar-bg`/`sidebar-border`。
+- `AppUserMenu.tsx`：移除 Phase 6 的 `USER_MENU_ICON_COLORS` 引用，四个操作项图标统一改为中性灰（`text-gray-500 dark:text-gray-400`），底部分隔线改用 `sidebar-border`，与新 Sidebar 配色保持一致（该组件挂载在 Sidebar 底部，若继续保留彩色图标会破坏整体"中性+仅激活态用蓝"的设计原则）。
+- 新增独立设计规范文档 `SIDEBAR_DESIGN_SPEC.md`（仓库根目录），包含 Figma 风格规范表格、Tailwind Design Token、CSS Variables、shadcn/ui 风格组件样式片段、Light/Dark 两套配色对照表。
+
+**追加调整（2026-07-10，同一会话）**：用户要求"全部应用到所有菜单"，把中性配色方案从桌面 Sidebar 扩展到移动端底部导航：
+- `MobileBottomTab.tsx`：移除 `MOBILE_CATEGORY_ICON_COLORS`/`MENU_ICON_COLORS`/`USER_MENU_ICON_COLORS`/`DEFAULT_MENU_ICON_COLOR` 引用。顶层五个入口（首页/新建/登记/管理/工具/我）图标与文字改用 `sidebar-item-icon`/`sidebar-item-text`（灰），激活/展开态改用 `sidebar-item-active-bg`/`-text`/`-icon`（品牌蓝），与桌面端视觉语言统一；下拉面板（分类子菜单 + "我"子菜单）背景/边框改用 `sidebar-border`，各项图标统一 `text-sidebar-item-icon`，不再逐项彩色；`strokeWidth` 统一改成 1.75 与桌面端一致。
+- `src/constants/menuIconColors.ts` 至此已无任何引用方（`AppSidebar.tsx`/`AppUserMenu.tsx`/`MobileBottomTab.tsx` 均已切到 `sidebar-*` token）；用户已手动删除该文件，`tsc`/`eslint` 复查均通过。
+- 验证：`npx tsc --noEmit`、`npx eslint`（`MobileBottomTab.tsx` + 删除 `menuIconColors.ts` 后）均无输出。未做：移动端真机/浏览器视觉走查未执行，建议用户实测。
+
+### Files in scope
+
+- `src/app/globals.css`
+- `tailwind.config.ts`
+- `src/utils/sidebarCollapse.ts`
+- `src/utils/__tests__/sidebarCollapse.test.ts`
+- `src/components/layout/AppSidebar.tsx`
+- `src/components/layout/AppUserMenu.tsx`
+- `src/components/layout/MobileBottomTab.tsx`（追加调整新增）
+- `src/constants/menuIconColors.ts`（追加调整中已删除）
+- `SIDEBAR_DESIGN_SPEC.md`（新增）
+
+### Non-goals / 红线
+
+- 不改导航项数据结构（`NAV_ITEMS`/`NAV_GROUPS`/`CATEGORY_DEFS`/权限映射）
+
+### Verification steps
+
+- `npx tsc --noEmit` — 通过
+- `npx eslint`（改动文件）— 通过
+- `npm run build` — 45 秒沙箱超时前未见报错（既有限制，见 TASK-109/110）
+- 待用户在浏览器人工核对：Light/Dark 两种模式下侧边栏配色、激活态指示条、收缩/展开切换、260px 宽度是否符合预期
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

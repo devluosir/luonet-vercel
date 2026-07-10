@@ -25,6 +25,24 @@ export default {
             surface: '#2c2c2e',
           },
         },
+        // 侧边栏设计 Token（Light/Dark 值由 CSS 变量提供，见 globals.css + SIDEBAR_DESIGN_SPEC.md）
+        sidebar: {
+          bg: 'var(--sidebar-bg)',
+          border: 'var(--sidebar-border)',
+          'section-title': 'var(--sidebar-section-title)',
+          'item-text': 'var(--sidebar-item-text)',
+          'item-icon': 'var(--sidebar-item-icon)',
+          'item-hover-bg': 'var(--sidebar-item-hover-bg)',
+          'item-active-bg': 'var(--sidebar-item-active-bg)',
+          'item-active-text': 'var(--sidebar-item-active-text)',
+          'item-active-icon': 'var(--sidebar-item-active-icon)',
+          'item-active-indicator': 'var(--sidebar-item-active-indicator)',
+        },
+        status: {
+          success: '#10B981',
+          warning: '#F59E0B',
+          danger: '#EF4444',
+        },
       },
       caretColor: {
         'blue-600': '#2563eb',

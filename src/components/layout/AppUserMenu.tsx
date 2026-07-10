@@ -13,7 +13,9 @@ import {
 import { Avatar } from '@/components/Avatar';
 import { UserProfilePanel } from './UserProfilePanel';
 import { preloadManager } from '@/utils/preloadUtils';
-import { USER_MENU_ICON_COLORS } from '@/constants/menuIconColors';
+
+// 用户菜单嵌在 Sidebar 底部，图标统一中性灰，与 Sidebar 主导航配色保持一致（不使用逐项彩色图标）
+const USER_MENU_ICON_CLASS = 'text-gray-500 dark:text-gray-400';
 
 export interface AppUserMenuProps {
   user: {
@@ -137,7 +139,7 @@ export function AppUserMenu({
   // 弹出层定位
   const dropdownPos = isBottomLeft ? 'bottom-full left-0 mb-2' : 'right-0 top-full mt-2';
   // 子菜单定位（profile 面板）
-  // 移动端侧边栏固定宽 220px，屏幕较窄时若仍向右展开会超出可视区域，
+  // 移动端侧边栏固定宽 260px，屏幕较窄时若仍向右展开会超出可视区域，
   // 因此小屏（<640px）改为在按钮下方原地展开（智能收窄），sm 及以上保持原有向右弹出。
   const submenuPos = isBottomLeft
     ? 'static mt-2 sm:absolute sm:mt-0 sm:left-full sm:top-0 sm:ml-1'
@@ -186,7 +188,7 @@ export function AppUserMenu({
               onClick={openProfileSubmenu}
               className="relative flex w-full items-center px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50"
             >
-              <User className={`mr-2 h-4 w-4 ${USER_MENU_ICON_COLORS.profile}`} />
+              <User className={`mr-2 h-4 w-4 ${USER_MENU_ICON_CLASS}`} />
               个人信息
               {openSubmenu === 'profile' && (
                 <span
@@ -236,7 +238,7 @@ export function AppUserMenu({
                     />
                   )}
                   <div className="relative z-10 flex w-full items-center">
-                    <Download className={`mr-2 h-4 w-4 ${USER_MENU_ICON_COLORS.preload} ${isPreloading ? 'animate-pulse' : ''}`} />
+                    <Download className={`mr-2 h-4 w-4 ${USER_MENU_ICON_CLASS} ${isPreloading ? 'animate-pulse' : ''}`} />
                     <span className="flex-1 text-left">
                       {isPreloading ? (
                         <span className="flex flex-col">
@@ -263,7 +265,7 @@ export function AppUserMenu({
                 }}
                 className="flex w-full items-center px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50"
               >
-                <Settings className={`mr-2 h-4 w-4 ${USER_MENU_ICON_COLORS.admin}`} />
+                <Settings className={`mr-2 h-4 w-4 ${USER_MENU_ICON_CLASS}`} />
                 管理后台
               </button>
             )}
@@ -276,7 +278,7 @@ export function AppUserMenu({
               }}
               className="flex w-full items-center px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50"
             >
-              <LogOut className={`mr-2 h-4 w-4 ${USER_MENU_ICON_COLORS.logout}`} />
+              <LogOut className={`mr-2 h-4 w-4 ${USER_MENU_ICON_CLASS}`} />
               退出登录
             </button>
           </div>

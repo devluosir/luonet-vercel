@@ -29,7 +29,6 @@ import {
   DomesticQuotationIcon,
   DomesticContractIcon,
 } from '@/components/icons/TradeDocIcons';
-import { MENU_ICON_COLORS, DEFAULT_MENU_ICON_COLOR } from '@/constants/menuIconColors';
 import { AppUserMenu } from './AppUserMenu';
 
 // ── 类型 ──────────────────────────────────────────────────────────────────────
@@ -193,15 +192,15 @@ export function AppSidebar({
     return permission?.canAccess ?? permissionUser.isAdmin;
   }
 
-  const widthClass = isMobile ? 'w-[220px]' : 'app-sidebar';
+  const widthClass = isMobile ? 'w-[260px]' : 'app-sidebar';
 
   return (
     <aside
-      className={`app-h-dvh fixed left-0 top-0 z-30 flex flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-app-dark-base ${widthClass} ${className}`}
+      className={`app-h-dvh fixed left-0 top-0 z-30 flex flex-col border-r border-sidebar-border bg-sidebar-bg ${widthClass} ${className}`}
     >
       {/* ── 头部 ── */}
-      <div className="flex h-14 shrink-0 items-center border-b border-gray-200 dark:border-gray-700"
-           style={{ padding: isCollapsed ? '0' : '0 12px' }}>
+      <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border"
+           style={{ padding: isCollapsed ? '0' : '0 16px' }}>
         {/* 收缩态头部（CSS 首屏预置 + React 状态双保险） */}
         {!isMobile && (
           <button
@@ -258,42 +257,44 @@ export function AppSidebar({
       </div>
 
       {/* ── 导航列表 ── */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2"
-           style={{ padding: isCollapsed ? '8px 0' : '8px 10px' }}>
-        {NAV_GROUPS.map((group, groupIndex) => {
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden"
+           style={{ padding: isCollapsed ? '16px 0' : '16px' }}>
+        {NAV_GROUPS.map((group) => {
           const visibleItems = group.items.filter(isVisible);
           if (visibleItems.length === 0) return null;
 
           return (
-            <div
-              key={group.id}
-              className={groupIndex > 0 ? 'mt-1 border-t border-gray-100 pt-1 dark:border-gray-800' : undefined}
-            >
-              {/* 组标签（仅展开时显示） */}
+            <div key={group.id}>
+              {/* 组标签（仅展开时显示）：12px / 600 / #9CA3AF / 大写，与上一组保持 20-24px 间距 */}
               {group.label && !isCollapsed && (
-                <div className="app-sidebar-group-label mb-0.5 mt-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                <div className="app-sidebar-group-label mb-2 mt-6 px-3 text-xs font-semibold uppercase tracking-wide text-sidebar-section-title first:mt-0">
                   {group.label}
                 </div>
               )}
 
-              {/* 导航项：图标固定专属配色（MENU_ICON_COLORS），不随选中态变化；
-                  选中态改用背景高亮 + 加粗文字区分，不再靠图标/文字变色表达 */}
+              {/* 导航项：默认统一中性灰（图标 #64748B / 文字 #4B5563），
+                  激活态品牌蓝背景 + 蓝色文字/图标 + 左侧 3px 指示条，不再使用逐项彩色图标 */}
               {visibleItems.map((item) => {
-                const Icon      = item.icon;
-                const active    = isItemActive(item, pathname, tab, docType);
-                const iconColor = MENU_ICON_COLORS[item.id] ?? DEFAULT_MENU_ICON_COLOR;
-                const navItemClassName = `flex h-9 items-center rounded-md text-sm transition-colors ${
+                const Icon   = item.icon;
+                const active = isItemActive(item, pathname, tab, docType);
+                const navItemClassName = `flex h-11 items-center rounded-[10px] text-[15px] font-medium transition-colors ${
                   isCollapsed
                     ? 'justify-center px-0 mx-1'
-                    : 'gap-2.5 px-2'
+                    : 'gap-3 px-3'
                 } ${
                   active
-                    ? 'bg-gray-100 font-medium text-gray-900 dark:bg-gray-800/60 dark:text-white'
-                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/50'
+                    ? 'bg-sidebar-item-active-bg text-sidebar-item-active-text'
+                    : 'text-sidebar-item-text hover:bg-sidebar-item-hover-bg'
                 }`;
+                const iconClassName = `h-5 w-5 shrink-0 ${active ? 'text-sidebar-item-active-icon' : 'text-sidebar-item-icon'}`;
 
                 return (
-                  <div key={item.id} className="relative group/nav">
+                  <div key={item.id} className="relative group/nav mb-0.5">
+                    {/* 激活态左侧品牌蓝指示条 */}
+                    {active && !isCollapsed && (
+                      <span className="pointer-events-none absolute -left-4 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-item-active-indicator" />
+                    )}
+
                     {item.external ? (
                       <a
                         href={item.path}
@@ -302,7 +303,7 @@ export function AppSidebar({
                         onClick={onClose}
                         className={navItemClassName}
                       >
-                        <Icon className={`h-4 w-4 shrink-0 ${iconColor}`} />
+                        <Icon className={iconClassName} strokeWidth={1.75} />
                         {!isCollapsed && (
                           <span className="app-sidebar-nav-label truncate">{item.label}</span>
                         )}
@@ -313,7 +314,7 @@ export function AppSidebar({
                         onClick={onClose}
                         className={navItemClassName}
                       >
-                        <Icon className={`h-4 w-4 shrink-0 ${iconColor}`} />
+                        <Icon className={iconClassName} strokeWidth={1.75} />
                         {!isCollapsed && (
                           <span className="app-sidebar-nav-label truncate">{item.label}</span>
                         )}
@@ -341,7 +342,7 @@ export function AppSidebar({
 
       {/* ── 底部：用户菜单 ── */}
       {user && onLogout && (
-        <div className={`shrink-0 border-t border-gray-200 py-2 dark:border-gray-700 ${isCollapsed ? 'px-1' : 'px-2'}`}>
+        <div className={`shrink-0 border-t border-sidebar-border py-2 ${isCollapsed ? 'px-1' : 'px-2'}`}>
           <AppUserMenu
             user={user}
             onLogout={onLogout}

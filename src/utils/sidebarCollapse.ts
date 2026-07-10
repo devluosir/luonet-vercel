@@ -1,6 +1,6 @@
 export const COLLAPSED_KEY = 'sidebar_collapsed';
 
-export const SIDEBAR_WIDTH_EXPANDED = '220px';
+export const SIDEBAR_WIDTH_EXPANDED = '260px';
 export const SIDEBAR_WIDTH_COLLAPSED = '3.5rem';
 
 export function readCollapsed(): boolean {

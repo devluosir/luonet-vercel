@@ -43,9 +43,27 @@
   --transition-normal: 0.3s ease-out;
   --transition-slow: 0.5s ease-out;
 
+  /* 侧边栏设计规范（企业级 SaaS 风格：Microsoft 365 / Linear / Notion / Stripe Dashboard，
+     见 SIDEBAR_DESIGN_SPEC.md）*/
+  --sidebar-bg: #FAFBFC;
+  --sidebar-border: #E5E7EB;
+  --sidebar-section-title: #9CA3AF;
+  --sidebar-item-text: #4B5563;
+  --sidebar-item-icon: #64748B;
+  --sidebar-item-hover-bg: #F3F4F6;
+  --sidebar-item-active-bg: #EEF4FF;
+  --sidebar-item-active-text: #2563EB;
+  --sidebar-item-active-icon: #2563EB;
+  --sidebar-item-active-indicator: #2563EB;
+
+  /* 功能色（成功/警告/危险） */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+
   /* 侧边栏宽度（由预置脚本 / sidebarCollapse 工具同步） */
-  --sidebar-width: 220px;
-  --sidebar-margin: 220px;
+  --sidebar-width: 260px;
+  --sidebar-margin: 260px;
 }
 
 /* 深色模式变量 */
@@ -54,13 +72,25 @@ html.dark {
   --bg-secondary: var(--app-dark-surface);
   --bg-card: rgba(44, 44, 46, 0.8);
   --bg-card-hover: rgba(44, 44, 46, 0.9);
-  
+
   --text-primary: #f9fafb;
   --text-secondary: #d1d5db;
   --text-muted: #9ca3af;
-  
+
   --border-primary: rgba(255, 255, 255, 0.1);
   --border-secondary: rgba(255, 255, 255, 0.08);
+
+  /* 侧边栏设计规范（暗色） */
+  --sidebar-bg: var(--app-dark-base);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-section-title: #71717A;
+  --sidebar-item-text: #D1D5DB;
+  --sidebar-item-icon: #94A3B8;
+  --sidebar-item-hover-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-item-active-bg: rgba(37, 99, 235, 0.16);
+  --sidebar-item-active-text: #60A5FA;
+  --sidebar-item-active-icon: #60A5FA;
+  --sidebar-item-active-indicator: #60A5FA;
 }
 
 /* 主题切换动画 */
