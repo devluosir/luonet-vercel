@@ -143,3 +143,94 @@ describe('inquiryService D1 sync queue', () => {
     );
   });
 });
+
+/**
+ * TASK-128：mergeFieldsOnly 从"以 d1Records 为源的 filter/map 管道"改成 Map-based upsert，
+ * 是为了配合询报价同步从"整表轮询"改成"增量拉取"（见 useInquirySync.ts 的 incrementalSync）。
+ * 这个函数过去半年已经因为类似的边界问题出过两次线上 bug（TASK-124 pending 保护缺失、受限视图
+ * 裁剪字段冲掉共享缓存），这里补上此前完全没有的自动化测试覆盖，锁定四条关键行为。
+ */
+describe('inquiryService.mergeFieldsOnly (TASK-128)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  function seedPendingOp(recordId: string): void {
+    localStorage.setItem(
+      PENDING_SYNC_KEY,
+      JSON.stringify([
+        {
+          opId: `${recordId}-update-1`,
+          action: 'update',
+          recordId,
+          payload: {},
+          createdAt: '2026-07-10T00:00:00.000Z',
+          attempts: 0,
+        },
+      ])
+    );
+  }
+
+  test('保留增量结果集里没出现的本地记录，不因缺席而被当成已删除丢弃', () => {
+    const untouched = mockRecord({ id: 'A', inquiryNo: 'INQ-A' });
+    const changed = mockRecord({ id: 'B', inquiryNo: 'INQ-B' });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([untouched, changed]));
+
+    // 增量响应里只有 B 变化了，A 完全没出现在这次响应里
+    const updatedB = { ...changed, description: '已更新', updatedAt: '2026-07-10T08:00:00.000Z' };
+    const result = inquiryService.mergeFieldsOnly([updatedB]);
+
+    expect(result.map((r) => r.id).sort()).toEqual(['A', 'B']);
+    expect(result.find((r) => r.id === 'A')).toEqual(untouched);
+    expect(result.find((r) => r.id === 'B')?.description).toBe('已更新');
+  });
+
+  test('D1 软删除标记的记录会被从结果里移除', () => {
+    const record = mockRecord({ id: 'C' });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([record]));
+
+    const deleted = { ...record, status: 'deleted' as const, updatedAt: '2026-07-10T08:00:00.000Z' };
+    const result = inquiryService.mergeFieldsOnly([deleted]);
+
+    expect(result.find((r) => r.id === 'C')).toBeUndefined();
+  });
+
+  test('有 pending 同步操作的记录不会被 d1Record 的旧值覆盖（TASK-124 保护）', () => {
+    const local = mockRecord({
+      id: 'D',
+      orderCustomerNo: '客户刚编辑的新值',
+      updatedAt: '2026-07-10T09:00:00.000Z',
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([local]));
+    seedPendingOp('D'); // 模拟这条记录的 PUT 还在排队/重试中
+
+    // D1 侧还是旧数据（增量或全量拉取都可能拿到这种"过期"响应）
+    const staleFromD1 = { ...local, orderCustomerNo: undefined, updatedAt: '2026-07-09T00:00:00.000Z' };
+    const result = inquiryService.mergeFieldsOnly([staleFromD1]);
+
+    expect(result.find((r) => r.id === 'D')?.orderCustomerNo).toBe('客户刚编辑的新值');
+  });
+
+  test('字段级合并：受限视图响应缺失的字段不会清空本地已缓存的其它字段', () => {
+    const local = mockRecord({
+      id: 'E',
+      quotedStatuses: [{ id: 'q1', quoteDate: '2026-07-01', supplierShortName: '飞罗', version: 'v1' }],
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([local]));
+
+    // 受限视图响应里没有 quotedStatuses 这个 key（服务端裁剪掉了，不是 undefined）
+    const restrictedView: Partial<InquiryRecord> = mockRecord({
+      id: 'E',
+      description: '受限视图更新的描述',
+      updatedAt: '2026-07-10T08:00:00.000Z',
+    });
+    delete restrictedView.quotedStatuses;
+
+    const result = inquiryService.mergeFieldsOnly([restrictedView as InquiryRecord]);
+
+    expect(result.find((r) => r.id === 'E')?.description).toBe('受限视图更新的描述');
+    expect(result.find((r) => r.id === 'E')?.quotedStatuses).toEqual([
+      { id: 'q1', quoteDate: '2026-07-01', supplierShortName: '飞罗', version: 'v1' },
+    ]);
+  });
+});

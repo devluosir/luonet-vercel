@@ -1183,6 +1183,132 @@ TASK-125 给订单状态表加了"编辑订单"弹窗后，用户要求采购订
 
 **Status:** completed
 
+## TASK-128：询报价同步改为增量拉取，修复 Vercel Fluid CPU 逼近月度上限
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+**背景来源**：用户反馈 Vercel Hobby 项目月度 Fluid Active CPU 用量 3h54m/4h（已接近上限），排查后定位到根因在询报价同步逻辑，非 PDF/图片/Excel 处理。
+
+### 背景
+
+`useInquirySync`（`src/features/inquiry/hooks/useInquirySync.ts`）目前被 4 个页面使用：`InquiryPage.tsx`（询报价登记，`mergeLocal:true`）、`OrderPage.tsx`（订单状态表，`mergeLocal:true`）、`PurchaseRegistrationPage.tsx`（采购部登记，`pushLocal:false mergeLocal:false`）、`PurchaseOrderRegistrationPage.tsx`（采购订单表，`pushLocal:false mergeLocal:false`）。每个打开的页面每 30 秒轮询一次 `GET /api/inquiry/meta`（count + maxUpdatedAt），只要这个值变化（即"任何人改了任何一条询报价记录"），就会对**这张表的全部记录**发起一次全量拉取（`inquiryService.pullFromD1()`，`src/worker.ts` 的 `GET /api/inquiry` 完全不支持增量参数，只能整表返回），而且不管有没有变化，每 5 分钟还会强制整表重新同步一次。
+
+协作编辑越密集，级联效应越明显：多人同时改询报价的时段，每次编辑都会在 30 秒窗口内让所有打开着这 4 个页面的客户端一起触发整表拉取（每次响应体是全部询报价记录的 JSON，在 Vercel 的 `/api/inquiry` 代理路由里还要做一次 `JSON.parse` + 受限视图的逐条字段过滤），这是 Vercel 侧 40.9 万次/月调用和"特定几天 CPU 飙升"最直接的成因。
+
+本任务把"整表轮询"改成"增量拉取"：客户端记住上次同步到的服务端时间戳（`meta.maxUpdatedAt`），下次同步时只让 Worker 返回这之后变化过的记录，而不是每次都要回整张表。
+
+这跟仓库里已有的三个询报价同步 bug 记录是同一套代码路径，实现时必须保住它们已经修好的行为，不能开倒车：
+- `bug_inquiry_sync_phantom_records`（fire-and-forget 同步静默失败，不能把本地独有、未入队的记录误推到 D1）
+- `bug_inquiry_restricted_view_cache_corruption`（受限视图字段被裁剪的响应，绝不能整条覆盖共享 `inquiry_records` 缓存，必须字段级合并）
+- `bug_inquiry_merge_pending_protection` / TASK-124（`mergeFieldsOnly` 必须跳过有 pending 同步操作的记录，不能用 D1 的旧值把刚编辑、还没同步成功的字段冲掉）
+
+### Files in scope
+
+- `src/worker.ts`（`handleInquiryRequest` 里 `GET /api/inquiry` 分支，约 1548-1586 行）——加 `since` 查询参数支持
+- `src/features/inquiry/services/inquiry.service.ts`——`pullFromD1` 加 `since` 参数；`mergeFieldsOnly` 改写为 Map-based upsert（不再是"以 d1Records 为源、缺席即丢弃"的管道）
+- `src/features/inquiry/hooks/useInquirySync.ts`——拆分"全量同步"与"增量同步"两条路径，维护同步水位（watermark）
+
+### 具体改动要求
+
+**1. `src/worker.ts` — `GET /api/inquiry` 支持 `since`**
+
+在现有 `limit`/`offset` 之外读取 `since = url.searchParams.get('since')`。校验：`since` 存在且 `!Number.isNaN(Date.parse(since))` 才生效，否则按"无 since"处理（不要因为参数非法就报错/500）。生效时把 `AND updated_at >= ?` 拼进现有 WHERE（在 `(status = 'active' OR updated_at >= datetime('now', '-30 days'))` 后面追加，用 `>=` 不用 `>`——增量拉取用的是上次已知的服务端 `maxUpdatedAt` 做水位，用 `>=` 允许水位这一刻的记录被重复带回来，客户端合并是按 id upsert 的幂等操作，重复带回无害，但用 `>` 会在同一 updated_at 精度内有并发写入时丢记录）。这个 `since` 绑定要同时用在**COUNT 查询和 SELECT 查询**，两处绑定参数顺序必须一致（`since` 在前，`limit, offset` 在后）。不传 `since` 时的行为必须和现在完全一样（回归保护）。
+
+**2. `src/features/inquiry/services/inquiry.service.ts` — `pullFromD1`**
+
+签名改为 `pullFromD1(since?: string): Promise<InquiryRecord[]>`，每一页请求都带上 `since`（有值时）：`` `${API_BASE}?limit=${PAGE_SIZE}&offset=${offset}${since ? `&since=${encodeURIComponent(since)}` : ''}` ``。分页/总数判断逻辑不变。
+
+**3. `src/features/inquiry/services/inquiry.service.ts` — `mergeFieldsOnly` 改写**
+
+当前实现是纯管道 `d1Records.filter().map().concat(pending本地版本)`，返回值**只包含这次响应里出现过的记录**——这在"每次都是整表"的前提下没问题（缺席=D1 没有=已删除），但增量拉取下"缺席"只代表"这条没变化"，不代表"不存在"，如果不改会导致采购部登记/采购订单表这两个页面在增量同步后，列表里只剩本次变化过的那几条记录，其余全部消失。
+
+改成跟 `mergeFromD1` 同样的 Map-based upsert 模式（`mergeFromD1` 本身已经是这个模式，不需要改）：
+
+```ts
+mergeFieldsOnly(d1Records: InquiryRecord[]): InquiryRecord[] {
+  const local = this.getAll();
+  const localMap = new Map(local.map((record) => [record.id, record]));
+  const pendingIds = this.getPendingSyncIds();
+
+  for (const d1Record of d1Records) {
+    if (pendingIds.has(d1Record.id)) continue; // TASK-124 保护：有 pending 操作的记录不参与字段合并
+    if (d1Record.status === 'deleted') {
+      localMap.delete(d1Record.id);
+      continue;
+    }
+    const localRecord = localMap.get(d1Record.id);
+    localMap.set(d1Record.id, localRecord ? { ...localRecord, ...d1Record } : d1Record);
+  }
+
+  return Array.from(localMap.values())
+    .filter((record) => record.status !== 'deleted')
+    .sort((a, b) => b.inquiryNo.localeCompare(a.inquiryNo));
+}
+```
+
+行为对照：TASK-124 的 pending 保护语义不变（有 pending 操作的记录保留本地版本，不被 d1Record 覆盖——现在是"跳过合并，localMap 里保留原样"而不是"从管道里 filter 掉再 concat 回来"，效果一致）；`bug_inquiry_restricted_view_cache_corruption` 的字段级合并语义不变（`{...localRecord, ...d1Record}`，只覆盖 d1Record 真正带回来的字段）；新增行为是"不在 d1Records 里的本地记录默认保留"（增量拉取的必要条件），删除信号从"filter 掉、管道里消失"改成"显式 `localMap.delete`"。
+
+**4. `src/features/inquiry/hooks/useInquirySync.ts` — 拆分全量/增量同步**
+
+- `POLL_INTERVAL_MS` 从 `30_000` 调到 `60_000`。
+- `FORCE_FULL_SYNC_EVERY_MS` 从 `5 * 60_000` 调到 `60 * 60_000`（1 小时）——增量同步已经能在检测到变化时即时更新，这个定时全量不再是"防止漏更新"的主力机制，只是兜底自愈（防御未知边界情况/时钟问题），所以间隔可以大幅拉长。
+- 新增一个 ref 记录同步水位，例如 `const syncWatermarkRef = useRef<string | null>(null)`，初始为 `null`（未同步过，下一次必须走全量）。
+- `fullSync()`（保留现名，代表真正整表拉取的路径）在成功后把 `syncWatermarkRef.current` 设为**这次拿到的 `meta.maxUpdatedAt`**（用服务端时间，不要用本地 `Date.now()`/`new Date().toISOString()`，避免客户端时钟偏移导致水位比服务端记录的 updatedAt 还早/晚，进而漏拉或重复拉整表）。
+- 新增 `incrementalSync()`：调用 `inquiryService.pullFromD1(syncWatermarkRef.current ?? undefined)`（水位为空时等同全量，理论上不会发生，因为首次一定走 `fullSync()`，但保留兜底），**不调用 `pushLocalToD1`**（无论 `pushLocal` 是否为 true——`pushLocalToD1` 是"拿完整 D1 记录集对比本地哪些没同步"的逻辑，喂给它一个增量结果集会导致每个本次没变化、没有 pending 操作的本地记录都被判定为"D1 里找不到"，从而在每个增量周期里对着完全正常的记录刷 `console.warn` 噪音——这个检测只在真正拿到全表时才有意义，增量周期跳过即可，不算功能回归，因为真正需要"推本地独有记录"的 pending 记录不受影响，见下方 pushLocalToD1 现有逻辑），走 `mergeLocal ? mergeFromD1(d1Records) : mergeFieldsOnly(d1Records)`（两者现在都是 delta-safe），成功后把 `syncWatermarkRef.current` 更新为这次 `meta.maxUpdatedAt`。
+- `checkAndMaybeSync()`：`metaProbeFailed || forceFullSync` 时仍然走 `fullSync()`（整表 + 按 `pushLocal` 决定要不要 `pushLocalToD1`，逻辑不变）；`metaKey !== lastMetaRef.current` 且不需要强制全量时，改走 `incrementalSync()`，不再调用 `fullSync()`。
+- Hook 对外的入参/返回值（`enabled/suspended/pushLocal/mergeLocal` → `{ lastSyncedAt, syncStatus }`）不变，4 个调用方（`InquiryPage.tsx`/`OrderPage.tsx`/`PurchaseRegistrationPage.tsx`/`PurchaseOrderRegistrationPage.tsx`）不需要改动。
+
+### Non-goals / 红线
+
+- 不改动 `mergeFromD1`——它已经是 Map-based upsert，天然支持增量结果集，不需要改代码，只是它接收到的参数会从"整表"变成有时是"增量"。
+- 不改动 pending 队列相关逻辑（`enqueueSync`/`compactWithNewOp`/`executeSyncOp`/`flushPendingSyncs`/`patchInD1`/`syncToD1`/`updateInD1`/`deleteFromD1`）——`incrementalSync()` 仍然要在同步前调用 `flushPendingSyncs()`，跟现在 `fullSync()` 的第一步一致，不要省略。
+- 不改动 `app/api/inquiry/[[...path]]/route.ts`（Vercel 代理层）——它已经是 `${WORKER_BASE}${workerPath}${url.search}` 透传全部 query string，`since` 会自动带过去，不需要改代码；实现时确认一下这一点即可，不要额外加逻辑。
+- 不改动 `/api/inquiry/meta`、`GET /api/inquiry/:id`、POST/PUT/DELETE 分支。
+- 不改动 `customers`/`documents`/`admin` 这几个其它代理路由和它们对应的 Worker handler——本次只处理询报价这一条同步路径。
+- 不改动 `PAGE_SIZE`（2000）本身的分页机制。
+- 不新增/修改 `DELETED_KEY`（`inquiry_deleted_ids`）相关逻辑——`mergeFieldsOnly` 的删除处理走 `localMap.delete`，跟 `mergeFromD1` 不同，`mergeFromD1` 那边的 `deletedIds` 记账逻辑不用照搬过来，两者删除防护的场景不同（`mergeFieldsOnly` 对应的页面 `pushLocal:false`，没有"本地新建/编辑还没同步、可能被误判删除"的场景）。
+
+### 验收标准
+
+- 首次进入询报价登记/订单状态表/采购部登记/采购订单表任意一个页面，行为不变：一次性拉到完整数据（走 `fullSync()`，水位为空）。
+- 复现 TASK-124 场景：在 `/order` 编辑某条记录的"客户订单号"，该 PUT 还在排队/未完成时立刻切到 `/purchase-order-table` 或 `/purchase-registration`，等待或触发一次增量同步后，确认该字段值不被回退成旧值（即 pending 保护在增量路径下依然生效）。
+- 复现"字段裁剪不冲掉缓存"场景：受限视图页面（采购部登记）触发一次增量同步后，检查其它页面（询报价登记）里同一条记录的 `quotedStatuses` 等受限视图不返回的字段没有丢失。
+- 新增场景：A 设备在 `/inquiry` 新增/编辑一条记录，B 设备已经打开 `/order` 且本地已有其余全部历史记录，等 B 设备下一次 30-90 秒周期内的 meta 轮询检测到变化后，B 设备的 `useInquiryStore.records` 里应该：新记录/被编辑记录的值正确更新，**且其余历史记录不会凭空消失**（验证 `mergeFieldsOnly` 改写和增量路径没有把"没在这次响应里"的记录误删）。
+- 用浏览器 Network 面板确认：稳态下（没有新增/编辑发生时）增量同步请求 `GET /api/inquiry?...&since=...` 返回的 `records` 数组明显小于全表条数（理想情况下为空或只有个位数条目），而不是每次都回全表。
+- 建议给 `mergeFieldsOnly` 补一个 Jest 单测（`src/features/inquiry/services/__tests__/inquiry.service.test.ts`，当前该文件不存在），覆盖：(a) 增量结果不包含的本地记录被保留；(b) `status:'deleted'` 的记录被从结果里移除；(c) 有 pending 操作的记录不被 d1Record 覆盖。这个函数过去半年已经因为类似的边界问题出过两次线上 bug（TASK-124、受限视图缓存崩溃），目前完全没有自动化测试覆盖。
+
+### Verification steps
+
+- `npx tsc --noEmit` 通过
+- `npx eslint src/worker.ts src/features/inquiry/services/inquiry.service.ts src/features/inquiry/hooks/useInquirySync.ts` 无输出
+- `npm test -- inquiry.service` （如按验收标准补了单测）通过
+- 手动走一遍上面"验收标准"里列的 4 个复现场景
+- 部署后观察 1-2 天 Vercel 后台的 Function Invocations 和 Active CPU 曲线，确认协作编辑高峰时段不再出现整表级联拉取导致的尖峰（这一步无法在开发环境验证，记录为部署后待观察项）
+
+### 执行记录
+
+- `src/worker.ts`：`GET /api/inquiry` 加 `since` 参数（校验 `Date.parse` 合法性，非法/缺失按无 since 处理），拼进 COUNT 和 SELECT 两条查询的 WHERE，绑定参数顺序保持一致（`since` 在前，`limit/offset` 在后）；不传 `since` 时行为与改动前完全一致。
+- `src/features/inquiry/services/inquiry.service.ts`：`pullFromD1` 加可选 `since` 参数，逐页请求带上；`mergeFieldsOnly` 从"以 d1Records 为源的 filter/map 管道"改写为 Map-based upsert（跟 `mergeFromD1` 同一模式），不在响应里出现的本地记录默认保留，`status:'deleted'` 走 `localMap.delete` 显式移除，TASK-124 的 pending 保护改成"跳过合并、保留 localMap 原值"，字段级合并语义不变。`mergeFromD1` 本身未改动——它已经是 Map-based upsert，天然对增量结果集安全。
+- `src/features/inquiry/hooks/useInquirySync.ts`：`POLL_INTERVAL_MS` 30s→60s，`FORCE_FULL_SYNC_EVERY_MS` 5min→60min；新增 `syncWatermarkRef`（存服务端 `meta.maxUpdatedAt`，不用本地时钟）；`fullSync` 保留原逻辑（整表 + `pushLocalToD1`），新增 `incrementalSync`（用水位增量拉取，不调用 `pushLocalToD1`，避免把"这次没变化、没有 pending 操作的本地记录"误判成"D1 里找不到"而刷警告）；`checkAndMaybeSync` 改为：探测失败或到了强制整表兜底周期走 `fullSync`，否则 meta 变化走 `incrementalSync`。Hook 对外签名和 4 个调用方（`InquiryPage`/`OrderPage`/`PurchaseRegistrationPage`/`PurchaseOrderRegistrationPage`）均未改动。
+- `src/features/inquiry/services/__tests__/inquiry.service.test.ts`（已存在，追加而非新建）：新增 `describe('inquiryService.mergeFieldsOnly (TASK-128)')`，覆盖增量结果保留未出现记录、软删除移除、pending 保护、字段级合并四种场景，未改动文件里原有的 pending 队列测试。
+
+### Files in scope
+
+- `src/worker.ts`
+- `src/features/inquiry/services/inquiry.service.ts`
+- `src/features/inquiry/hooks/useInquirySync.ts`
+- `src/features/inquiry/services/__tests__/inquiry.service.test.ts`
+
+### Verification steps
+
+- `npx tsc --noEmit` 通过。
+- `npx eslint` 对上述四个改动文件无输出。
+- `npx jest inquiry.service` 通过，9/9（5 条既有 pending 队列测试 + 4 条新增 `mergeFieldsOnly` 测试）。
+- 未做：部署后观察 Vercel 后台 Function Invocations / Active CPU 曲线（需要真实生产流量，记录为部署后待观察项，不在本次会话验证范围内）。
+- 建议用户实测：在 `/order` 编辑某条记录的字段后立刻切到 `/purchase-order-table`，确认编辑没被同步周期冲掉（TASK-124 场景在增量路径下依然成立）；多设备协作编辑时用浏览器 Network 面板确认稳态下的同步请求体明显变小，不再是每次都回整表。
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

@@ -5,8 +5,11 @@ import { inquiryService } from '../services/inquiry.service';
 import { useInquiryStore } from '../state/inquiry.store';
 import type { InquirySyncStatus } from '../services/inquiry.service';
 
-const POLL_INTERVAL_MS = 30_000;
-const FORCE_FULL_SYNC_EVERY_MS = 5 * 60_000;
+const POLL_INTERVAL_MS = 60_000;
+// TASK-128：有了增量同步后，检测到变化时会立即增量拉取更新，这个定时整表同步
+// 不再是防止漏更新的主力机制，只是兜底自愈（防御未知边界情况/时钟问题），
+// 间隔可以从原来的 5 分钟大幅拉长。
+const FORCE_FULL_SYNC_EVERY_MS = 60 * 60_000;
 
 interface UseInquirySyncOptions {
   enabled: boolean;
@@ -33,6 +36,9 @@ export function useInquirySync({
   const lastMetaRef = useRef<string | null>(null);
   const lastFullSyncAtRef = useRef(0);
   const syncingRef = useRef(false);
+  // TASK-128：增量同步水位——上次已知的服务端 meta.maxUpdatedAt（服务端时间，不用本地时钟，
+  // 避免客户端/服务端时钟偏移导致漏拉或重复整表拉取）。为空代表还没同步过，下一次必须走全量。
+  const syncWatermarkRef = useRef<string | null>(null);
 
   useEffect(() => {
     suspendedRef.current = suspended;
@@ -50,9 +56,14 @@ export function useInquirySync({
 
     async function refreshMetaMemory() {
       const meta = await inquiryService.getMeta();
-      if (!cancelled && meta.count >= 0) lastMetaRef.current = getMetaKey(meta);
+      if (!cancelled && meta.count >= 0) {
+        lastMetaRef.current = getMetaKey(meta);
+        // 用服务端 maxUpdatedAt 作为下一次增量同步的水位。
+        if (meta.maxUpdatedAt) syncWatermarkRef.current = meta.maxUpdatedAt;
+      }
     }
 
+    /** 整表同步：初次挂载 + 定时兜底自愈时使用，会做 pushLocalToD1 的整表对比。 */
     async function fullSync() {
       if (syncingRef.current || suspendedRef.current) return;
       syncingRef.current = true;
@@ -77,6 +88,36 @@ export function useInquirySync({
       }
     }
 
+    /**
+     * TASK-128：增量同步——meta 探测到变化、但还没到定时整表兜底的时间点时使用。
+     * 只拉 syncWatermarkRef 之后变化过的记录，不做 pushLocalToD1（那是"拿完整 D1
+     * 记录集对比本地哪些没同步"的逻辑，喂给它增量结果集会把每条本次没变化、没有
+     * pending 操作的本地记录都误判成"D1 里找不到"，对着完全正常的记录刷警告；
+     * 这个检测只在真正拿到全表的 fullSync 里才有意义）。mergeFromD1/mergeFieldsOnly
+     * 都是以本地记录为底的 Map upsert，喂增量结果集是安全的。
+     */
+    async function incrementalSync() {
+      if (syncingRef.current || suspendedRef.current) return;
+      syncingRef.current = true;
+
+      try {
+        await inquiryService.flushPendingSyncs();
+        if (cancelled || suspendedRef.current) return;
+        const d1Records = await inquiryService.pullFromD1(syncWatermarkRef.current ?? undefined);
+        if (cancelled || suspendedRef.current) return;
+        const nextRecords = mergeLocal
+          ? inquiryService.mergeFromD1(d1Records)
+          : inquiryService.mergeFieldsOnly(d1Records);
+        if (!mergeLocal) inquiryService.save(nextRecords);
+        useInquiryStore.setState({ records: nextRecords });
+        setLastSyncedAt(new Date());
+        setSyncStatus(inquiryService.getSyncStatus());
+        await refreshMetaMemory();
+      } finally {
+        syncingRef.current = false;
+      }
+    }
+
     async function checkAndMaybeSync() {
       if (syncingRef.current || suspendedRef.current) return;
 
@@ -87,9 +128,12 @@ export function useInquirySync({
       const metaProbeFailed = meta.count < 0;
       const forceFullSync = Date.now() - lastFullSyncAtRef.current > FORCE_FULL_SYNC_EVERY_MS;
 
-      if (metaProbeFailed || metaKey !== lastMetaRef.current || forceFullSync) {
+      if (metaProbeFailed || forceFullSync) {
         if (!metaProbeFailed) lastMetaRef.current = metaKey;
         await fullSync();
+      } else if (metaKey !== lastMetaRef.current) {
+        lastMetaRef.current = metaKey;
+        await incrementalSync();
       } else {
         setLastSyncedAt(new Date());
         setSyncStatus(inquiryService.getSyncStatus());

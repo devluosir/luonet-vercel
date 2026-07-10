@@ -1550,22 +1550,32 @@ async function handleInquiryRequest(
       const limit = Math.min(Number(url.searchParams.get('limit')) || 2000, 2000);
       const offset = Number(url.searchParams.get('offset')) || 0;
 
+      // TASK-128：增量同步用的水位参数。非法/缺失时按"无 since"处理（即整表拉取），
+      // 不因参数格式问题报错——客户端传的是上次已知的 meta.maxUpdatedAt（服务端时间）。
+      const sinceParam = url.searchParams.get('since');
+      const since = sinceParam && !Number.isNaN(Date.parse(sinceParam)) ? sinceParam : null;
+      const sinceClause = since ? 'AND updated_at >= ?' : '';
+      const sinceArgs = since ? [since] : [];
+
       // 先查总数，供客户端判断是否需要继续分页
       const countRow = await env.USERS_DB.prepare(`
         SELECT COUNT(*) as cnt FROM Document
         WHERE type = 'inquiry'
           AND (status = 'active' OR updated_at >= datetime('now', '-30 days'))
-      `).bind().first<{ cnt: number }>();
+          ${sinceClause}
+      `).bind(...sinceArgs).first<{ cnt: number }>();
       const totalCount = countRow?.cnt ?? 0;
 
-      // 返回所有 active 记录 + 30 天内的 deleted 记录（供其他端感知删除并同步）
+      // 返回所有 active 记录 + 30 天内的 deleted 记录（供其他端感知删除并同步）；
+      // 带 since 时只返回该时间点（含）之后变化过的记录，用于增量同步。
       const result = await env.USERS_DB.prepare(`
         SELECT * FROM Document
         WHERE type = 'inquiry'
           AND (status = 'active' OR updated_at >= datetime('now', '-30 days'))
+          ${sinceClause}
         ORDER BY doc_no DESC
         LIMIT ? OFFSET ?
-      `).bind(limit, offset).all<DocumentRow>();
+      `).bind(...sinceArgs, limit, offset).all<DocumentRow>();
 
       const records = result.results.map((row) => {
         const data = parseJsonData<InquiryRecordPayload>(row.data, {});

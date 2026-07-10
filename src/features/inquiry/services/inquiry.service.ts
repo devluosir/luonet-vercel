@@ -236,15 +236,20 @@ export const inquiryService = {
     return records;
   },
 
-  async pullFromD1(): Promise<InquiryRecord[]> {
+  /**
+   * TASK-128：since 传入上次已知的服务端水位（meta.maxUpdatedAt），只拉这之后变化过的记录，
+   * 用于增量同步。不传 since 时行为不变，仍是整表拉取。
+   */
+  async pullFromD1(since?: string): Promise<InquiryRecord[]> {
     const PAGE_SIZE = 2000;
     const all: InquiryRecord[] = [];
     let offset = 0;
+    const sinceQuery = since ? `&since=${encodeURIComponent(since)}` : '';
 
     try {
       while (true) {
         const res = await fetch(
-          `${API_BASE}?limit=${PAGE_SIZE}&offset=${offset}`,
+          `${API_BASE}?limit=${PAGE_SIZE}&offset=${offset}${sinceQuery}`,
           { cache: 'no-store' }
         );
         if (!res.ok) break;
@@ -381,27 +386,41 @@ export const inquiryService = {
    * inquiry_records —— 否则会冲掉其它字段（quotedStatuses 等），导致询报价登记表
    * 读到缺字段的记录而崩溃。这里对已存在的本地记录做字段级合并，保留响应中缺失的字段。
    *
-   * 2026-07-10 修复：跟 mergeFromD1 一样要跳过有 pending 同步操作的记录，否则会出现
+   * 2026-07-10 修复（TASK-124）：跟 mergeFromD1 一样要跳过有 pending 同步操作的记录，否则会出现
    * "订单状态表能看到刚编辑的客户订单号，采购订单表看不到"的问题——用户在 /order 编辑了
    * orderCustomerNo，PUT 请求还在排队/失败重试中（本地已落盘，D1 还是旧数据），这时如果
    * 打开 /purchase-order-table，它独立拉一次 D1（还是旧的、没有该字段），在没有 pendingIds
    * 保护的情况下会用 D1 的旧值覆盖本地这条记录，把刚编辑的值从共享 store 里冲掉，导致两个
    * 页面读到的是同一份被污染后的记录（不是两边渲染逻辑不一致，是共享数据被覆盖了）。
+   *
+   * 2026-07-10 改写（TASK-128）：原实现是"以 d1Records 为源的 filter/map 管道"，返回值只包含
+   * 这次响应里出现过的记录——整表拉取下没问题（缺席=D1 没有=已删除），但配合增量同步
+   * （useInquirySync 只传近期变化过的记录）就会导致列表里只剩这次变化的几条，其余历史记录全部
+   * 从共享 store 里消失。改成跟 mergeFromD1 一样的 Map-based upsert：以本地已有记录为底，只对
+   * d1Records 里出现的 id 做更新/删除，没出现在这次响应里的本地记录原样保留，这样无论传入的是
+   * 整表还是增量结果集都是安全的。删除信号从"filter 掉、管道里消失"改成显式 localMap.delete；
+   * pending 保护从"filter 掉再 concat 本地版本回来"改成"跳过合并、localMap 里保留原样"，效果一致。
    */
   mergeFieldsOnly(d1Records: InquiryRecord[]): InquiryRecord[] {
     const local = this.getAll();
     const localMap = new Map(local.map((record) => [record.id, record]));
     const pendingIds = this.getPendingSyncIds();
-    return d1Records
+
+    for (const d1Record of d1Records) {
+      // 有 pending 同步操作的记录：不参与字段合并，保留 localMap 里的本地版本原样
+      if (pendingIds.has(d1Record.id)) continue;
+      if (d1Record.status === 'deleted') {
+        localMap.delete(d1Record.id);
+        continue;
+      }
+      const localRecord = localMap.get(d1Record.id);
+      // 字段级合并而非整条覆盖：受限视图响应可能裁剪了 quotedStatuses 等字段，
+      // 只用 d1Record 真正带回来的字段覆盖，不清空本地已缓存的其它字段。
+      localMap.set(d1Record.id, localRecord ? { ...localRecord, ...d1Record } : d1Record);
+    }
+
+    return Array.from(localMap.values())
       .filter((record) => record.status !== 'deleted')
-      .filter((record) => !pendingIds.has(record.id))
-      .map((record) => {
-        const localRecord = localMap.get(record.id);
-        return localRecord ? { ...localRecord, ...record } : record;
-      })
-      // 有 pending 同步操作的记录：原样保留本地版本（不参与上面基于 d1Records 的字段合并），
-      // 跟 mergeFromD1 的 pendingIds 保护语义一致；本地已标记删除的不再带回列表
-      .concat(local.filter((record) => pendingIds.has(record.id) && record.status !== 'deleted'))
       .sort((a, b) => b.inquiryNo.localeCompare(a.inquiryNo));
   },
 
