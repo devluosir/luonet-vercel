@@ -62,8 +62,8 @@
   --color-danger: #EF4444;
 
   /* 侧边栏宽度（由预置脚本 / sidebarCollapse 工具同步） */
-  --sidebar-width: 260px;
-  --sidebar-margin: 260px;
+  --sidebar-width: 240px;
+  --sidebar-margin: 240px;
 }
 
 /* 深色模式变量 */
@@ -844,7 +844,6 @@ html.dark, html.dark body {
     margin-left: 0;
   }
 }
-
 
 
 

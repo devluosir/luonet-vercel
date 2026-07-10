@@ -29,7 +29,7 @@ describe('sidebarCollapse', () => {
     setSidebarCollapsed(false);
 
     expect(localStorage.getItem(COLLAPSED_KEY)).toBe('false');
-    expect(document.documentElement.style.getPropertyValue('--sidebar-width')).toBe('260px');
+    expect(document.documentElement.style.getPropertyValue('--sidebar-width')).toBe('240px');
     expect(document.documentElement.dataset.sidebarCollapsed).toBeUndefined();
   });
 
@@ -40,6 +40,6 @@ describe('sidebarCollapse', () => {
 
   it('applySidebarCollapseToDom syncs expanded layout', () => {
     applySidebarCollapseToDom(false);
-    expect(document.documentElement.style.getPropertyValue('--sidebar-margin')).toBe('260px');
+    expect(document.documentElement.style.getPropertyValue('--sidebar-margin')).toBe('240px');
   });
 });
