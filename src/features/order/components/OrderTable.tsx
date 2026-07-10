@@ -13,6 +13,7 @@ import {
   type OrderTableBreakpoint,
   getVisibleColWidths,
   showAdminCols,
+  showConfirmDateCol,
   showCustomerCol,
   showLgCols,
 } from '../utils/orderTableLayout';
@@ -78,6 +79,7 @@ export function OrderTable({
   const bp = useBreakpoint();
   const colWidths = getVisibleColWidths(bp, canViewFinancials, canBatchEdit);
   const customerCol = showCustomerCol(bp);
+  const confirmDateCol = showConfirmDateCol(bp);
   const lgCols = showLgCols(bp);
   const adminCols = showAdminCols(bp, canViewFinancials);
   const allIds = records.map((r) => r.id);
@@ -150,15 +152,17 @@ export function OrderTable({
             <th className={headerCellClass}>
               <span className="block truncate">内容简述</span>
             </th>
+            {confirmDateCol && (
+              <th className={`${headerCellClass} px-1.5 sm:px-2`}>
+                <span className="block truncate">
+                  {bp === 'sm' ? '确认' : '确认日'}
+                </span>
+              </th>
+            )}
             {lgCols && (
-              <>
-                <th className={headerCellClass}>
-                  <span className="block truncate">确认日</span>
-                </th>
-                <th className={headerCellClass}>
-                  <span className="block truncate">客户订单号</span>
-                </th>
-              </>
+              <th className={headerCellClass}>
+                <span className="block truncate">客户订单号</span>
+              </th>
             )}
             <th className={`${headerCellClass} px-1.5 sm:px-2`}>
               <span className="block truncate">

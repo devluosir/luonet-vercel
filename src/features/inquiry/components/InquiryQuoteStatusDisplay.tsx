@@ -41,7 +41,7 @@ export function InquiryQuoteStatusDisplay({ record }: Props) {
   const statusTitle = `${supplierParts.join(',')}/${[...quotedParts, ...specialParts].join(',')}`;
 
   return (
-    <p className="m-0 block w-full max-w-full truncate whitespace-nowrap text-xs font-medium leading-4" title={statusTitle}>
+    <p className="m-0 block w-full max-w-full truncate whitespace-nowrap text-[13px] font-medium leading-4" title={statusTitle}>
       {supplierStatuses.map((supplier, index) => {
         const colorClass = getSupplierStatusClass(supplier);
         const label = supplierParts[index];

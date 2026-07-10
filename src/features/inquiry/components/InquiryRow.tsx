@@ -50,7 +50,7 @@ export function InquiryRow({
         </td>
       )}
 
-      <td className="overflow-hidden px-2 py-2 text-sm md:px-3">
+      <td className="overflow-hidden px-2 py-2 text-[13px] md:px-3">
         <div className="flex min-w-0 flex-col gap-0 leading-tight">
           <span className={`block truncate font-mono leading-4 ${mainTextClass}`}>
             {record.inquiryNo}
@@ -70,10 +70,10 @@ export function InquiryRow({
           </span>
         </div>
       </td>
-      <td className="hidden overflow-hidden px-3 py-2 text-sm md:table-cell">
+      <td className="hidden overflow-hidden px-3 py-2 text-[13px] md:table-cell">
         <span className={`block truncate ${mainTextClass}`}>{record.inquirer}</span>
       </td>
-      <td className="hidden overflow-hidden px-3 py-2 text-sm lg:table-cell">
+      <td className="hidden overflow-hidden px-3 py-2 text-[13px] lg:table-cell">
         <span
           className={`line-clamp-2 max-w-full break-words leading-4 ${mainTextClass}`}
           title={record.customerNo}
@@ -81,7 +81,7 @@ export function InquiryRow({
           {record.customerNo}
         </span>
       </td>
-      <td className="overflow-hidden px-2 py-2 text-sm md:px-3">
+      <td className="overflow-hidden px-2 py-2 text-[13px] md:px-3">
         <p className={`hidden max-w-full truncate lg:block ${mainTextClass}`} title={record.description}>
           {record.description}
         </p>

@@ -7,6 +7,7 @@ import { stripDateBrackets, normalizeShortDateInput } from '@/features/inquiry/u
 import {
   type OrderTableBreakpoint,
   showAdminCols,
+  showConfirmDateCol,
   showCustomerCol,
   showLgCols,
 } from '../utils/orderTableLayout';
@@ -380,7 +381,7 @@ function OrderNoText({ record, textClassName }: { record: InquiryRecord; textCla
     : orderSubStatus === 'followup' ? 'S'
     : null;
   return (
-    <span className={`inline-flex max-w-full min-w-0 items-baseline gap-0.5 truncate font-mono text-[11px] font-bold leading-5 ${textClassName}`}>
+    <span className={`inline-flex max-w-full min-w-0 items-baseline gap-0.5 truncate font-mono text-[13px] font-bold leading-5 ${textClassName}`}>
       <span className="truncate">{orderNo}</span>
       {letter && <span className="shrink-0 font-bold text-red-500">{letter}</span>}
     </span>
@@ -405,6 +406,7 @@ export function OrderRow({
   canBatchEdit = false, selected = false, onToggleSelect,
 }: OrderRowProps) {
   const customerCol = showCustomerCol(bp);
+  const confirmDateCol = showConfirmDateCol(bp);
   const lgCols = showLgCols(bp);
   const adminCols = showAdminCols(bp, canViewFinancials);
   const [activeField, setActiveField] = useState<EditField>(null);
@@ -463,52 +465,53 @@ export function OrderRow({
       </td>
 
       {customerCol && (
-        <td className="max-w-0 overflow-hidden px-2 py-2 text-xs">
+        <td className="max-w-0 overflow-hidden px-2 py-2 text-[13px]">
           <span className={`block min-w-0 truncate ${rowTextClass}`} title={record.inquirer}>{record.inquirer}</span>
         </td>
       )}
 
       {/* 内容简述 */}
       <td className="max-w-0 overflow-hidden px-1.5 py-2 sm:px-2">
-        <p className={`truncate text-xs ${rowTextClass}`} title={record.description}>{record.description}</p>
+        <p className={`truncate text-[13px] ${rowTextClass}`} title={record.description}>{record.description}</p>
         {bp === 'sm' && (
           <p className={`truncate text-[10px] ${rowTextClass}`} title={record.inquirer}>{record.inquirer}</p>
         )}
       </td>
 
+      {confirmDateCol && (
+        <td className="max-w-0 overflow-hidden whitespace-nowrap px-1.5 py-2 sm:px-2">
+          <DatePickerCell field="confirmDate" activeField={activeField}
+            value={record.orderConfirmDate ? stripDateBrackets(record.orderConfirmDate) : undefined}
+            textClassName={rowTextClass}
+            onActivate={activate}
+            onSave={(val) => { setActiveField(null); onUpdate({ orderConfirmDate: val ? normalizeShortDateInput(val) : undefined }); }}
+            onCancel={cancel}
+          />
+        </td>
+      )}
+
       {lgCols && (
-        <>
-          <td className="max-w-0 overflow-hidden whitespace-nowrap px-2 py-2">
-            <DatePickerCell field="confirmDate" activeField={activeField}
-              value={record.orderConfirmDate ? stripDateBrackets(record.orderConfirmDate) : undefined}
+        <td className="max-w-0 overflow-hidden px-2 py-2">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <EditableCell field="customerNo" activeField={activeField}
+              value={record.orderCustomerNo}
+              fallback={customerNoFallback}
+              placeholder="—"
               textClassName={rowTextClass}
               onActivate={activate}
-              onSave={(val) => { setActiveField(null); onUpdate({ orderConfirmDate: val ? normalizeShortDateInput(val) : undefined }); }}
+              onSave={saveCustomerNo}
               onCancel={cancel}
             />
-          </td>
-          <td className="max-w-0 overflow-hidden px-2 py-2">
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <EditableCell field="customerNo" activeField={activeField}
-                value={record.orderCustomerNo}
-                fallback={customerNoFallback}
-                placeholder="—"
-                textClassName={rowTextClass}
-                onActivate={activate}
-                onSave={saveCustomerNo}
-                onCancel={cancel}
-              />
-              {record.orderSubStatus && orderSubStatusRemark && (
-                <span
-                  className={`block truncate px-0.5 text-[10px] leading-4 ${getOrderSubStatusRemarkClass(record)}`}
-                  title={orderSubStatusRemark}
-                >
-                  {orderSubStatusRemark}
-                </span>
-              )}
-            </div>
-          </td>
-        </>
+            {record.orderSubStatus && orderSubStatusRemark && (
+              <span
+                className={`block truncate px-0.5 text-[10px] leading-4 ${getOrderSubStatusRemarkClass(record)}`}
+                title={orderSubStatusRemark}
+              >
+                {orderSubStatusRemark}
+              </span>
+            )}
+          </div>
+        </td>
       )}
 
       {/* 执行情况 */}

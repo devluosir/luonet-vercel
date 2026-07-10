@@ -49,7 +49,7 @@ function EditableText({ editing, value, placeholder, colorClassName, onActivate,
         if (e.key === 'Enter' || e.key === ' ') onActivate();
       }}
       title={display || undefined}
-      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-xs font-medium hover:bg-black/5 dark:hover:bg-white/5 ${
+      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-[13px] font-medium hover:bg-black/5 dark:hover:bg-white/5 ${
         display ? (colorClassName ?? 'text-gray-800 dark:text-gray-100') : 'text-gray-300 dark:text-gray-700'
       }`}
     >
@@ -86,7 +86,7 @@ export function PurchaseRegistrationRow({ record, onUpdate, onEditRecord }: Purc
     >
       <td className="max-w-0 overflow-hidden px-3 py-2">
         <div className="flex min-w-0 flex-col gap-0 leading-tight">
-          <span className={`block truncate font-mono text-[11px] font-bold leading-4 ${mainColorClass}`}>
+          <span className={`block truncate font-mono text-[13px] font-bold leading-4 ${mainColorClass}`}>
             {record.inquiryNo}
           </span>
           {/* 已成单时，日期 + 订单号 + 颜色状态与询报价登记表 InquiryRow 保持一致 */}

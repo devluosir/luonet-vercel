@@ -925,6 +925,87 @@ TASK-116 修好了收缩态悬浮提示的可见性问题，但当时沿用的�
 
 **Status:** completed
 
+## TASK-121：统一四张登记表（询报价登记/订单状态表/采购部登记/采购订单表）主内容字号
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 背景
+
+用户截图对比反馈"询报价登记"表格看起来比另外三张（订单状态表/采购部登记/采购订单表）字更大、行更松。排查后发现行高（`py-2`）四张表完全一致，差异纯粹来自字号：`InquiryRow.tsx` 用的是 `text-sm`（14px），另外三张表的等价内容列用的是 `text-xs`/`text-[11px]`（12/11px）。
+
+用户进一步追问"最舒适的字号是多大"，综合考虑：这类表格是"扫读型"（用户找单号/客户名/状态，不是读长句），12px 在非 Retina 显示器上偏小、容易疲劳，14px 又会明显减少单屏可见行数（询报价登记截图单屏能看到 26 条记录）；专业密集表格产品（Linear/Airtable 的数据网格）主内容大多落在 13~14px 区间。综合舒适度和信息密度，选定 **13px** 作为四张表主内容的统一字号（用户确认选择）。
+
+### 执行记录
+
+只调整"主要内容"（单号/客户名/描述/状态/供应商等用户实际要读的文本），不动日期、金额等结构化数字字段的字号（这些字段本来就该保持紧凑，各表处理方式本就一致，不是本次要解决的问题）：
+
+- `InquiryRow.tsx`：4 处 `text-sm` → `text-[13px]`（询价编号、询价人、客户编号、内容简述所在的 `<td>`）。
+- `InquiryQuoteStatusDisplay.tsx`（询报价登记 + 采购部登记共用的"询报价状态"列）：`text-xs` → `text-[13px]`。
+- `OrderRow.tsx`：`OrderNoText`（订单编号，原 `text-[11px]`）→ `text-[13px]`；客户列、内容简述列（原 `text-xs`）→ `text-[13px]`。
+- `DeliveryStatusCell.tsx`（订单状态表 + 采购订单表共用的"执行情况"列）：只读展示态 `text-xs` → `text-[13px]`。
+- `PurchaseRegistrationRow.tsx`：询价编号主标识（原 `text-[11px]`）→ `text-[13px]`；内容描述 `EditableText` 只读态（原 `text-xs`）→ `text-[13px]`。
+- `PurchaseOrderRow.tsx`：`OrderNoText`（原 `text-[11px]`）→ `text-[13px]`；采购单号/供应商 `EditableText` 只读态（原 `text-xs`）→ `text-[13px]`。
+
+### Files in scope
+
+- `src/features/inquiry/components/InquiryRow.tsx`
+- `src/features/inquiry/components/InquiryQuoteStatusDisplay.tsx`
+- `src/features/order/components/OrderRow.tsx`
+- `src/features/order/components/DeliveryStatusCell.tsx`
+- `src/features/purchase-registration/components/PurchaseRegistrationRow.tsx`
+- `src/features/purchase-order-registration/components/PurchaseOrderRow.tsx`
+
+### Non-goals / 红线
+
+- 未改动日期选择器（`DatePickerCell`/`DateEditCell`/`MonthPickerCell`）、金额输入（`AmountCell`/`AmountEditCell`）、只读参考字段（`ReadOnlyText`：确认日期/客户订单号）、编辑态 `<input>` 本身的字号——这些保持原有 `text-xs`（12px）不变，是刻意的层级区分（结构化数字/参考数据 vs 用户主要阅读的文本内容），四张表在这一层原本就是一致的，不在本次问题范围内。
+- 未改动表头 `<th>` 字号——排查确认表头在四张表之间本来就是一致的，差异只在表体（`<tr>`/`<td>`）。
+- 未改动行高/内边距（`py-2`）——四张表本来就一致，字号变化会让行的视觉高度顺带增加一点（13px 比 12px 略高），这是预期的、跟随字号自然产生的变化，不是单独调整行高。
+
+### Verification steps
+
+- `npx tsc --noEmit`、`npx eslint`（六个改动文件）均无输出。
+- 未做真实浏览器验证，建议用户对比四张表，确认字号观感一致、单屏可见行数没有因为字号变化而大幅减少。
+
+**Status:** completed
+
+## TASK-122：订单状态表——确认日期列在中屏/小屏也显示
+
+**状态**：已完成（2026-07-10，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-10
+
+### 背景
+
+`OrderTable.tsx`/`OrderRow.tsx` 原来"确认日"和"客户订单号"两列绑在同一个 `showLgCols`（仅 lg/xl ≥1024px）开关下，一起出现一起消失。用户反馈中屏（md，768~1023px）和小屏（sm，<768px）下也需要看到"确认日"这一列（客户订单号没提，维持仅 lg/xl 显示）。
+
+### 执行记录
+
+- `src/features/order/utils/orderTableLayout.ts`：新增 `showConfirmDateCol(bp)`（所有断点都返回 `true`），`showLgCols(bp)` 保留不变但语义收窄为只管"客户订单号"列。`getVisibleColWidths` 的 `sm`/`md` 分支各插入确认日列宽度并重新分配百分比：
+  - sm：`['26%','12%','36%','26%']`（订单编号/交货/内容简述/执行情况）→ `['22%','10%','30%','10%','28%']`（订单编号/交货/内容简述/确认日/执行情况）
+  - md：`['14%','7%','12%','28%','29%']`（订单编号/交货/客户/内容简述/执行情况）→ `['13%','7%','11%','24%','8%','27%']`（订单编号/交货/客户/内容简述/确认日/执行情况）
+  - lg/xl 两档列数和顺序不变（确认日本来就在，只是判定条件从 `lgCols` 换成了恒真的 `confirmDateCol`，视觉上无变化）。
+- `OrderTable.tsx`：表头新增 `confirmDateCol` 变量，"确认日"单独一个 `<th>`（不再跟"客户订单号"共用一个 `lgCols && (<>...</>)` fragment），sm 断点下文案缩短成"确认"（比照"执行情况"→"执行"的现有缩写规则）；"客户订单号"单独保留在 `lgCols` 判断下。
+- `OrderRow.tsx`：同步拆分——确认日期 `<td>`（`DatePickerCell`）不再包在 `lgCols` fragment 里，改成独立的 `confirmDateCol &&` 判断，四个断点都渲染；客户订单号 `<td>`（含 `EditableCell` + 订单子状态备注）继续用 `lgCols` 单独包裹。
+
+### Files in scope
+
+- `src/features/order/utils/orderTableLayout.ts`
+- `src/features/order/components/OrderTable.tsx`
+- `src/features/order/components/OrderRow.tsx`
+
+### Non-goals / 红线
+
+- 客户订单号列维持原样，仍然只在 lg/xl（≥1024px）显示——用户只要求确认日期，没有要求客户订单号也下放到中小屏。
+- 未改动 `/purchase-order-table`（`PurchaseOrderRow.tsx`）的"确认日期"列（`ReadOnlyText`，目前该页面没有响应式断点隐藏机制，本来就一直显示，不在本次问题范围内）。
+- 列宽百分比是估算重新分配（新插入confirm列取约 8~10%，从内容简述/执行情况两列均摊让出），非精确计算；原数组本身合计也并非严格 100%（如 lg 档 97%、xl+financials 档 98%），延续现有的近似惯例。
+
+### Verification steps
+
+- `npx tsc --noEmit`、`npx eslint`（三个改动文件）均无输出。
+- 未做真实浏览器验证，建议用户把窗口分别缩到 <768px（sm）、768~1023px（md）两档，确认"确认日"列都能看到且不跟其他列挤压换行；lg/xl 档确认视觉无变化。
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

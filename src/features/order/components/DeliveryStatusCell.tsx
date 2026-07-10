@@ -169,7 +169,7 @@ export function DeliveryStatusCell({
         if (e.key === 'Enter' || e.key === ' ') onActivate();
       }}
       title={[displayStr, shouldShowConsignee ? displayConsignee : null].filter(Boolean).join('\n') || undefined}
-      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-xs
+      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-[13px]
         hover:bg-black/5 dark:hover:bg-white/5
         ${displayStr ? textClassName ?? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
     >

@@ -38,7 +38,7 @@ function OrderNoText({ record, textClassName }: { record: InquiryRecord; textCla
     : orderSubStatus === 'followup' ? 'S'
     : null;
   return (
-    <span className={`inline-flex max-w-full min-w-0 items-baseline gap-0.5 truncate font-mono text-[11px] font-bold leading-5 ${textClassName}`}>
+    <span className={`inline-flex max-w-full min-w-0 items-baseline gap-0.5 truncate font-mono text-[13px] font-bold leading-5 ${textClassName}`}>
       <span className="truncate">{orderNo}</span>
       {letter && <span className="shrink-0 font-bold text-red-500">{letter}</span>}
     </span>
@@ -88,7 +88,7 @@ function EditableText({ editing, value, placeholder, textClassName, onActivate, 
       onClick={onActivate}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onActivate(); }}
       title={display || undefined}
-      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/5 ${
+      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-[13px] hover:bg-black/5 dark:hover:bg-white/5 ${
         display ? (textClassName ?? 'text-gray-800 dark:text-gray-100') : 'text-gray-300 dark:text-gray-700'
       }`}
     >
