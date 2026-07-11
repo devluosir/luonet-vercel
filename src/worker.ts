@@ -1328,6 +1328,7 @@ async function handleListDocuments(request: Request, env: Env): Promise<Response
     const type = url.searchParams.get('type');
     const status = url.searchParams.get('status') || 'active';
     const search = url.searchParams.get('search');
+    const since = url.searchParams.get('since');
     const limit = Math.min(Number(url.searchParams.get('limit')) || 100, 500);
     const offset = Number(url.searchParams.get('offset')) || 0;
 
@@ -1347,6 +1348,11 @@ async function handleListDocuments(request: Request, env: Env): Promise<Response
     if (search) {
       conditions.push('(doc_no LIKE ? OR customer_name LIKE ?)');
       values.push(`%${search}%`, `%${search}%`);
+    }
+
+    if (since && !Number.isNaN(Date.parse(since))) {
+      conditions.push('updated_at >= ?');
+      values.push(since);
     }
 
     values.push(limit, offset);

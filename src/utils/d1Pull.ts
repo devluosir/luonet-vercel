@@ -11,8 +11,14 @@ import {
   flushPendingQueue,
   getD1ActiveUserId,
   getDeletedDocIds,
+  getDocsLastFullSyncAt,
+  getDocsLastSyncAttemptAt,
+  getDocSyncWatermark,
   getPendingIds,
   recordDeletedDocId,
+  setDocsLastFullSyncAt,
+  setDocsLastSyncAttemptAt,
+  setDocSyncWatermark,
   type D1DocType,
 } from '@/utils/d1Sync';
 import { persistHistoryToStorage } from '@/utils/storageQuotaManager';
@@ -41,6 +47,7 @@ type LocalStorageItem = {
 async function fetchAll<T>(
   url: string,
   key: string,
+  since?: string,
 ): Promise<{ data: T[]; ok: boolean }> {
   const results: T[] = [];
   let offset = 0;
@@ -48,7 +55,8 @@ async function fetchAll<T>(
   let ok = false;
 
   while (true) {
-    const resp = await fetch(`${url}&limit=${limit}&offset=${offset}`);
+    const sinceQuery = since ? `&since=${encodeURIComponent(since)}` : '';
+    const resp = await fetch(`${url}&limit=${limit}&offset=${offset}${sinceQuery}`);
     if (!resp.ok) break;
     ok = true;
 
@@ -233,6 +241,7 @@ function mergeIntoStorage<T extends LocalStorageItem>(
   d1Ok: boolean,
   pendingIds: Set<string>,
   deletedIds: Set<string>,
+  isFullSync: boolean,
 ): void {
   // D1 请求失败时不动 localStorage，避免误删本地数据
   if (!d1Ok) return;
@@ -267,6 +276,12 @@ function mergeIntoStorage<T extends LocalStorageItem>(
 
     if (map.has(item.id)) continue;
 
+    if (!isFullSync) {
+      // 增量响应里没出现只代表近期没变化，不能据此推断远端已删除。
+      map.set(item.id, item);
+      continue;
+    }
+
     if (pendingIds.has(item.id)) {
       // 仍在待提交队列（本轮 flush 失败）→ 保留本地，等下次重试
       map.set(item.id, item);
@@ -285,6 +300,36 @@ function mergeIntoStorage<T extends LocalStorageItem>(
   if (!persistHistoryToStorage(storageKey, merged)) {
     console.warn(`[d1Pull] 合并写入失败: ${storageKey}`);
   }
+}
+
+const MIN_SYNC_INTERVAL_MS = 60_000;
+const FORCE_FULL_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+function getAllDocuments(results: Array<{ data: D1Doc[] }>): D1Doc[] {
+  return results.flatMap((result) => result.data);
+}
+
+function getMaxUpdatedAt(documents: D1Doc[], baseline?: string): string | null {
+  let maxValue = baseline ?? null;
+  let maxTime = baseline ? Date.parse(baseline) : Number.NEGATIVE_INFINITY;
+
+  for (const doc of documents) {
+    const time = Date.parse(doc.updated_at);
+    if (!Number.isNaN(time) && time > maxTime) {
+      maxTime = time;
+      maxValue = doc.updated_at;
+    }
+  }
+
+  return maxValue;
+}
+
+function getRemoteDeletedIds(documents: D1Doc[]): Set<string> {
+  return new Set(
+    documents
+      .filter((doc) => doc.status === 'deleted')
+      .map((doc) => doc.id),
+  );
 }
 
 function docToQuotationHistory(doc: D1Doc) {
@@ -348,74 +393,125 @@ function docToPurchaseHistory(doc: D1Doc) {
   };
 }
 
-/**
- * 拉取全部 D1 数据并合并到 localStorage。
- * 失败时静默（不影响现有功能）。
- */
-export async function pullAllFromD1(): Promise<void> {
+async function fullSyncFromD1(): Promise<void> {
+  // 先刷新待提交队列，确保本机改动已写入 D1
+  await flushPendingQueue();
+
+  // 取当前仍未成功提交的 id（flush 后仍失败的），merge 时保护它们
+  let pendingIds = getPendingIds();
+  const deletedIds = getDeletedDocIds();
+
+  // 先推：本地有但 D1 可能没有的记录，防止本地有效记录被下一步 pull 误删
+  await pushLocalDocsToD1(deletedIds);
+  // pushLocalDocsToD1 内部调用 d1SyncDocument（fire-and-forget + 入队）
+  // 再次 flush 确保刚入队的补推请求在 pull 前全部完成
+  await flushPendingQueue();
+  pendingIds = getPendingIds();
+
+  const [quotRes, confRes, domesticRes, invRes, packRes, purchRes] = await Promise.all([
+    fetchAll<D1Doc>('/api/documents?type=quotation&status=all', 'documents'),
+    fetchAll<D1Doc>('/api/documents?type=confirmation&status=all', 'documents'),
+    fetchAll<D1Doc>('/api/documents?type=domestic&status=all', 'documents'),
+    fetchAll<D1Doc>('/api/documents?type=invoice&status=all', 'documents'),
+    fetchAll<D1Doc>('/api/documents?type=packing&status=all', 'documents'),
+    fetchAll<D1Doc>('/api/documents?type=purchase&status=all', 'documents'),
+  ]);
+
+  const results = [quotRes, confRes, domesticRes, invRes, packRes, purchRes];
+  const allDocuments = getAllDocuments(results);
+  const remoteDeletedIds = getRemoteDeletedIds(allDocuments);
+  remoteDeletedIds.forEach(recordDeletedDocId);
+  const effectiveDeletedIds = new Set([
+    ...Array.from(deletedIds),
+    ...Array.from(remoteDeletedIds),
+  ]);
+
+  console.log(
+    `[d1Pull] D1数据: quotation=${quotRes.data.length} confirmation=${confRes.data.length}` +
+    ` domestic=${domesticRes.data.length} invoice=${invRes.data.length} packing=${packRes.data.length} purchase=${purchRes.data.length}` +
+    ` (ok=${quotRes.ok})`,
+  );
+
+  mergeIntoStorage(
+    'quotation_history',
+    [...quotRes.data, ...confRes.data, ...domesticRes.data].map(docToQuotationHistory),
+    quotRes.ok && confRes.ok && domesticRes.ok,
+    pendingIds,
+    effectiveDeletedIds,
+    true,
+  );
+  mergeIntoStorage('invoice_history', invRes.data.map(docToInvoiceHistory), invRes.ok, pendingIds, effectiveDeletedIds, true);
+  mergeIntoStorage('packing_history', packRes.data.map(docToPackingHistory), packRes.ok, pendingIds, effectiveDeletedIds, true);
+  mergeIntoStorage('purchase_history', purchRes.data.map(docToPurchaseHistory), purchRes.ok, pendingIds, effectiveDeletedIds, true);
+
+  if (results.every((result) => result.ok)) {
+    const maxUpdatedAt = getMaxUpdatedAt(allDocuments);
+    if (maxUpdatedAt) setDocSyncWatermark(maxUpdatedAt);
+    setDocsLastFullSyncAt(Date.now());
+  }
+
+  const remaining = getPendingIds().size;
+  console.log(`[d1Pull] 同步完成${remaining > 0 ? `，${remaining} 条待提交（网络不可达）` : ''}`);
+}
+
+async function incrementalSyncFromD1(since: string): Promise<void> {
+  await flushPendingQueue();
+
+  const pendingIds = getPendingIds();
+  const deletedIds = getDeletedDocIds();
+  const [quotRes, confRes, domesticRes, invRes, packRes, purchRes] = await Promise.all([
+    fetchAll<D1Doc>('/api/documents?type=quotation&status=all', 'documents', since),
+    fetchAll<D1Doc>('/api/documents?type=confirmation&status=all', 'documents', since),
+    fetchAll<D1Doc>('/api/documents?type=domestic&status=all', 'documents', since),
+    fetchAll<D1Doc>('/api/documents?type=invoice&status=all', 'documents', since),
+    fetchAll<D1Doc>('/api/documents?type=packing&status=all', 'documents', since),
+    fetchAll<D1Doc>('/api/documents?type=purchase&status=all', 'documents', since),
+  ]);
+
+  const results = [quotRes, confRes, domesticRes, invRes, packRes, purchRes];
+  const allDocuments = getAllDocuments(results);
+  const remoteDeletedIds = getRemoteDeletedIds(allDocuments);
+  remoteDeletedIds.forEach(recordDeletedDocId);
+  const effectiveDeletedIds = new Set([...Array.from(deletedIds), ...Array.from(remoteDeletedIds)]);
+
+  mergeIntoStorage(
+    'quotation_history',
+    [...quotRes.data, ...confRes.data, ...domesticRes.data].map(docToQuotationHistory),
+    quotRes.ok && confRes.ok && domesticRes.ok,
+    pendingIds,
+    effectiveDeletedIds,
+    false,
+  );
+  mergeIntoStorage('invoice_history', invRes.data.map(docToInvoiceHistory), invRes.ok, pendingIds, effectiveDeletedIds, false);
+  mergeIntoStorage('packing_history', packRes.data.map(docToPackingHistory), packRes.ok, pendingIds, effectiveDeletedIds, false);
+  mergeIntoStorage('purchase_history', purchRes.data.map(docToPurchaseHistory), purchRes.ok, pendingIds, effectiveDeletedIds, false);
+
+  if (results.every((result) => result.ok)) {
+    const maxUpdatedAt = getMaxUpdatedAt(allDocuments, since);
+    if (maxUpdatedAt) setDocSyncWatermark(maxUpdatedAt);
+  }
+
+  const remaining = getPendingIds().size;
+  console.log(`[d1Pull] 增量同步完成${remaining > 0 ? `，${remaining} 条待提交（网络不可达）` : ''}`);
+}
+
+/** 按持久化水位选择全量或增量同步；失败不影响 localStorage 主流程。 */
+export async function pullAllFromD1(force = false): Promise<void> {
   if (typeof window === 'undefined') return;
 
+  const now = Date.now();
+  if (!force && now - getDocsLastSyncAttemptAt() < MIN_SYNC_INTERVAL_MS) return;
+  setDocsLastSyncAttemptAt(now);
+
+  const watermark = getDocSyncWatermark();
+  const needsFull = force || !watermark || now - getDocsLastFullSyncAt() > FORCE_FULL_SYNC_INTERVAL_MS;
+
   try {
-    // 先刷新待提交队列，确保本机改动已写入 D1
-    await flushPendingQueue();
-
-    // 取当前仍未成功提交的 id（flush 后仍失败的），merge 时保护它们
-    let pendingIds = getPendingIds();
-    const deletedIds = getDeletedDocIds();
-
-    // 先推：本地有但 D1 可能没有的记录，防止本地有效记录被下一步 pull 误删
-    await pushLocalDocsToD1(deletedIds);
-    // pushLocalDocsToD1 内部调用 d1SyncDocument（fire-and-forget + 入队）
-    // 再次 flush 确保刚入队的补推请求在 pull 前全部完成
-    await flushPendingQueue();
-    pendingIds = getPendingIds();
-
-    const [quotRes, confRes, domesticRes, invRes, packRes, purchRes] = await Promise.all([
-      fetchAll<D1Doc>('/api/documents?type=quotation&status=all', 'documents'),
-      fetchAll<D1Doc>('/api/documents?type=confirmation&status=all', 'documents'),
-      fetchAll<D1Doc>('/api/documents?type=domestic&status=all', 'documents'),
-      fetchAll<D1Doc>('/api/documents?type=invoice&status=all', 'documents'),
-      fetchAll<D1Doc>('/api/documents?type=packing&status=all', 'documents'),
-      fetchAll<D1Doc>('/api/documents?type=purchase&status=all', 'documents'),
-    ]);
-
-    const remoteDeletedIds = new Set(
-      [
-        ...quotRes.data,
-        ...confRes.data,
-        ...domesticRes.data,
-        ...invRes.data,
-        ...packRes.data,
-        ...purchRes.data,
-      ]
-        .filter((doc) => doc.status === 'deleted')
-        .map((doc) => doc.id),
-    );
-    remoteDeletedIds.forEach(recordDeletedDocId);
-    const effectiveDeletedIds = new Set([
-      ...Array.from(deletedIds),
-      ...Array.from(remoteDeletedIds),
-    ]);
-
-    console.log(
-      `[d1Pull] D1数据: quotation=${quotRes.data.length} confirmation=${confRes.data.length}` +
-      ` domestic=${domesticRes.data.length} invoice=${invRes.data.length} packing=${packRes.data.length} purchase=${purchRes.data.length}` +
-      ` (ok=${quotRes.ok})`,
-    );
-
-    mergeIntoStorage(
-      'quotation_history',
-      [...quotRes.data, ...confRes.data, ...domesticRes.data].map(docToQuotationHistory),
-      quotRes.ok && confRes.ok && domesticRes.ok,
-      pendingIds,
-      effectiveDeletedIds,
-    );
-    mergeIntoStorage('invoice_history', invRes.data.map(docToInvoiceHistory), invRes.ok, pendingIds, effectiveDeletedIds);
-    mergeIntoStorage('packing_history', packRes.data.map(docToPackingHistory), packRes.ok, pendingIds, effectiveDeletedIds);
-    mergeIntoStorage('purchase_history', purchRes.data.map(docToPurchaseHistory), purchRes.ok, pendingIds, effectiveDeletedIds);
-
-    const remaining = getPendingIds().size;
-    console.log(`[d1Pull] 同步完成${remaining > 0 ? `，${remaining} 条待提交（网络不可达）` : ''}`);
+    if (needsFull) {
+      await fullSyncFromD1();
+    } else {
+      await incrementalSyncFromD1(watermark);
+    }
   } catch (err) {
     console.warn('[d1Pull] 同步失败（不影响现有功能）:', err);
   }

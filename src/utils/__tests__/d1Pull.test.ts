@@ -138,4 +138,125 @@ describe('pullAllFromD1 merge behavior', () => {
     expect(merged[0].data).toEqual({ source: 'pending-local' });
     expect(JSON.parse(localStorage.getItem('d1_pending_syncs') || '[]')).toHaveLength(1);
   });
+
+  test('uses the persisted watermark and preserves documents absent from an incremental response', async () => {
+    const watermark = '2026-07-05T10:00:00.000Z';
+    localStorage.setItem('d1_docs_sync_watermark', watermark);
+    localStorage.setItem('d1_docs_last_full_sync_at', String(Date.now()));
+    localStorage.setItem('quotation_history', JSON.stringify([
+      {
+        id: 'older-local-doc',
+        type: 'quotation',
+        quotationNo: 'QT-OLDER',
+        customerName: 'Existing Customer',
+        createdAt: '2026-07-01T00:00:00.000Z',
+        updatedAt: '2026-07-02T00:00:00.000Z',
+        data: { source: 'existing-local' },
+      },
+    ]));
+    global.fetch = jest.fn().mockResolvedValue(okResponse()) as jest.Mock;
+
+    await pullAllFromD1();
+
+    const merged = JSON.parse(localStorage.getItem('quotation_history') || '[]');
+    expect(merged).toHaveLength(1);
+    expect(merged[0].id).toBe('older-local-doc');
+    expect(global.fetch).toHaveBeenCalledTimes(6);
+    for (const [url] of (global.fetch as jest.Mock).mock.calls) {
+      expect(url).toContain(`since=${encodeURIComponent(watermark)}`);
+    }
+    expect(localStorage.getItem('d1_docs_sync_watermark')).toBe(watermark);
+  });
+
+  test('removes a locally cached document when an incremental response contains its tombstone', async () => {
+    const watermark = '2026-07-05T10:00:00.000Z';
+    const deletedAt = '2026-07-06T10:00:00.000Z';
+    localStorage.setItem('d1_docs_sync_watermark', watermark);
+    localStorage.setItem('d1_docs_last_full_sync_at', String(Date.now()));
+    localStorage.setItem('quotation_history', JSON.stringify([
+      {
+        id: 'deleted-remotely',
+        type: 'quotation',
+        quotationNo: 'QT-DELETED',
+        createdAt: '2026-07-01T00:00:00.000Z',
+        updatedAt: '2026-07-02T00:00:00.000Z',
+        data: { source: 'local' },
+      },
+    ]));
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      if (url.includes('type=quotation')) {
+        return Promise.resolve(okResponse([
+          mockDocument({ id: 'deleted-remotely', status: 'deleted', updated_at: deletedAt }),
+        ]));
+      }
+      return Promise.resolve(okResponse());
+    }) as jest.Mock;
+
+    await pullAllFromD1();
+
+    expect(JSON.parse(localStorage.getItem('quotation_history') || '[]')).toEqual([]);
+    expect(localStorage.getItem('d1_docs_sync_watermark')).toBe(deletedAt);
+  });
+
+  test('throttles repeated sync attempts for 60 seconds', async () => {
+    const watermark = '2026-07-05T10:00:00.000Z';
+    localStorage.setItem('d1_docs_sync_watermark', watermark);
+    localStorage.setItem('d1_docs_last_full_sync_at', String(Date.now()));
+    global.fetch = jest.fn().mockResolvedValue(okResponse()) as jest.Mock;
+
+    await pullAllFromD1();
+    await pullAllFromD1();
+
+    expect(global.fetch).toHaveBeenCalledTimes(6);
+  });
+
+  test('allows a forced sync inside the 60-second throttle window', async () => {
+    localStorage.setItem('d1_docs_last_sync_attempt_at', String(Date.now()));
+    global.fetch = jest.fn().mockResolvedValue(okResponse()) as jest.Mock;
+
+    await pullAllFromD1();
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    await pullAllFromD1(true);
+    expect(global.fetch).toHaveBeenCalledTimes(6);
+    for (const [url] of (global.fetch as jest.Mock).mock.calls) {
+      expect(url).not.toContain('since=');
+    }
+  });
+
+  test('forces a full sync with push-check even when a recent watermark exists', async () => {
+    localStorage.setItem('d1_active_user_id', 'test-user');
+    localStorage.setItem('d1_docs_sync_watermark', '2026-07-08T10:00:00.000Z');
+    localStorage.setItem('d1_docs_last_full_sync_at', String(Date.now()));
+    global.fetch = jest.fn().mockResolvedValue(okResponse()) as jest.Mock;
+
+    await pullAllFromD1(true);
+
+    expect(global.fetch).toHaveBeenCalledTimes(12);
+    for (const [url] of (global.fetch as jest.Mock).mock.calls) {
+      expect(url).not.toContain('since=');
+    }
+  });
+
+  test('records the maximum server updated_at after a successful full sync', async () => {
+    const newestTimestamp = '2026-07-08T10:00:00.000Z';
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      if (url.includes('type=invoice')) {
+        return Promise.resolve(okResponse([
+          mockDocument({ id: 'invoice-1', type: 'invoice', updated_at: newestTimestamp }),
+        ]));
+      }
+      if (url.includes('type=quotation')) {
+        return Promise.resolve(okResponse([
+          mockDocument({ updated_at: '2026-07-07T10:00:00.000Z' }),
+        ]));
+      }
+      return Promise.resolve(okResponse());
+    }) as jest.Mock;
+
+    await pullAllFromD1();
+
+    expect(localStorage.getItem('d1_docs_sync_watermark')).toBe(newestTimestamp);
+    expect(Number(localStorage.getItem('d1_docs_last_full_sync_at'))).toBeGreaterThan(0);
+  });
 });

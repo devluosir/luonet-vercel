@@ -1729,6 +1729,245 @@ TASK-132 把 `stamp-hongkong.png` 用 `convert -colors 16` 量化调色板颜色
 - `npm run build` 跑通（沙箱如遇历史已知的超时问题，按 TASK-103 的做法在 45s 内跑到编译阶段即可，建议用户本地或 CI 补跑一次完整 build 确认）。
 - **待用户验证**：真机 iOS Safari + Android Chrome 各做一次「添加到主屏幕」，确认图标正确。
 
+## TASK-137：单据全量同步改为增量拉取 + 持久化水位，降低 Vercel Fluid CPU
+
+**状态**：已完成（2026-07-11；部署后仍需观察 Vercel CPU，并做跨设备手工验证）
+**背景来源**：用户反馈 Vercel Fluid Active CPU 用量随"打开 app 的次数"线性累加（开一次约 +3s，开两次约 +6s），排查定位到全局挂载的 `useD1Sync`（`src/hooks/useD1Sync.ts`，在 `src/app/providers.tsx` 里包住整个 app，跟停留在哪个页面无关，首页也会触发）。
+
+### 背景（根因）
+
+`useD1Sync` 在每次**全新页面加载**（新开 tab / 整页刷新，用户已登录）4 秒后调用一次 `pullAllFromD1()`（`src/utils/d1Pull.ts`）。这个函数目前是无条件全量同步：
+
+1. `pushLocalDocsToD1`（约 126-228 行）：对 quotation / confirmation / domestic / invoice / packing / purchase 六种单据类型各发一次 `GET /api/documents?type=X&status=all`，只是为了拿到 D1 现有 id 集合，判断本地有没有"D1 缺失、需要补推"的记录。
+2. 紧接着 `pullAllFromD1` 主体（约 355-422 行）：同样六种类型再各发一次 `GET /api/documents?type=X&status=all`，把全部记录整表拉回来 merge 进 localStorage。
+
+一次打开 app 至少 12 次 `/api/documents` 请求（某类型超过 500 条时 `fetchAll` 还会继续翻页，请求更多）。每次都是独立的 Vercel serverless function 调用（`getServerSession` 解 JWT + 代理转发到 Cloudflare Worker + `await workerResp.json()` 解析整页单据数据——单据 `data` 字段是完整报价单/发票内容，body 不小），这是"每次开 app 都固定 +N 秒 CPU"的直接成因。
+
+`syncedUserId`（`useD1Sync.ts` 里的模块级变量）只在**同一次页面加载**内去重，一刷新或新开 tab 就失效，等同于"从未同步过"，于是每次都重新跑一整轮。
+
+这跟询报价同步在 [[bug_inquiry_sync_phantom_records]] 之后、TASK-128 修复前的"整表轮询"是同一类问题（全量拉取、没有增量/水位机制），TASK-128 已经把询报价那条路径改成了"服务端 `since` 参数 + 客户端维护同步水位"，本任务是同一思路在 documents 同步路径上的对应修复。**关键区别**：TASK-128 的水位存在 `useInquirySync` 组件的 `useRef` 里就够用，因为它是"同一次页面加载内、30-60 秒轮询"的场景；本任务的水位必须**持久化到 localStorage**，否则每次新开 tab 依然会被判定成"从未同步过"而触发全量，起不到效果。
+
+**已知隐患，实现时必须处理**：`pullAllFromD1` 里的 `mergeIntoStorage`（约 230-288 行）在"响应里没出现的本地记录 + 不在 pending 队列"时，会调用 `recordDeletedDocId` 把它当成"已在其他设备删除"从本地清掉（约 265-277 行）。这个推断只有在**响应是完整全量结果集**时才成立；改成增量（`since` 过滤）之后，一条记录"没出现在这次响应里"通常只是"最近没变化"，如果不加区分，会把所有近期没编辑过的历史单据在下一次增量同步后从本地误删——这跟 TASK-128 里 `mergeFieldsOnly` 那个"缺席 tomorrow 当删除"的回归是同一类型的 bug，必须在设计里显式避免，不能等测试发现。
+
+### Files in scope
+
+- `src/worker.ts` —— `handleListDocuments`（第 1320 行起）：加 `since` 查询参数支持
+- `src/utils/d1Sync.ts` —— 新增同步水位 / 上次全量同步时间 / 上次同步尝试时间的读写函数；`clearD1DocumentLocalState` 加入新 key 的清理
+- `src/utils/d1Pull.ts` —— `fetchAll` 加 `since` 参数；`mergeIntoStorage` 加 `isFullSync` 参数修正误删逻辑；拆分 `pullAllFromD1` 为 `fullSyncFromD1` / `incrementalSyncFromD1` 两条路径 + 顶层节流编排
+- `src/hooks/useD1Sync.ts` —— 预期不需要改动（`pullAllFromD1()` 对外签名不变），实现时确认这一点即可
+
+### 具体改动要求
+
+**1. `src/worker.ts` —— `handleListDocuments` 支持 `since`**
+
+在现有 `type`/`status`/`search`/`limit`/`offset` 之外读取 `since = url.searchParams.get('since')`。校验：`since` 存在且 `!Number.isNaN(Date.parse(since))` 才生效，否则按"无 since"处理（不要因为参数非法就报错/500，跟 TASK-128 里 `/api/inquiry` 的 `since` 校验规则一致）。生效时在 `conditions`/`values` 数组里追加 `updated_at >= ?` / `since`（放在 `search` 条件之后、`values.push(limit, offset)` 之前，保证 `conditions.join(' AND ')` 里的 `?` 占位符顺序和 `values` 数组顺序一一对应）。用 `>=` 不用 `>`（原因同 TASK-128：允许水位这一刻的记录被重复带回来，客户端 merge 是按 id upsert 的幂等操作，重复带回无害；用 `>` 在同一 `updated_at` 精度内有并发写入时会丢记录）。不传 `since` 时返回结果必须和现在完全一样（回归保护）。
+
+**2. `src/utils/d1Sync.ts` —— 新增水位/节流状态读写**
+
+新增三个 localStorage key 和对应读写函数（放在文件里 `ACTIVE_USER_KEY` 附近即可）：
+
+```ts
+const DOC_SYNC_WATERMARK_KEY = 'd1_docs_sync_watermark';        // 已知的服务端最大 updated_at（ISO 字符串）
+const DOC_SYNC_LAST_FULL_AT_KEY = 'd1_docs_last_full_sync_at';   // 上次成功全量同步的时间戳（客户端 Date.now()，仅用于节流判断，不是数据水位）
+const DOC_SYNC_LAST_ATTEMPT_AT_KEY = 'd1_docs_last_sync_attempt_at'; // 上次发起同步尝试（无论成败）的时间戳
+
+export function getDocSyncWatermark(): string | null { ... }
+export function setDocSyncWatermark(iso: string): void { ... }
+export function getDocsLastFullSyncAt(): number { ... }
+export function setDocsLastFullSyncAt(ts: number): void { ... }
+export function getDocsLastSyncAttemptAt(): number { ... }
+export function setDocsLastSyncAttemptAt(ts: number): void { ... }
+```
+
+读函数在 `typeof window === 'undefined'` 时分别返回 `null`/`0`；写函数同样条件下直接 return。数值型用 `Number(localStorage.getItem(key) || 0)` / `String(ts)` 存取。
+
+`clearD1DocumentLocalState`（约 61-71 行）的清理列表里加上这三个 key——切换账号时必须一并清空，强制新用户走一次全量同步，不能复用上一个用户的水位。
+
+**3. `src/utils/d1Pull.ts` —— `fetchAll` 加 `since`**
+
+```ts
+async function fetchAll<T>(url: string, key: string, since?: string): Promise<{ data: T[]; ok: boolean }> {
+  // ...原逻辑不变，只是请求 URL 拼接时加上 since ? `&since=${encodeURIComponent(since)}` : ''
+}
+```
+
+**4. `src/utils/d1Pull.ts` —— `mergeIntoStorage` 加 `isFullSync` 参数**
+
+签名改为 `mergeIntoStorage<T>(storageKey, incoming, d1Ok, pendingIds, deletedIds, isFullSync: boolean)`。第二个循环（约 265-277 行，"存在于本地但不在这次响应里的记录"）改成：
+
+```ts
+for (const item of existing) {
+  if (deletedIds.has(item.id)) continue;
+  if (map.has(item.id)) continue;
+
+  if (!isFullSync) {
+    // 增量响应里没出现 = 最近没变化，不代表已删除，原样保留
+    map.set(item.id, item);
+    continue;
+  }
+
+  if (pendingIds.has(item.id)) {
+    map.set(item.id, item);
+  } else {
+    recordDeletedDocId(item.id);
+  }
+}
+```
+
+其余合并逻辑（`activeIncoming` 过滤、按 `updatedAt` 取较新版本等）不变。
+
+**5. `src/utils/d1Pull.ts` —— 拆分 `pullAllFromD1`**
+
+把现有 `pullAllFromD1` 函数体重命名为 `fullSyncFromD1`（保留内部全部逻辑：`flushPendingQueue` → `pushLocalDocsToD1` → `flushPendingQueue` → 六种类型整表 `fetchAll`（不传 `since`）→ 六次 `mergeIntoStorage(..., isFullSync: true)`），在最后成功路径追加：
+
+- 只有当六种类型的 fetch 全部 `ok`（即 `quotRes.ok && confRes.ok && domesticRes.ok && invRes.ok && packRes.ok && purchRes.ok`）时，才计算这一批数据里 `updated_at` 字段的最大值（用每个 `D1Doc.updated_at` 服务端字段，不要用转换后 `docToXxxHistory()` 输出的 `updatedAt`，也不要用客户端 `Date.now()`——原因同 TASK-128，避免客户端时钟偏移导致水位比服务端记录还早/晚），调用 `setDocSyncWatermark(maxUpdatedAt)` 和 `setDocsLastFullSyncAt(Date.now())`。
+- 任一类型 fetch 失败时，不更新水位、不更新"上次全量同步时间"（下次调用会因为水位/时间都没推进，仍然判定需要重试）。
+
+新增 `incrementalSyncFromD1(since: string): Promise<void>`：
+
+- 只调用一次 `flushPendingQueue()`（跟全量同步的第一步一致，不要省略），**不调用 `pushLocalDocsToD1`**（原因同 TASK-128 对 `incrementalSync` 的处理：`pushLocalDocsToD1` 需要拿到完整 D1 id 集合才能判断"本地独有"，喂给它一个 `since` 过滤后的结果会把所有"最近没变化、也没有 pending 操作"的本地记录误判成"D1 里找不到"，产生噪音警告；真正需要补推的场景已经由 pending 队列 + `flushPendingQueue` 覆盖，遗留的真正孤儿记录会在下一次强制全量同步时被 `pushLocalDocsToD1` 捕获）。
+- 六种类型各 `fetchAll(..., since)` 一次，六次 `mergeIntoStorage(..., isFullSync: false)`。
+- 同样只有六种类型全部 `ok` 时才推进水位：新水位 = `max(旧水位, 这一批 D1Doc.updated_at 最大值)`（如果这一批为空，水位不变；不要因为这次没有新数据就往回退）。任一类型失败则水位保持不变。
+
+顶层 `pullAllFromD1()` 改成节流 + 分派编排（对外仍然是唯一入口，无参数，签名不变）：
+
+```ts
+const MIN_SYNC_INTERVAL_MS = 60_000;             // 60 秒内的重复触发（多 tab / 快速刷新）直接跳过
+const FORCE_FULL_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 小时强制整表兜底一次（自愈，防御增量路径的未知边界问题）
+
+export async function pullAllFromD1(): Promise<void> {
+  if (typeof window === 'undefined') return;
+
+  const now = Date.now();
+  if (now - getDocsLastSyncAttemptAt() < MIN_SYNC_INTERVAL_MS) return;
+  setDocsLastSyncAttemptAt(now);
+
+  const watermark = getDocSyncWatermark();
+  const needsFull = !watermark || (now - getDocsLastFullSyncAt() > FORCE_FULL_SYNC_INTERVAL_MS);
+
+  try {
+    if (needsFull) {
+      await fullSyncFromD1();
+    } else {
+      await incrementalSyncFromD1(watermark);
+    }
+  } catch (err) {
+    console.warn('[d1Pull] 同步失败（不影响现有功能）:', err);
+  }
+}
+```
+
+### Acceptance criteria
+
+- 用户首次登录/换设备（本地无 `d1_docs_sync_watermark`）：打开 app 走 `fullSyncFromD1()`，行为和改动前一致（一次性拉全量 + push-check）。
+- 已有水位、且距上次全量同步不到 24 小时：打开 app 只走 `incrementalSyncFromD1()`，用浏览器 Network 面板确认六个 `/api/documents?...&since=...` 请求返回的 `documents` 数组在稳态下（没有新增/编辑）明显小于全表条数（理想情况为空）。
+- 60 秒内重复打开/刷新 app（模拟用户连续开关或多 tab）：第二次及以后的调用应直接被节流跳过，不发起任何 `/api/documents` 请求（Network 面板确认）。
+- 回归验证："响应中没出现的历史单据不会被误删"——先用增量路径同步一次（本地已有的、近期未编辑的历史单据不在 `since` 之后），确认这些历史单据在 `quotation_history`/`invoice_history`/`packing_history`/`purchase_history` 里原样保留，没有被 `recordDeletedDocId` 误删。
+- 回归验证："删除仍能同步"——在 A 设备删除一条单据，B 设备下一次增量同步后，该单据应从 B 设备本地清除（验证 D1 软删除 `status='deleted'` + `updated_at` 更新后能被 `since` 过滤的增量响应正确捕获，不依赖"缺席=删除"那条只对全量有效的旧逻辑）。
+- 回归验证：TASK-124/`bug_inquiry_merge_pending_protection` 同类场景——某条单据本地刚编辑、PUT 还在 pending 队列里未确认，此时触发一次增量同步，确认该单据不被覆盖回旧值（`mergeIntoStorage` 现有的 pending 保护逻辑在增量路径下依然生效，未受本次改动影响）。
+- 不传 `since` 的 `GET /api/documents` 行为不变（`npm test` 或手工 curl 确认）。
+
+### Non-goals / 红线
+
+- 不改动 `app/api/documents/[[...path]]/route.ts`（Vercel 代理层）——它已经是 `${WORKER_BASE}${workerPath}${url.search}` 透传全部 query string，`since` 会自动带过去，不需要改代码，实现时确认这一点即可。
+- 不改动 `handleGetDocument`/`handleCreateDocument`/`handleUpdateDocument`/`handleDeleteDocument` 这几个单文档 CRUD handler。
+- 不改动 `pushLocalDocsToD1` 内部逻辑本身（判断"本地独有、需要补推"的规则不变），只是把它的调用时机从"每次同步都跑"收紧成"只在 `fullSyncFromD1` 里跑"。
+- 不改动 `customers`/`inquiry`/`admin` 这几个其它代理路由和它们对应的 Worker handler——本次只处理 documents 这一条同步路径。
+- 不改动 `PAGE_SIZE`（500）本身的分页机制。
+- 不改动 `flushPendingQueue`/`enqueue`/`dequeue`/`executeOp`/`d1SyncDocument`/`recordDeletedDocId`/`getDeletedDocIds`/`getPendingIds` 这些 pending 队列相关函数。
+- 不改动 `useD1Sync.ts` 里"延迟 4 秒执行"和"`syncedUserId` 同一页面加载内去重"这两条逻辑——它们和本任务的持久化水位节流是两层不同的保护，都保留。
+
+### Verification steps
+
+- `npx tsc --noEmit` 通过
+- `npx eslint src/worker.ts src/utils/d1Sync.ts src/utils/d1Pull.ts` 无输出
+- `npx jest d1Pull`（如果补了单测，建议至少覆盖 `mergeIntoStorage` 的 `isFullSync: false` 分支——增量响应缺席的记录被保留、`status: 'deleted'` 的记录仍被正确移除）
+- `npm run build` 跑通
+- 手动走一遍上面"验收标准"里列的场景，重点是"60 秒节流"和"增量同步不误删历史记录"这两条
+- 部署后观察 1-2 天 Vercel 后台 Function Invocations 和 Active CPU 曲线，确认"打开 app 次数"和 CPU 用量之间不再是之前的线性关系（这一步无法在开发环境验证，记录为部署后待观察项）
+
+**Status:** completed
+
+## TASK-138：`pullAllFromD1` 加 `force` 参数，恢复历史页"手动同步刷新"按钮的强制全量语义
+
+**状态**：已完成（2026-07-11）
+**背景来源**：TASK-137 上线验证时发现的副作用——`src/features/history/app/HistoryPage.tsx` 里有一处独立的 `pullAllFromD1()` 调用点，不在 TASK-137 的 Files in scope 里，没有随之调整，导致该页面的"手动同步刷新"按钮在 TASK-137 之后可能被节流静默吞掉，或者降级成增量、跳过 `pushLocalDocsToD1`，跟用户点这个按钮时的预期（"强制真的去拉一次最新数据"）不符。
+
+### 背景
+
+`HistoryPage.tsx` 里 `pullAllFromD1()` 目前有两处调用：
+
+1. `handleSyncRefresh`（第 108-121 行左右，绑定在"同步刷新"按钮 `onClick={handleSyncRefresh}`，约第 344 行）：用户主动点击触发，语义是"我知道/怀疑数据可能不是最新的，强制去拉一次"。
+2. 组件内部的 `syncFromD1()`（第 152 行起）：在页面 `mount` 时调用一次（第 162 行 `void syncFromD1()`），以及浏览器标签页从后台切回前台时（`visibilitychange` 事件，第 166 行）再调用一次。这是自动触发，跟 TASK-137 要解决的"频繁触发同步消耗 CPU"是同一类场景——用户来回切换标签页会反复命中这个 effect。
+
+TASK-137 把 `pullAllFromD1()` 改成了"60 秒节流 + 有水位时默认增量"，这两处调用点因为共用同一个函数，行为都变了。**但这两处调用点的语义其实是不一样的**：调用点 1（按钮）应该保留"用户主动要求、必须给出真实结果"的强语义，调用点 2（mount / visibilitychange 自动触发）恰恰应该继续享受 TASK-137 的节流和增量收益——不做区分的话，要么按钮被误伤（用户点了没反应），要么如果简单粗暴地把两处都改成强制全量，会重新引入 TASK-137 想解决的"频繁切回历史页触发全量请求"问题，前功尽弃。
+
+### Files in scope
+
+- `src/utils/d1Pull.ts` —— `pullAllFromD1` 加可选 `force` 参数
+- `src/features/history/app/HistoryPage.tsx` —— 只改 `handleSyncRefresh` 这一处调用
+- `src/utils/__tests__/d1Pull.test.ts` —— 补两个测试（见下）
+
+### 具体改动要求
+
+**1. `src/utils/d1Pull.ts` —— `pullAllFromD1(force = false)`**
+
+```ts
+export async function pullAllFromD1(force = false): Promise<void> {
+  if (typeof window === 'undefined') return;
+
+  const now = Date.now();
+  if (!force && now - getDocsLastSyncAttemptAt() < MIN_SYNC_INTERVAL_MS) return;
+  setDocsLastSyncAttemptAt(now);
+
+  const watermark = getDocSyncWatermark();
+  const needsFull = force || !watermark || now - getDocsLastFullSyncAt() > FORCE_FULL_SYNC_INTERVAL_MS;
+
+  try {
+    if (needsFull) {
+      await fullSyncFromD1();
+    } else {
+      await incrementalSyncFromD1(watermark);
+    }
+  } catch (err) {
+    console.warn('[d1Pull] 同步失败（不影响现有功能）:', err);
+  }
+}
+```
+
+两处改动：`force` 为 `true` 时跳过 60 秒节流的 early return；`needsFull` 的判断加上 `force ||`，强制走 `fullSyncFromD1()`（内部逻辑不变，仍然是 `flushPendingQueue → pushLocalDocsToD1 → flushPendingQueue → 六种类型整表 fetch → mergeIntoStorage(isFullSync: true) → 六种类型全部 ok 时才更新水位/`lastFullSyncAt`）。`setDocsLastSyncAttemptAt(now)` 保持无条件执行（`force` 场景也算一次尝试，避免紧接着的自动同步在同一个节流窗口内重复触发）。
+
+**2. `src/features/history/app/HistoryPage.tsx` —— 只改按钮这一处**
+
+第 113 行 `await pullAllFromD1();` 改成 `await pullAllFromD1(true);`。
+
+第 154 行（`syncFromD1()` 内部，服务于 mount 和 visibilitychange 两个触发点）**不改**，继续调用 `pullAllFromD1()`（不传参，默认 `force = false`），保留 TASK-137 的节流 + 增量行为。
+
+### Acceptance criteria
+
+- `pullAllFromD1()`（不传参/`force: false`）在 60 秒节流窗口内被重复调用时，行为跟 TASK-137 完成后一致：第二次及以后的调用不发起任何 `/api/documents` 请求。
+- `pullAllFromD1(true)` 无论是否处于 60 秒节流窗口内，都会真正发起请求，且总是走 `fullSyncFromD1()`（六种类型的 push-check + 六种类型的整表 pull，请求 URL 都不带 `since` 参数），不受当前是否已有有效水位、是否还没到 24 小时强制全量周期的影响。
+- 点击历史页"同步刷新"按钮（`handleSyncRefresh`）在任何时机都会触发一次真正的全量同步，不会被静默吞掉。
+- 历史页 mount 和标签页切回前台触发的自动同步（`syncFromD1()`）行为不变，继续吃 TASK-137 的节流和增量收益——反复切换标签页回到历史页，不应该重新变成"每次都整表拉取"。
+
+### Non-goals / 红线
+
+- 不改动 `fullSyncFromD1`/`incrementalSyncFromD1`/`mergeIntoStorage`/`fetchAll` 的内部实现——本任务只是让 `pullAllFromD1` 多一个入口参数去选择已有的两条路径之一，不新增同步逻辑。
+- 不改动 `src/hooks/useD1Sync.ts`——它调用 `pullAllFromD1()` 不传参，默认 `force = false`，行为不变，不需要动这个文件确认这一点即可。
+- 不给 `HistoryPage.tsx` 里 `syncFromD1()`（mount / visibilitychange 路径）传 `force: true`——这是本任务最重要的红线，传了就会重新引入 TASK-137 要解决的"频繁切换标签页导致全量请求堆积"问题。
+- 不新增 UI 提示（比如"已强制刷新"之类的 toast）——除非用户后续单独提出，这次只恢复函数语义。
+
+### Verification steps
+
+- `npx tsc --noEmit` 通过
+- `npx eslint src/utils/d1Pull.ts src/features/history/app/HistoryPage.tsx src/utils/__tests__/d1Pull.test.ts` 无输出
+- `npx jest d1Pull` 通过，新增两个测试用例：
+  1. "60 秒内普通调用被节流，强制调用不被节流"：预置一个最近的 `d1_docs_last_sync_attempt_at`（模拟刚同步过），先调用 `pullAllFromD1()` 确认没有发起任何 fetch，再调用 `pullAllFromD1(true)` 确认发起了 fetch（六次，URL 不含 `since`）。
+  2. "已有有效水位时，强制调用仍走全量路径并执行 push-check"：预置一个有效的 `d1_docs_sync_watermark` 和最近的 `d1_docs_last_full_sync_at`（模拟"正常情况下应该走增量"的状态），调用 `pullAllFromD1(true)`，验证请求总数是 12 次（push-check 6 次 + 主 pull 6 次）且没有一个 URL 带 `since` 参数——用这个信号证明 `pushLocalDocsToD1` 真的执行了，而不是被跳过直接进了增量分支。有余力的话可以进一步验证：本地放一条 D1 mock 响应里不存在的孤儿单据，强制同步后确认 `d1_pending_syncs` 队列或 fetch 记录里出现过针对该 id 的 `POST /api/documents`。
+- 手动验证：历史页连续切走再切回浏览器标签页几次（模拟 visibilitychange），确认 Network 面板里不会每次都出现 12 个请求，只有偶发的节流内跳过或增量的 6 个请求；随后点一次"同步刷新"按钮，确认这次一定能看到 12 个请求（或至少确认不带 `since` 参数）。
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

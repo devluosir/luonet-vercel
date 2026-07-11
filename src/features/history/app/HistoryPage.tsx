@@ -110,7 +110,7 @@ export function HistoryPage() {
     isSyncing.current = true;
     setSyncing(true);
     try {
-      await pullAllFromD1();
+      await pullAllFromD1(true);
       handleRefresh();
       ['quotation_history', 'packing_history', 'invoice_history', 'purchase_history'].forEach(key => {
         window.dispatchEvent(new CustomEvent('customStorageChange', { detail: { key } }));

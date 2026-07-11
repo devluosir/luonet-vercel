@@ -38,6 +38,9 @@ interface PendingOp {
 const QUEUE_KEY = 'd1_pending_syncs';
 const DELETED_DOC_IDS_KEY = 'd1_deleted_doc_ids';
 const ACTIVE_USER_KEY = 'd1_active_user_id';
+const DOC_SYNC_WATERMARK_KEY = 'd1_docs_sync_watermark';
+const DOC_SYNC_LAST_FULL_AT_KEY = 'd1_docs_last_full_sync_at';
+const DOC_SYNC_LAST_ATTEMPT_AT_KEY = 'd1_docs_last_sync_attempt_at';
 const DOCUMENT_HISTORY_KEYS = [
   'quotation_history',
   'invoice_history',
@@ -57,6 +60,39 @@ export function getD1ActiveUserId(): string | null {
   return localStorage.getItem(ACTIVE_USER_KEY);
 }
 
+/** 已知的服务端最大 updated_at，用于 documents 增量拉取。 */
+export function getDocSyncWatermark(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(DOC_SYNC_WATERMARK_KEY);
+}
+
+export function setDocSyncWatermark(iso: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(DOC_SYNC_WATERMARK_KEY, iso);
+}
+
+/** 上次成功完成全量同步的客户端时间，仅用于 24 小时兜底判断。 */
+export function getDocsLastFullSyncAt(): number {
+  if (typeof window === 'undefined') return 0;
+  return Number(localStorage.getItem(DOC_SYNC_LAST_FULL_AT_KEY) || 0);
+}
+
+export function setDocsLastFullSyncAt(ts: number): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(DOC_SYNC_LAST_FULL_AT_KEY, String(ts));
+}
+
+/** 上次发起同步尝试的客户端时间，用于跨页面加载节流。 */
+export function getDocsLastSyncAttemptAt(): number {
+  if (typeof window === 'undefined') return 0;
+  return Number(localStorage.getItem(DOC_SYNC_LAST_ATTEMPT_AT_KEY) || 0);
+}
+
+export function setDocsLastSyncAttemptAt(ts: number): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(DOC_SYNC_LAST_ATTEMPT_AT_KEY, String(ts));
+}
+
 /** 清空本地单据同步状态。退出登录或检测到换用户时调用。 */
 export function clearD1DocumentLocalState(clearActiveUser = true): void {
   if (typeof window === 'undefined') return;
@@ -64,6 +100,9 @@ export function clearD1DocumentLocalState(clearActiveUser = true): void {
   DOCUMENT_HISTORY_KEYS.forEach((key) => localStorage.removeItem(key));
   localStorage.removeItem(QUEUE_KEY);
   localStorage.removeItem(DELETED_DOC_IDS_KEY);
+  localStorage.removeItem(DOC_SYNC_WATERMARK_KEY);
+  localStorage.removeItem(DOC_SYNC_LAST_FULL_AT_KEY);
+  localStorage.removeItem(DOC_SYNC_LAST_ATTEMPT_AT_KEY);
   if (clearActiveUser) {
     localStorage.removeItem(ACTIVE_USER_KEY);
   }
