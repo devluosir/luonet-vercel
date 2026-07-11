@@ -3211,6 +3211,199 @@ WHERE canAccess = 0
 - 全表复查：`history=1 AND 五个单据类权限全 0` 或 `五个单据类权限任一为1 AND history≠1` 的账号数为 0，无残留不一致记录。
 - 011、012 均已先于 TASK-146 代码变更部署到生产前执行完毕（本次改动目前仍在本地未提交，尚未部署）。
 
+## TASK-148：左侧侧边栏分组标题改为可折叠分类（参考 Cloudflare dashboard 左侧菜单）
+
+**状态**：已完成（2026-07-11，本次会话由 Claude 直接实现，未经 Codex）
+**日期**：2026-07-11
+
+### 背景
+
+用户看到 dash.cloudflare.com 左侧菜单的样式（"Observe"/"构建" 等大分类下，"Investigate"/"数据分析"/"计算" 这类子分类自带 chevron，可以点击展开/收起，子项用左侧竖线缩进），想把 `AppSidebar.tsx` 里现有的分组标题（"新单据"/"登记表"/"管理"/"工具"，`NAV_GROUPS` 定义在 `src/components/layout/AppSidebar.tsx` 第104-130行）改造成同样可点击展开/收起的形式，而不是像现在这样永远全部展开、纯静态文字标签。
+
+讨论过程中还提议加一个"最近访问"分组（参考 Cloudflare 记录具体访问过的 zone），用户明确表示当前菜单结构够简单，不需要这个功能——**本任务范围只包含分组折叠，不包含"最近访问"**。
+
+现状代码（`AppSidebar.tsx`）：
+- 组标签渲染在第285-290行：`{group.label && !isCollapsed && (<div className="app-sidebar-group-label ...">{group.label}</div>)}`，纯文字，无 chevron，不可点击。
+- 紧接着第292-347行是 `visibleItems.map(...)`，不受组标签控制，永远渲染。
+- `isCollapsed` 指的是桌面端整个侧边栏收缩为 56px 图标态（跟本任务的"分组折叠"是两个不同层级的概念，注意区分：整体 `isCollapsed=true` 时组标签本来就不渲染，图标平铺显示，这个已有行为本任务不能破坏）。
+- `NAV_GROUPS` 里第一个分组 `id: 'home'`（首页）`label` 是空字符串，本来就不显示标题——这个分组维持现状，不参与折叠。
+
+### Files in scope
+
+- `src/components/layout/AppSidebar.tsx` —— 组标签改成可点击 header（文字 + chevron），根据折叠状态条件渲染 `visibleItems`，子项外层加缩进容器。
+- `src/utils/sidebarGroupCollapse.ts`（新建）—— localStorage 读写 + toggle 的纯函数，风格参照同目录下已有的 `src/utils/sidebarCollapse.ts`。
+- `src/utils/__tests__/sidebarGroupCollapse.test.ts`（新建）—— 覆盖新工具函数，参照已有的 `src/utils/__tests__/sidebarCollapse.test.ts` 写法。
+- `SIDEBAR_DESIGN_SPEC.md` —— 在"Section Title"章节（第21-30行附近）补充分组图标（14px、颜色跟随标题文字）、chevron 交互状态和缩进线的样式值，保持文档跟实现同步（这个项目一直有维护这份文档的习惯）。
+
+### 具体改动要求
+
+1. 给分组数据加图标字段。`NavGroup` 接口（`AppSidebar.tsx` 第47-51行）新增一个可选字段：
+
+   ```ts
+   interface NavGroup {
+     id: string;
+     label: string;
+     icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>; // 分组标题图标，'home' 分组不设置
+     items: SidebarItem[];
+   }
+   ```
+
+   `NAV_GROUPS`（第104-130行）给四个有标题的分组分别指定图标，从文件顶部已经 import 的 `lucide-react` 里补充引入：
+
+   | 分组 id | label | 图标 | 语义 |
+   |---|---|---|---|
+   | `documents` | 新单据 | `FilePlus2` | 新建单据 |
+   | `registration` | 登记表 | `ClipboardList` | 登记类表格 |
+   | `management` | 管理 | `Settings2` | 管理功能 |
+   | `tools` | 工具 | `Wrench` | 工具类 |
+
+   `home` 分组（`label: ''`）不设置 `icon`，保持无标题、无图标。
+
+2. 新建 `src/utils/sidebarGroupCollapse.ts`：
+
+   ```ts
+   export const GROUP_COLLAPSED_KEY = 'sidebar_group_collapsed';
+
+   export function readCollapsedGroups(): Set<string> {
+     if (typeof window === 'undefined') return new Set();
+     try {
+       const raw = localStorage.getItem(GROUP_COLLAPSED_KEY);
+       if (!raw) return new Set();
+       const arr = JSON.parse(raw);
+       return Array.isArray(arr) ? new Set(arr.filter((x) => typeof x === 'string')) : new Set();
+     } catch {
+       return new Set();
+     }
+   }
+
+   export function writeCollapsedGroups(ids: Set<string>): void {
+     try {
+       localStorage.setItem(GROUP_COLLAPSED_KEY, JSON.stringify(Array.from(ids)));
+     } catch {
+       /* ignore */
+     }
+   }
+
+   export function toggleGroupCollapsed(groupId: string, current: Set<string>): Set<string> {
+     const next = new Set(current);
+     if (next.has(groupId)) next.delete(groupId);
+     else next.add(groupId);
+     writeCollapsedGroups(next);
+     return next;
+   }
+   ```
+
+   不需要 DOM/CSS 变量同步、不需要 `useSyncExternalStore` 订阅机制（那是给影响主内容区宽度的整体收缩态用的，参见 `sidebarCollapse.ts`；分组折叠只影响侧边栏内部显示，不影响布局宽度，不需要这么重）。
+
+3. `AppSidebar.tsx` 组件内新增本地状态，mount 后从 localStorage 水合（避免 SSR/hydration 不一致，允许首次渲染有一次性的"先展开后可能折叠"的闪烁，这是可接受的，不用做成首屏预置脚本）：
+
+   ```tsx
+   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+   useEffect(() => {
+     setCollapsedGroups(readCollapsedGroups());
+   }, []);
+
+   function handleToggleGroup(groupId: string) {
+     setCollapsedGroups((prev) => toggleGroupCollapsed(groupId, prev));
+   }
+   ```
+
+4. 在 `NAV_GROUPS.map(...)` 循环内部（现有第279-350行附近），对每个分组算出：
+
+   ```tsx
+   const hasActiveItem = visibleItems.some((item) => isItemActive(item, pathname, tab, docType));
+   const isGroupCollapsed = !!group.label && collapsedGroups.has(group.id) && !hasActiveItem;
+   const showItems = isCollapsed || !group.label || !isGroupCollapsed;
+   ```
+
+   　`isCollapsed` 是整体侧边栏图标态那个已有变量，务必参与这个判断——图标态下必须无条件 `showItems = true`，分组折叠状态被完全忽略。
+
+5. 组标签从纯 `<div>` 改成可点击 `<button>`，加分组图标 + chevron（`ChevronDown` 跟文件顶部已有的 `ChevronLeft`/`ChevronRight` 一起从 `lucide-react` import；分组图标就是第1步里 `NavGroup.icon` 那个组件）：
+
+   ```tsx
+   {group.label && !isCollapsed && (
+     <button
+       type="button"
+       onClick={() => handleToggleGroup(group.id)}
+       aria-expanded={!isGroupCollapsed}
+       className="app-sidebar-group-label mb-2 mt-6 flex w-full items-center gap-1.5 px-3 text-xs font-semibold uppercase tracking-wide text-sidebar-section-title first:mt-0 hover:text-gray-600 dark:hover:text-gray-300"
+     >
+       {group.icon && <group.icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />}
+       <span className="flex-1 text-left">{group.label}</span>
+       <ChevronDown
+         className={`h-3.5 w-3.5 shrink-0 transition-transform ${isGroupCollapsed ? '-rotate-90' : ''}`}
+         strokeWidth={2}
+       />
+     </button>
+   )}
+   ```
+
+   分组图标尺寸（14px / `h-3.5 w-3.5`）明显小于菜单项图标（20px / `h-5 w-5`），保持"标题级图标比内容级图标小"的层级关系，颜色跟随 `text-sidebar-section-title`（不用单独设色），不要做成跟菜单项一样大小/一样醒目，否则会喧宾夺主。
+
+6. `visibleItems.map(...)` 整段包一层容器，按 `showItems` 条件渲染；有 `group.label` 且整体未收缩时加左侧缩进引导线：
+
+   ```tsx
+   {showItems && (
+     <div className={!isCollapsed && group.label ? 'ml-1 border-l border-sidebar-border pl-2' : undefined}>
+       {visibleItems.map((item) => { /* 原有渲染逻辑不变 */ })}
+     </div>
+   )}
+   ```
+
+   原有每个 item 内部的渲染逻辑（active 判断、外部链接、tooltip 的 onMouseEnter/onMouseLeave）不用改，只是多包一层外层 div。加了缩进线之后留意一下 active 态左侧品牌蓝指示条（`absolute -left-4 ...`，第316-318行附近）有没有被新的 `pl-2` 挤到跟竖线重叠或者被 nav 的 `overflow-x-hidden`（第276行）裁掉——如果视觉上有冲突，可以把指示条的 `-left-4` 适当调整（比如改成 `-left-3`），只要保证收缩线和激活指示条不重叠、不被裁切即可，具体像素值不是红线，以实际渲染效果为准。
+
+### Acceptance criteria
+
+- 默认状态（localStorage 里没有 `sidebar_group_collapsed`）：所有分组展开，视觉和交互跟当前完全一致，不影响现有用户。
+- 点击"新单据"/"登记表"/"管理"/"工具"任一分组标题整行，chevron 从朝下变成朝左（`-rotate-90`），对应分组下的菜单项立即隐藏；再点一次恢复展开。不需要做展开/收起的过渡动画。
+- 折叠状态写入 `localStorage`（key `sidebar_group_collapsed`），刷新页面后保留上次的折叠/展开状态。
+- 如果某个分组里包含当前高亮激活的菜单项（`isItemActive` 返回 true 的那一项），即使 localStorage 记录该分组为折叠，也必须强制展开显示——保证用户任何时候都能看到自己所在的菜单项，这一条优先级高于存储的折叠状态。
+- 桌面端整体收缩为图标态（56px 宽度，`isCollapsed=true`）时，分组折叠状态被完全忽略，所有图标照常平铺显示，不会出现"图标态下某个分组还处于折叠、图标消失"的情况——这是必须保留的既有行为。
+- "首页"这个无标题分组（`group.id === 'home'`）不受影响：不出现图标、不出现 chevron，不可折叠，始终直接显示（跟其它带图标的分组标题区分开）。
+- 移动端侧滑抽屉（`AppSidebar` 传了 `onClose`，即 `isMobile=true`）复用同一个 localStorage key，折叠交互跟桌面展开态一致，分组图标同样显示。
+- 四个分组标题（新单据/登记表/管理/工具）左侧各自出现一个 14px 小图标（`FilePlus2`/`ClipboardList`/`Settings2`/`Wrench`），明显小于下方菜单项的 20px 图标，颜色跟标题文字一致（`text-sidebar-section-title`），不单独上色，不会比菜单项图标更显眼。
+- 桌面收缩为图标态（`isCollapsed=true`）时，分组标题整行（含图标）不渲染，跟现状一致——分组图标只在展开态的标题行里出现，不会跑到收缩态的图标列表里跟菜单项图标混在一起。
+
+### Non-goals / 红线
+
+- 不做展开/收起的高度过渡动画，直接显示/隐藏即可，动画后续如果需要再单独提任务。
+- 分组图标只加在四个有标题的分组上，不改动菜单项本身的图标（`SidebarItem.icon`）、不改 `PERMISSION_MODULE_MAP`、不改任何图标的语义映射。
+- 不做跨实例实时同步——每个 `AppSidebar` 实例只在自己 mount 时读一次 localStorage，不需要引入订阅/`useSyncExternalStore` 机制。
+- 不包含"最近访问"分组（用户已明确表示不需要，讨论到此为止）。
+- 不改动 `NAV_GROUPS`/`NAV_ITEMS` 数据本身的分组归属、图标、权限逻辑（`PERMISSION_MODULE_MAP`、`isVisible` 等），只加折叠交互这一层。
+- 不改 `isItemActive` 函数本身的判断逻辑，只是复用它的返回值来决定要不要强制展开分组。
+
+### Verification steps
+
+- `npx tsc --noEmit`
+- `npx eslint src/components/layout/AppSidebar.tsx src/utils/sidebarGroupCollapse.ts src/utils/__tests__/sidebarGroupCollapse.test.ts`
+- 跑一下项目里 `sidebarCollapse.test.ts` 用的同一套测试命令，确认新增的 `sidebarGroupCollapse.test.ts` 也能跑过。
+- `npm run build` 通过。
+- 手动验证（建议用户在浏览器里确认）：桌面展开态下四个分组标题左侧各自出现对应图标（新单据=FilePlus2、登记表=ClipboardList、管理=Settings2、工具=Wrench），明显比菜单项图标小一号；依次点击四个分组标题，能正常折叠/展开，chevron 方向正确；刷新页面折叠状态保留；把窗口宽度缩小到侧边栏图标态，确认分组标题行（含图标）整体不显示，只剩菜单项图标平铺、不受任何分组折叠状态影响；点开移动端汉堡菜单，分组图标和折叠交互跟桌面一致；访问一个属于被折叠分组的页面（比如先把"管理"折叠，再直接打开"客户管理"页面），确认"管理"分组会自动强制展开、能看到高亮的"客户管理"项。
+
+### 执行记录
+
+- 按方案原样落地，无偏离：`NavGroup` 加了可选 `icon` 字段；`NAV_GROUPS` 四个有标题分组分别接上 `FilePlus2`/`ClipboardList`/`Settings2`/`Wrench`；新建 `src/utils/sidebarGroupCollapse.ts`（`readCollapsedGroups`/`writeCollapsedGroups`/`toggleGroupCollapsed` 三个纯函数，localStorage key `sidebar_group_collapsed`，JSON 数组存被折叠的分组 id）。
+- `AppSidebar.tsx`：新增 `collapsedGroups` 状态，`useEffect` 在 mount 后从 localStorage 水合；组标签从 `<div>` 改成可点击 `<button aria-expanded>`，内容为「14px 分组图标 + 文字 + `ChevronDown`」，收起态 chevron 加 `-rotate-90`；`visibleItems` 外层包一层 `showItems` 条件容器，展开态且有标题时加 `ml-1 border-l border-sidebar-border pl-2` 缩进引导线；`showItems = isCollapsed || !group.label || !isGroupCollapsed`，`isGroupCollapsed` 额外要求分组内没有当前高亮项（`hasActiveItem`），保证高亮项所在分组始终强制展开——整体收缩图标态和"首页"分组均按预期不受影响。
+- 新建 `src/utils/__tests__/sidebarGroupCollapse.test.ts`，覆盖默认空集合、读写往返、toggle 增删、toggle 不改动传入的原 Set、以及 localStorage 里数据损坏/非数组/含非字符串元素时的降级行为，共 8 个用例。
+- `SIDEBAR_DESIGN_SPEC.md`：Section Title 表格补充分组图标尺寸/映射、chevron 交互、缩进线、折叠持久化说明；文档开头加了一行指向本任务。
+
+### Verification results（2026-07-11）
+
+- `npx tsc --noEmit`：无输出，无类型错误。
+- `npx eslint src/components/layout/AppSidebar.tsx src/utils/sidebarGroupCollapse.ts src/utils/__tests__/sidebarGroupCollapse.test.ts`：无输出。
+- `npx jest sidebarGroupCollapse sidebarCollapse`：2 个测试文件、12 个用例全部通过。
+- `npm run build`：在本次会话的沙箱环境里跑不完整——`embed-resources.js` 几秒内跑完，`next build` 进入"Creating an optimized production build"阶段后，沙箱单次 bash 调用有 45 秒硬上限、且不支持跨调用保留后台进程（`nohup ... &` 在调用结束后不会存活到下一次调用），两次尝试都在编译阶段被强制掐断，没能跑出最终结果。这个项目本身构建偏重（内嵌字体/印章资源 + 多个 PDF 生成器 + 大量路由），超过 45 秒并不意外。**建议用户本地跑一次 `npm run build` 确认最终产物没问题**，本次改动只涉及一个客户端组件（`AppSidebar.tsx` 已有 `'use client'`）和一个纯前端 utils 文件，不涉及任何 SSR/服务端逻辑，`tsc --noEmit` 全量类型检查已通过，构建失败风险较低，但仍未做最终确认。
+- 未做真实浏览器交互验证（点击分组标题、刷新保留状态、图标态下的表现等），建议用户按上面"Acceptance criteria"逐条过一遍。
+
+**追加修正（2026-07-11，同一会话）**：用户截图反馈分组图标"比例有点不太对"——首版用的是 14px（`h-3.5 w-3.5`）+ `strokeWidth 2`，跟下方 20px 菜单项图标的视觉差距不够大，加上描边比菜单项（`strokeWidth 1.75`）更粗，小图标反而显得敦实、抢眼，没有起到"标题级，比内容级小一号"的从属效果。改成 12px（`h-3 w-3`）+ `strokeWidth 1.75`（跟菜单项描边一致），chevron 同步收窄到 12px，图标与文字间距从 `gap-1.5` 收到 `gap-1`。`npx tsc --noEmit`、`npx eslint AppSidebar.tsx` 均无输出。`SIDEBAR_DESIGN_SPEC.md` 已同步更新。
+
+**追加修正 2（2026-07-11，同一会话）**：用户反馈"太小了，收起来靠得太近，不太好点击"——12px 图标本身偏小，且组标题 `<button>` 一直没有额外的垂直内边距，可点击热区基本等于文字行高（约 16~18px），比菜单项 40px 高的点击区小很多，精准点中不容易。调整：图标/chevron 从 12px 微调到 13px（`h-[13px] w-[13px]`，在"14px 太抢眼"和"12px 太小"之间取中间值）；`<button>` 加 `py-1.5` 内边距、`rounded-md`、`hover:bg-sidebar-item-hover-bg`（跟菜单项同款 hover 背景反馈），明显扩大可点击热区；图标与文字间距恢复到 `gap-1.5`。`npx tsc --noEmit`、`npx eslint AppSidebar.tsx` 均无输出。`SIDEBAR_DESIGN_SPEC.md` 已同步更新，补了"点击区域"一行。
+
+**追加修正 3（2026-07-11，同一会话，撤销折叠交互）**：用户三个要求一起提出——① "把分类弄成不可收"：撤销 TASK-148 最初加的分组折叠功能，组标题不再是可点击 `<button>`，改回纯展示的 `<div>`，去掉 chevron、去掉 `aria-expanded`、去掉 hover 背景/圆角/`py-1.5` 点击态样式；组件里 `collapsedGroups` 状态、`handleToggleGroup`、`isGroupCollapsed`/`showItems`/`hasActiveItem` 判断全部删除，菜单项恢复成之前的"分组内容永远显示"；`src/utils/sidebarGroupCollapse.ts` 和它的测试文件已不再被引用，一并删除（经 `allow_cowork_file_delete` 授权后才能删，工作区文件默认不让直接 rm）。② "菜单的字也小一号"：菜单项文字 `text-sm`（14px）改成 `text-xs`（12px）；组标题图标/文字本来就是 12/13px 没再动。③ "前面的线，从上面的图标往下"：子项缩进引导线（`border-l`）容器从 `ml-1` 改成 `ml-3`（12px），跟组标题图标的 `px-3` 左边缘对齐；组标题跟子项之间的间距从 `mb-2`（8px）收到 `mb-1`（4px），让引导线在视觉上更贴近正上方的图标、像是从图标延伸下来，而不是凭空冒出来。分组图标（`FilePlus2`/`ClipboardList`/`Settings2`/`Wrench`）本身保留，用户没有要求去掉。`npx tsc --noEmit`、`npx eslint AppSidebar.tsx` 均无输出；`npx jest src/components/layout src/utils/__tests__/sidebarCollapse.test.ts` 8 个用例全过。`SIDEBAR_DESIGN_SPEC.md` 同步改回"不可折叠"状态描述。**这次撤销之后，TASK-148 的最终形态是：分组标题带小图标、不可折叠、子项菜单文字改小、缩进引导线对齐图标——分组折叠这个功能已经不存在了，以后不用再假设它还在。**
+
+**Status:** completed
+
 **Status:** completed
 
 ## 已关闭 / 不做

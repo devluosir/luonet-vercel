@@ -10,16 +10,20 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   Clock,
   ClipboardCheck,
+  FilePlus2,
   LayoutDashboard,
   Mail,
   Package,
   PackageSearch,
   Receipt,
   Search,
+  Settings2,
   ShoppingCart,
   Users,
+  Wrench,
   X,
 } from 'lucide-react';
 import { usePermissionStore } from '@/lib/permissions';
@@ -47,6 +51,8 @@ export interface SidebarItem {
 interface NavGroup {
   id: string;
   label: string; // 空字符串 = 不显示标题
+  /** 分组标题图标（14px，比菜单项图标小一号），'home' 分组不设置 */
+  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   items: SidebarItem[];
 }
 
@@ -110,21 +116,25 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: 'documents',
     label: '新单据',
+    icon: FilePlus2,
     items: navGroupItems(['quotation', 'confirmation', 'quotation-domestic', 'quotation-domestic-contract', 'packing', 'invoice', 'purchase']),
   },
   {
     id: 'registration',
     label: '登记表',
+    icon: ClipboardList,
     items: navGroupItems(['inquiry', 'order', 'purchase-registration', 'purchase-order-table']),
   },
   {
     id: 'management',
     label: '管理',
+    icon: Settings2,
     items: navGroupItems(['history', 'customer']),
   },
   {
     id: 'tools',
     label: '工具',
+    icon: Wrench,
     items: navGroupItems(['clock', 'holidays', 'rmb', 'mail', 'impa']),
   },
 ];
@@ -282,69 +292,78 @@ export function AppSidebar({
 
           return (
             <div key={group.id}>
-              {/* 组标签（仅展开时显示）：12px / 600 / #9CA3AF / 大写，与上一组保持 20-24px 间距 */}
+              {/* 组标签（仅展开时显示，不可折叠）：12px / 600 / #9CA3AF / 大写文字，与上一组保持 20-24px 间距。
+                  分组图标暂时去掉看效果（2026-07-11），纯文字标签 */}
               {group.label && !isCollapsed && (
-                <div className="app-sidebar-group-label mb-2 mt-6 px-3 text-xs font-semibold uppercase tracking-wide text-sidebar-section-title first:mt-0">
+                <div className="app-sidebar-group-label mb-1 mt-6 px-3 text-xs font-semibold uppercase tracking-wide text-sidebar-section-title first:mt-0">
                   {group.label}
                 </div>
               )}
 
+              {/* 收缩图标态没有文字标签，用一条居中小短线分隔各分组的图标 */}
+              {group.label && isCollapsed && (
+                <div className="mx-auto my-2 h-px w-6 bg-sidebar-border" />
+              )}
+
               {/* 导航项：默认统一中性灰（图标 #64748B / 文字 #4B5563），
-                  激活态品牌蓝背景 + 蓝色文字/图标 + 左侧 3px 指示条，不再使用逐项彩色图标 */}
-              {visibleItems.map((item) => {
-                const Icon   = item.icon;
-                const active = isItemActive(item, pathname, tab, docType);
-                const navItemClassName = `flex h-10 items-center rounded-[10px] text-sm font-medium transition-colors ${
-                  isCollapsed
-                    ? 'justify-center px-0 mx-1'
-                    : 'gap-2.5 px-3'
-                } ${
-                  active
-                    ? 'bg-sidebar-item-active-bg text-sidebar-item-active-text'
-                    : 'text-sidebar-item-text hover:bg-sidebar-item-hover-bg'
-                }`;
-                const iconClassName = `h-5 w-5 shrink-0 ${active ? 'text-sidebar-item-active-icon' : 'text-sidebar-item-icon'}`;
+                  激活态品牌蓝背景 + 蓝色文字/图标 + 左侧 3px 指示条，不再使用逐项彩色图标。
+                  有标题且展开态时，外层加缩进引导线（ml-3 对齐上方组图标左边缘） */}
+              <div className={!isCollapsed && group.label ? 'ml-4 border-l border-sidebar-border pl-2' : undefined}>
+                {visibleItems.map((item) => {
+                  const Icon   = item.icon;
+                  const active = isItemActive(item, pathname, tab, docType);
+                  const navItemClassName = `flex h-10 items-center rounded-[10px] text-sm font-medium transition-colors ${
+                    isCollapsed
+                      ? 'justify-center px-0 mx-1'
+                      : 'gap-2.5 px-3'
+                  } ${
+                    active
+                      ? 'bg-sidebar-item-active-bg text-sidebar-item-active-text'
+                      : 'text-sidebar-item-text hover:bg-sidebar-item-hover-bg'
+                  }`;
+                  const iconClassName = `h-5 w-5 shrink-0 ${active ? 'text-sidebar-item-active-icon' : 'text-sidebar-item-icon'}`;
 
-                return (
-                  <div
-                    key={item.id}
-                    className="relative group/nav mb-0.5"
-                    onMouseEnter={isCollapsed ? (e) => showTooltip(item.id, item.label, e.currentTarget) : undefined}
-                    onMouseLeave={isCollapsed ? hideTooltip : undefined}
-                  >
-                    {/* 激活态左侧品牌蓝指示条 */}
-                    {active && !isCollapsed && (
-                      <span className="pointer-events-none absolute -left-4 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-item-active-indicator" />
-                    )}
+                  return (
+                    <div
+                      key={item.id}
+                      className="relative group/nav mb-0.5"
+                      onMouseEnter={isCollapsed ? (e) => showTooltip(item.id, item.label, e.currentTarget) : undefined}
+                      onMouseLeave={isCollapsed ? hideTooltip : undefined}
+                    >
+                      {/* 激活态左侧品牌蓝指示条 */}
+                      {active && !isCollapsed && (
+                        <span className="pointer-events-none absolute -left-4 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-item-active-indicator" />
+                      )}
 
-                    {item.external ? (
-                      <a
-                        href={item.path}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={onClose}
-                        className={navItemClassName}
-                      >
-                        <Icon className={iconClassName} strokeWidth={1.75} />
-                        {!isCollapsed && (
-                          <span className="app-sidebar-nav-label truncate">{item.label}</span>
-                        )}
-                      </a>
-                    ) : (
-                      <Link
-                        href={item.path}
-                        onClick={onClose}
-                        className={navItemClassName}
-                      >
-                        <Icon className={iconClassName} strokeWidth={1.75} />
-                        {!isCollapsed && (
-                          <span className="app-sidebar-nav-label truncate">{item.label}</span>
-                        )}
-                      </Link>
-                    )}
-                  </div>
-                );
-              })}
+                      {item.external ? (
+                        <a
+                          href={item.path}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={onClose}
+                          className={navItemClassName}
+                        >
+                          <Icon className={iconClassName} strokeWidth={1.75} />
+                          {!isCollapsed && (
+                            <span className="app-sidebar-nav-label truncate">{item.label}</span>
+                          )}
+                        </a>
+                      ) : (
+                        <Link
+                          href={item.path}
+                          onClick={onClose}
+                          className={navItemClassName}
+                        >
+                          <Icon className={iconClassName} strokeWidth={1.75} />
+                          {!isCollapsed && (
+                            <span className="app-sidebar-nav-label truncate">{item.label}</span>
+                          )}
+                        </Link>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
         })}
