@@ -102,6 +102,21 @@ export default function LoginPage() {
     }
   };
 
+  if (status === 'loading' || status === 'authenticated') {
+    return (
+      <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center">
+        <Image
+          src={LOGO_CONFIG.web.logo}
+          alt="LC APP"
+          width={96}
+          height={96}
+          className="object-contain animate-pulse"
+          priority
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">

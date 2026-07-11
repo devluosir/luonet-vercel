@@ -2488,6 +2488,101 @@ export function DesktopSidebarHost() {
 
 **Status:** completed
 
+## TASK-143：已登录设备重新打开 App，会先闪一下空白登录表单再进内页——过渡态改成 logo 展示
+
+**状态**：已完成
+**背景来源**：用户反馈"在已登陆过的电脑中，再打开app，它是停在这个界面几秒钟再进内页"，附截图：一个已安装的 PWA 窗口，标题栏显示 `lc.luocompany.net`，页面内容是完整的登录表单（"用户名"/"密码"两个空输入框 + "登录 →"按钮），但用户名密码都是空的占位符状态，停留几秒后才跳进应用内页。用户同时问：这个过渡页能不能改成 logo 图标展示。
+
+### 背景（根因）
+
+跟 [[TASK-142]] 是同一类问题（`page.tsx` 的登录相关渲染没有跟"认证状态是否已确定"对齐），但触发场景不同：TASK-142 是提交登录表单**之后**的跳转过渡，这一条是**打开 App 时会话还没检查完**的过渡。
+
+`src/app/page.tsx` 现状：
+
+```tsx
+const { data: session, status } = useSession();   // L17
+...
+useEffect(() => {
+  if (session && status === 'authenticated') {
+    router.push('/dashboard');                     // L46-50
+  }
+}, [session, status, router]);
+
+return (
+  <div ...>
+    ...
+    <form onSubmit={handleSubmit}>...</form>        // L127 起，无条件渲染
+  </div>
+);
+```
+
+`useSession()` 的 `status` 有三种取值：`loading` → `authenticated`/`unauthenticated`。组件对 `status` 唯一的处理只有"变成 authenticated 时跳转"这个 `useEffect`，`return` 那部分**不管 `status` 是什么都无条件渲染完整登录表单**。
+
+已登录设备重新打开这个已安装的 PWA 时：
+
+1. 浏览器已经带着有效的 NextAuth JWT cookie，但 `useSession()` 第一次渲染（包括 SSR 和客户端 hydration 之后）`status` 必然是 `loading`——它要实际发一次请求去验证/解析这个 cookie 才知道是不是有效登录。
+2. 这个验证请求没完成之前，组件已经把完整表单渲染出来了——空的用户名/密码框、"登录"按钮——这就是截图里看到的画面。
+3. 等 `status` 变成 `authenticated`，上面那个 `useEffect` 才触发 `router.push('/dashboard')`，而这次跳转本身也需要时间（同 TASK-142 背景里提到的：过 middleware 校验 + 拉取 `/dashboard` 路由数据）。
+4. 这两段时间加起来，就是用户说的"停在这个界面几秒钟"——不是登录变慢，是这几秒里页面上展示的内容不对：本该是"正在恢复你的登录状态"，却展示成了一个看起来要用户重新输入账号密码的空表单。
+
+这不是 bug（没有走错逻辑，最终确实会自动跳进内页），是一个纯 UX 过渡态展示问题：`status === 'loading'`（以及已确定 `authenticated`、即将跳转）这两种情况下不应该展示登录表单本体。
+
+### Files in scope
+
+- `src/app/page.tsx` —— 按 `status` 区分渲染：`loading`/`authenticated`（跳转中）展示 logo 过渡态，只有 `unauthenticated` 才展示表单
+
+### 具体改动要求
+
+在 `return` 之前加一段分支，`status === 'loading'` 或 `status === 'authenticated'` 时，渲染一个只有 logo（复用现有 `LOGO_CONFIG.web.logo`，跟表单上方用的是同一张图）的居中过渡屏，不渲染表单：
+
+```tsx
+if (status === 'loading' || status === 'authenticated') {
+  return (
+    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center">
+      <Image
+        src={LOGO_CONFIG.web.logo}
+        alt="LC APP"
+        width={96}
+        height={96}
+        className="object-contain animate-pulse"
+        priority
+      />
+    </div>
+  );
+}
+```
+
+- `animate-pulse` 是 Tailwind 自带的呼吸透明度动画，用来提示"正在处理"，不需要额外引入 spinner 组件；如果觉得太素，可以加一行更小号的浅色文字（比如"正在登录…"），但不是必须。
+- `status === 'authenticated'` 这个分支存在的意义：即使会话已经确定登录成功，只要 `router.push('/dashboard')` 触发的跳转还没完成，也应该继续展示这个 logo 过渡态，而不是回落到表单——这正是 TASK-142 里 `DesktopSidebarHost` 场景之外，登录页自己这边的对应处理。
+- 原有的表单 JSX（用户名/密码/错误提示/登录按钮）保留，只在 `status === 'unauthenticated'` 时才会走到这段渲染。
+- 原有的两个 `useEffect`（全局错误处理、跳转逻辑）不用动，加的这段判断放在它们之后、`return` 表单 JSX 之前即可。
+
+### Acceptance criteria
+
+- 已登录设备（cookie 有效）重新打开/刷新 `/`，从页面出现到跳进 `/dashboard` 这段时间里，看到的是居中的 logo（可以有呼吸动画），**不会**再看到空的用户名/密码输入框一闪而过。
+- 未登录设备（无 cookie 或 cookie 已过期）访问 `/`，`status` 最终稳定为 `unauthenticated`，正常展示登录表单，可以正常输入账号密码登录——这段体验跟改动前完全一致。
+- 提交表单登录成功后（`status` 从 `unauthenticated` 变成 `authenticated`）到 `router.push(callbackUrl)` 跳转完成之间，也会展示同一个 logo 过渡态，不会出现"提交按钮变成登录中"的表单还留在画面上、同时又在悄悄跳转的中间态。
+- 不影响手机端/移动端浏览器打开同一登录页的表现（这段改动跟屏幕尺寸、`AppLayout`/`MobileBottomTab` 都无关，纯粹是登录页自身的条件渲染）。
+
+### Non-goals / 红线
+
+- 不解决"会话校验请求本身要花多久"这个问题——比如 Netlify Functions 冷启动、`getToken` 校验耗时等，这些是网络/后端层面的延迟，本任务只解决"这段等待时间里页面展示什么"，不做性能优化。
+- 不改 `useSession()`/NextAuth 的配置（`src/lib/auth.ts`）、不改 `SessionProvider` 的 `refetchInterval`。
+- 不改动提交表单的 `handleSubmit` 逻辑本身（`signIn` 调用、错误处理、`loading` state 这些保持不动）。
+- 不新增依赖（不引入额外的 spinner/loading 组件库），用 Tailwind 自带的 `animate-pulse` 即可。
+- 跟 [[TASK-142]]（`DesktopSidebarHost` 路径判断）是两个独立改动，各自负责登录页和侧边栏各自的过渡态，不要合并成一次改动，方便分别验证、互不影响回滚。
+
+### Verification steps
+
+- `npx tsc --noEmit` 通过
+- `npx eslint src/app/page.tsx` 无输出
+- 手动验证：已登录状态下（浏览器保留 cookie）刷新 `/` 或重新打开已安装的 PWA，确认只看到 logo 过渡态、看不到空表单闪现；可以用 Network 面板节流（Slow 3G）放大这段过渡时间方便观察。
+- 手动验证：清 cookie/隐私窗口访问 `/`，确认表单展示、输入、提交、错误提示（比如输错密码）都跟改动前一致。
+- 手动验证：正常账号密码登录一次，观察提交后到跳进 `/dashboard` 之间也是 logo 过渡态，不是表单+loading按钮的状态残留。
+- `npm run build` 通过
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |
