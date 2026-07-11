@@ -3402,6 +3402,14 @@ WHERE canAccess = 0
 
 **追加修正 3（2026-07-11，同一会话，撤销折叠交互）**：用户三个要求一起提出——① "把分类弄成不可收"：撤销 TASK-148 最初加的分组折叠功能，组标题不再是可点击 `<button>`，改回纯展示的 `<div>`，去掉 chevron、去掉 `aria-expanded`、去掉 hover 背景/圆角/`py-1.5` 点击态样式；组件里 `collapsedGroups` 状态、`handleToggleGroup`、`isGroupCollapsed`/`showItems`/`hasActiveItem` 判断全部删除，菜单项恢复成之前的"分组内容永远显示"；`src/utils/sidebarGroupCollapse.ts` 和它的测试文件已不再被引用，一并删除（经 `allow_cowork_file_delete` 授权后才能删，工作区文件默认不让直接 rm）。② "菜单的字也小一号"：菜单项文字 `text-sm`（14px）改成 `text-xs`（12px）；组标题图标/文字本来就是 12/13px 没再动。③ "前面的线，从上面的图标往下"：子项缩进引导线（`border-l`）容器从 `ml-1` 改成 `ml-3`（12px），跟组标题图标的 `px-3` 左边缘对齐；组标题跟子项之间的间距从 `mb-2`（8px）收到 `mb-1`（4px），让引导线在视觉上更贴近正上方的图标、像是从图标延伸下来，而不是凭空冒出来。分组图标（`FilePlus2`/`ClipboardList`/`Settings2`/`Wrench`）本身保留，用户没有要求去掉。`npx tsc --noEmit`、`npx eslint AppSidebar.tsx` 均无输出；`npx jest src/components/layout src/utils/__tests__/sidebarCollapse.test.ts` 8 个用例全过。`SIDEBAR_DESIGN_SPEC.md` 同步改回"不可折叠"状态描述。**这次撤销之后，TASK-148 的最终形态是：分组标题带小图标、不可折叠、子项菜单文字改小、缩进引导线对齐图标——分组折叠这个功能已经不存在了，以后不用再假设它还在。**
 
+**追加修正 4~8（2026-07-11，同一会话，快速连续微调）**：在追加修正 3 的基础上又做了几轮小调整，最终定稿状态如下（`SIDEBAR_DESIGN_SPEC.md` 已同步更新为定稿版本，不再保留中间态的调整记录，历史过程只保留在这里）：
+- 菜单项文字试过 `text-[13px]`，又试过分组图标/菜单图标一起缩小到 12px、16px（`h-3 w-3`/`h-4 w-4`），用户反馈"字和图标小了后，看得累"——**最终菜单项文字和图标都改回最初的 14px（`text-sm`）/ 20px（`h-5 w-5`）**，没有变小。
+- 分组图标（`FilePlus2`/`ClipboardList`/`Settings2`/`Wrench`）应用户要求整体去掉了，组标签改回纯文字，不再渲染图标；`NavGroup.icon` 字段和 `NAV_GROUPS` 里的图标赋值还留在代码里没删（只是不渲染），方便以后需要时快速加回来。
+- 子项缩进引导线从 `ml-3` 调到 `ml-4`（16px），应用户"线可以再往右一点点"的要求。
+- 收缩为图标态（56px）时，之前完全没有分组间的视觉分隔，应用户要求加了一条居中小短线：`mx-auto my-2 h-px w-6 bg-sidebar-border`，替代展开态才有的文字标签，让图标态下也能看出分组边界。
+
+`npx tsc --noEmit`、`npx eslint AppSidebar.tsx` 每一轮修改后都跑过，均无输出。**当前定稿（2026-07-11 收尾）：分组标题纯文字、无图标、不可折叠；菜单项 14px 文字 + 20px 图标（跟 TASK-114 最初设计一致）；子项引导线 `ml-4`；收缩图标态有分组分隔小短线。** 后续如果还有微调需求，直接在这个基础上改，不用再回溯前面的中间状态。
+
 **Status:** completed
 
 **Status:** completed

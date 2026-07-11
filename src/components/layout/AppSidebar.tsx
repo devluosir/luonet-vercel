@@ -292,8 +292,7 @@ export function AppSidebar({
 
           return (
             <div key={group.id}>
-              {/* 组标签（仅展开时显示，不可折叠）：12px / 600 / #9CA3AF / 大写文字，与上一组保持 20-24px 间距。
-                  分组图标暂时去掉看效果（2026-07-11），纯文字标签 */}
+              {/* 组标签（纯文字，不可折叠、不可点击）：12px / 600 / #9CA3AF / 大写，与上一组保持 20-24px 间距 */}
               {group.label && !isCollapsed && (
                 <div className="app-sidebar-group-label mb-1 mt-6 px-3 text-xs font-semibold uppercase tracking-wide text-sidebar-section-title first:mt-0">
                   {group.label}
@@ -307,7 +306,7 @@ export function AppSidebar({
 
               {/* 导航项：默认统一中性灰（图标 #64748B / 文字 #4B5563），
                   激活态品牌蓝背景 + 蓝色文字/图标 + 左侧 3px 指示条，不再使用逐项彩色图标。
-                  有标题且展开态时，外层加缩进引导线（ml-3 对齐上方组图标左边缘） */}
+                  有标题且展开态时，外层加缩进引导线（ml-4，比组标签的 px-3 多 4px，故意比标题文字略靠右） */}
               <div className={!isCollapsed && group.label ? 'ml-4 border-l border-sidebar-border pl-2' : undefined}>
                 {visibleItems.map((item) => {
                   const Icon   = item.icon;

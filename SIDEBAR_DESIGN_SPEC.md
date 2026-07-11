@@ -2,7 +2,7 @@
 
 企业级 SaaS 中性风格（参考 Microsoft 365 / Linear / Notion / Stripe Dashboard）。
 落地实现见 TASK-114（`CODEX_TASKS.md`）。代码位置：`src/components/layout/AppSidebar.tsx`、`src/components/layout/AppUserMenu.tsx`。
-分组标题带图标见 TASK-148（2026-07-11 追加修正 3：应用户要求撤销了可折叠交互，分组标题恢复为纯展示、不可点击，只保留图标）。
+分组标题相关调整见 TASK-148（2026-07-11，定稿状态见下方"Section Title"一节）。
 
 设计原则：80% 中性色 + 15% 品牌色 + 5% 功能色；图标默认统一灰色，仅激活菜单用品牌蓝；充足留白，不用彩虹式配色。
 
@@ -21,7 +21,7 @@
 
 ### Section Title（组标签，如"新单据""登记表"）
 
-TASK-148 起，组标签左侧加了一个小图标（**不可点击、不可折叠**，2026-07-11 追加修正 3 撤销了最初的折叠交互）：
+组标签是纯文字标签，**不可点击、不带图标、不可折叠**（TASK-148 中间试过可折叠+图标两种交互，2026-07-11 应用户要求都撤销了，定稿为最简单的静态文字标签）：
 
 | 属性 | 值 |
 |---|---|
@@ -29,10 +29,9 @@ TASK-148 起，组标签左侧加了一个小图标（**不可点击、不可折
 | Weight | 600 |
 | Color | `#9CA3AF`（Light）/ `#71717A`（Dark） |
 | Text Transform | Uppercase |
-| Spacing | 与上一组间距 24px（`mt-6`），与本组第一个菜单项间距 4px（`mb-1`，收紧过一次，让下方引导线看起来紧接着图标） |
-| 分组图标 | 13px（`h-[13px] w-[13px]`），`strokeWidth 1.75`，颜色跟随标题文字（不单独上色），明显小于菜单项的 20px 图标（首版 14px+粗描边比例太近，收到 12px 又被反馈太小，最终定在 13px） |
-| 分组图标映射 | 新单据 `FilePlus2` / 登记表 `ClipboardList` / 管理 `Settings2` / 工具 `Wrench`；`home`（首页）分组无标题、无图标 |
-| 子项缩进引导线 | 展开态子项外层加 `ml-3 border-l border-sidebar-border pl-2`——`ml-3`（12px）跟组标题的 `px-3` 对齐，引导线左边缘正好落在图标左边缘正下方，视觉上像从图标延伸下来；收缩图标态（56px）不显示分组标题和引导线 |
+| Spacing | 与上一组间距 24px（`mt-6`），与本组第一个菜单项间距 4px（`mb-1`） |
+| 子项缩进引导线 | 展开态子项外层加 `ml-4 border-l border-sidebar-border pl-2`（`ml-4` = 16px，比组标签的 `px-3` 缩进略靠右一点） |
+| 收缩图标态（56px） | 不显示分组标题和引导线；改成一条居中小短线分隔各分组的图标：`mx-auto my-2 h-px w-6 bg-sidebar-border` |
 
 ### Menu Item（菜单项）
 
@@ -44,7 +43,7 @@ TASK-148 起，组标签左侧加了一个小图标（**不可点击、不可折
 | Icon Size | 20px |
 | Icon Stroke Width | 1.75px |
 | Icon / Text Gap | 10px |
-| Font Size | 12px（原 14px，2026-07-11 应用户要求调小一号） |
+| Font Size | 14px |
 | Font Weight | 500 |
 
 #### 交互状态
@@ -160,10 +159,16 @@ const iconClassName = `h-5 w-5 shrink-0 ${
   <span className="pointer-events-none absolute -left-4 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-item-active-indicator" />
 )}
 
-// 组标签
-<div className="mb-2 mt-6 px-3 text-xs font-semibold uppercase tracking-wide text-sidebar-section-title first:mt-0">
+// 组标签（展开态）
+<div className="mb-1 mt-6 px-3 text-xs font-semibold uppercase tracking-wide text-sidebar-section-title first:mt-0">
   {group.label}
 </div>
+
+// 收缩图标态：组标签替换成一条居中小短线
+<div className="mx-auto my-2 h-px w-6 bg-sidebar-border" />
+
+// 子项缩进引导线（包一层在 visibleItems.map 外面，仅展开态 + 有标题的分组）
+<div className="ml-4 border-l border-sidebar-border pl-2">{/* items */}</div>
 
 // 容器
 <aside className="border-r border-sidebar-border bg-sidebar-bg" style={{ width: 'var(--sidebar-width)' }}>
