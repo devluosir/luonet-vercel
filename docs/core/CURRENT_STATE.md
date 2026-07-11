@@ -157,7 +157,7 @@ theme-config
 ## 前端交互与主题现状
 
 - 全局桌面侧边栏 `DesktopSidebarHost` 同时依据 session 和当前路径渲染：登录页 `/` 始终隐藏，即使登录成功后 session 已先变为 authenticated，也会等路由真正进入 `/dashboard` 或其他业务页后再出现，避免与仍挂载的登录表单形成过渡期画面分裂。
-- 桌面端与移动端退出登录统一先显示全屏 Logo 遮罩，再通过 `signOut({ redirect: false })` 清理会话并单次客户端跳转到 `/`；遮罩会等登录页且 session 确认为未登录后收起，请求失败则恢复当前页面并显示错误 Toast。
+- 桌面端与移动端退出登录统一先显示全屏 Logo 遮罩，再通过 `signOut({ redirect: false })` 清理会话并单次客户端跳转到 `/`；遮罩会等登录页且 session 确认为未登录后收起，请求失败则恢复当前页面并显示错误 Toast。共享入口会忽略 `isLoggingOut` 期间的重复调用，并在注销超过 8 秒仍未完成时使用 `window.location.replace('/')` 强制跳转；正常成功或明确失败都会取消兜底定时器。Dashboard、时区汇率、全球假日已移除各自的旧退出实现，全仓库统一使用 `useAppUser`，相关登录与退出 E2E 已验证通过。
 - 桌面端左侧 Sidebar 展开宽度为 240px、收缩宽度为 56px；导航项采用 40px 高度、14px/500 字体、20px 图标和 10px 图文间距。移动端侧滑菜单独立保持 260px 宽度。
 - 全局反馈入口为 `src/components/ui/Toast.tsx`，支持 success / error / warning / info / loading、更新已有 toast、promise-style 流程、hover 暂停、Esc 关闭最新一条和最多 4 条堆叠。
 - 全局二次确认入口为 `src/components/ui/ConfirmDialog.tsx`。纯提示类反馈使用 Toast，需要用户决策的危险操作使用 ConfirmDialog。

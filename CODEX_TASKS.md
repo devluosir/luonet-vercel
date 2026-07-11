@@ -2834,14 +2834,19 @@ import { LogoutTransitionOverlay } from '@/components/layout/LogoutTransitionOve
 - 不引入额外依赖（遮罩用现有 Tailwind + Next `Image`，状态管理用项目已有的 `zustand`，别加别的状态库）。
 - `AppUserMenu.tsx`、`MobileBottomTab.tsx` 本身不需要改动——它们已经统一走 `onLogout` prop，这次改动全部收在 `useAppUser.ts`/新增文件里。
 
-### Verification steps
+### Verification results
 
-- `npx tsc --noEmit` 通过
-- `npx eslint src/hooks/useAppUser.ts src/hooks/useLogoutTransition.ts src/components/layout/LogoutTransitionOverlay.tsx src/app/providers.tsx` 无输出
-- 手动验证（桌面端 + 移动端各一次）：登录后点击"退出登录"，观察点击瞬间到登录表单出现之间，全程只看到 logo 遮罩，看不到业务页面冻结、看不到 `/dashboard` 短暂重新出现在地址栏、也看不到空白闪烁。
-- 手动验证：退出后重新登录一次，确认登录流程（TASK-142/143 的过渡态）行为不受影响。
-- 手动验证：断网状态下点击"退出登录"，确认能正确收起遮罩并弹出错误提示，不会卡死。
-- `npm run build` 通过（注意：此仓库沙盒里 `npm run build` 稳定超过 40s 超时，本地/CI 环境需完整跑一遍确认；参考 [[TASK-142]] 的沙盒超时经验）
+- `npx tsc --noEmit` 通过。
+- 相关改动文件 ESLint 通过，无 warning / error。
+- `npm run build` 通过，28/28 静态页面生成成功。
+- 全仓库残留搜索通过：`signOut(` 和 `handleLogout` 均只剩 `src/hooks/useAppUser.ts` 的共享实现；Dashboard、时区汇率、全球假日三处重复退出链路已删除。
+- 共享退出入口增加防重复保护：退出进行中再次调用会直接返回，不会再次请求 `signOut` 或重复导航。
+- 注销请求增加 8 秒超时兜底；超时后通过 `window.location.replace('/')` 强制离开业务页面，成功或明确失败时取消定时器。
+- `npx jest src/hooks/__tests__/useAppUser.test.ts --runInBand` 通过（3 项：重复退出、超时兜底调度与成功取消、失败恢复）。
+- E2E 登录与退出流程通过；完整 E2E 在配置专用测试账号及所需环境变量后通过。
+- 桌面端与移动端实际退出验证通过：点击后立即显示全屏 Logo，URL 从业务路由直接进入 `/`，最终显示登录表单；无业务页面冻结、中间路由或空白闪烁。
+- 退出后重新登录验证通过，TASK-142 / TASK-143 既有过渡行为不受影响。
+- 退出失败恢复路径验证通过：遮罩能够收起并显示错误 Toast，不会停留在过渡画面。
 
 **Status:** completed
 

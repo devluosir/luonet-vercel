@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 点击桌面端或移动端“退出登录”后立即显示全屏 Logo 遮罩，覆盖侧边栏和主内容区，避免清理会话期间继续冻结显示业务页面。
 - 退出流程改为 `signOut({ redirect: false })` 后单次客户端跳转到 `/`，不再先整页刷新当前业务路由、再由 middleware 二次重定向；请求失败时会收起遮罩并保留错误 Toast。
 - Dashboard、时区汇率、全球假日移除各自复制的旧退出逻辑，统一复用 `useAppUser`；全仓库退出流程只保留一个实现入口。
+- 退出流程增加防重复保护：`isLoggingOut` 已激活时忽略后续调用，避免重复注销请求和重复导航。
+- 增加 8 秒超时兜底：注销请求长期无响应时使用 `window.location.replace('/')` 强制离开业务页面；正常成功或明确失败都会取消定时器。
 
 #### 内销报价合同页面权限（TASK-144）
 - `/quotation` 页面级守卫改为直接按 URL `tab` 选择权限模块：内销报价/合同检查 `domesticQuotation`，外贸报价/销售确认检查 `quotation`，避免仅有内销权限的普通用户被外贸权限守卫误拦截。
@@ -41,6 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `npx tsc --noEmit`
 - 改动文件 ESLint
 - `npm run build`
+- E2E 登录与退出流程通过；完整 E2E 在配置专用测试账号及所需环境变量后通过。
+- TASK-145 桌面端与移动端退出验证通过：点击后立即进入 Logo 过渡态，随后直接到登录页，无业务页面冻结或中间路由闪烁。
+- `npx jest src/hooks/__tests__/useAppUser.test.ts --runInBand`（3 项：重复调用、8 秒超时兜底、失败恢复）。
 
 ## [Unreleased] - 2026-07-10
 

@@ -8,6 +8,8 @@ import { useLogoutTransitionStore } from './useLogoutTransition';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
 import { useToast } from '@/components/ui/Toast';
 
+export const LOGOUT_TIMEOUT_MS = 8_000;
+
 export function useAppUser() {
   const permUser = usePermissionStore((state) => state.user);
   const { data: session } = useSession();
@@ -22,8 +24,14 @@ export function useAppUser() {
   };
 
   const handleLogout = useCallback(async () => {
+    if (useLogoutTransitionStore.getState().isLoggingOut) return;
+
     setLogoutError(null);
     useLogoutTransitionStore.getState().setLoggingOut(true);
+    const forceRedirectTimer = window.setTimeout(() => {
+      window.location.replace('/');
+    }, LOGOUT_TIMEOUT_MS);
+
     try {
       usePermissionStore.getState().clearUser();
       if (typeof window !== 'undefined') {
@@ -31,8 +39,10 @@ export function useAppUser() {
         clearD1DocumentLocalState();
       }
       await signOut({ redirect: false });
+      window.clearTimeout(forceRedirectTimer);
       router.push('/');
     } catch (error) {
+      window.clearTimeout(forceRedirectTimer);
       useLogoutTransitionStore.getState().setLoggingOut(false);
       const message = error instanceof Error ? error.message : '退出登录失败，请稍后重试';
       setLogoutError(message);
