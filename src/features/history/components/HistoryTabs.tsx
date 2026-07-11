@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useHistoryActiveTab, useHistoryFilters } from '../state/history.selectors';
-import { getAvailableTabs } from '../state/history.store';
 import { useHistoryTabCount } from '../hooks/useHistoryTabCount';
-import type { HistoryType } from '../types';
+import type { HistoryType, TabConfig } from '../types';
 
 interface HistoryTabsProps {
+  tabs: TabConfig[];
   onTabChange: (tab: HistoryType) => void;
 }
 
-export function HistoryTabs({ onTabChange }: HistoryTabsProps) {
+export function HistoryTabs({ tabs, onTabChange }: HistoryTabsProps) {
   const activeTab = useHistoryActiveTab();
   const filters = useHistoryFilters();
-  const availableTabs = getAvailableTabs();
   const { getTabCount } = useHistoryTabCount();
   const [isClient, setIsClient] = useState(false);
 
@@ -138,7 +137,7 @@ export function HistoryTabs({ onTabChange }: HistoryTabsProps) {
     <div className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <nav className="flex justify-center space-x-1 sm:space-x-2 pt-4">
-          {availableTabs.map((tab) => {
+          {tabs.map((tab) => {
             const Icon = tab.icon;
             const count = isClient ? getTabCount(tab.id) : 0;
             const isActive = activeTab === tab.id;

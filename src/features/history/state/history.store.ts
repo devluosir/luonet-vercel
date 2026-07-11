@@ -18,6 +18,8 @@ import {
   DomesticQuotationIcon,
   DomesticContractIcon,
 } from '@/components/icons/TradeDocIcons';
+import { getPermittedHistoryTypes } from '../utils/historyPermissions';
+import type { Permission } from '@/types/permissions';
 
 // 状态接口
 interface HistoryState {
@@ -177,7 +179,12 @@ export const useHistoryStore = create<HistoryState>()(
 );
 
 // 标签页配置
-export const getAvailableTabs = (): TabConfig[] => {
+export const getAvailableTabs = (
+  permissions: readonly Permission[],
+  isAdmin: boolean,
+): TabConfig[] => {
+  const permittedTypes = new Set(getPermittedHistoryTypes(permissions, isAdmin));
+
   return [
     { id: 'quotation', name: '外贸报价', shortName: '外贸报价', icon: ForeignQuotationIcon },
     { id: 'confirmation', name: '外贸合同', shortName: '外贸合同', icon: ForeignContractIcon },
@@ -186,5 +193,5 @@ export const getAvailableTabs = (): TabConfig[] => {
     { id: 'packing', name: '装箱单', shortName: '装箱', icon: Package },
     { id: 'invoice', name: '发票', shortName: '发票', icon: Receipt },
     { id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart },
-  ];
+  ].filter((tab) => permittedTypes.has(tab.id as HistoryType)) as TabConfig[];
 };

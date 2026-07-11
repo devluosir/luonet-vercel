@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Search, X, RefreshCw, Upload, Download } from 'lucide-react';
@@ -10,7 +10,7 @@ import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { useAppUser } from '@/hooks/useAppUser';
 import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
 import { HistoryTabs } from '../components/HistoryTabs';
-import { useHistoryStore } from '../state/history.store';
+import { getAvailableTabs, useHistoryStore } from '../state/history.store';
 import { useHistoryActions } from '../hooks/useHistoryActions';
 import {
   useHistoryMounted,
@@ -26,6 +26,11 @@ import {
 } from '../state/history.selectors';
 import { pullAllFromD1 } from '@/utils/d1Pull';
 import type { HistoryItem, HistoryType } from '../types';
+import {
+  HISTORY_TYPE_ORDER,
+  isPermittedHistoryType,
+  resolvePermittedHistoryType,
+} from '../utils/historyPermissions';
 
 // 动态导入Tab组件
 const QuotationHistoryTab = dynamic(() => import('@/app/history/tabs/QuotationHistoryTab'), {
@@ -71,7 +76,11 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
 export function HistoryPage() {
   const searchParams = useSearchParams();
   const { user, handleLogout } = useAppUser();
-  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('history');
+  const {
+    ready: permissionReady,
+    allowed: hasModuleAccess,
+    session,
+  } = useModulePermissionGuard('history');
 
   // 状态
   const mounted = useHistoryMounted();
@@ -100,7 +109,19 @@ export function HistoryPage() {
     handlePreview,
   } = useHistoryActions();
 
-  const { setMounted, setActiveTab, setFilters } = useHistoryStore();
+  const { setMounted, setActiveTab, setFilters, clearSelectedItems } = useHistoryStore();
+  const availableTabs = useMemo(
+    () => getAvailableTabs(
+      session?.user.permissions ?? [],
+      session?.user.isAdmin === true,
+    ),
+    [session?.user.permissions, session?.user.isAdmin],
+  );
+  const permittedTypes = useMemo(
+    () => availableTabs.map((tab) => tab.id),
+    [availableTabs],
+  );
+  const hasActiveTabAccess = isPermittedHistoryType(activeTab, permittedTypes);
 
   // 手动同步刷新：先从 D1 拉取，再刷新 localStorage 视图
   const isSyncing = useRef(false);
@@ -135,15 +156,31 @@ export function HistoryPage() {
   };
   const activeColor = tabColorMap[activeTab] || 'blue';
 
-  // 处理URL参数中的tab参数
+  // URL tab、当前 tab 和权限回退在同一处决策，避免多个 effect 互相覆盖
   useEffect(() => {
-      if (mounted && searchParams) {
-      const tabParam = searchParams.get('tab');
-      if (tabParam && ['quotation', 'confirmation', 'domestic', 'domestic-contract', 'invoice', 'purchase', 'packing'].includes(tabParam)) {
-        setActiveTab(tabParam as HistoryType);
-      }
+    if (!mounted || !permissionReady || !searchParams) return;
+
+    const currentTab = useHistoryStore.getState().activeTab;
+    const tabParam = searchParams.get('tab');
+    const requestedTab = tabParam && HISTORY_TYPE_ORDER.includes(tabParam as HistoryType)
+      ? tabParam as HistoryType
+      : null;
+    const nextTab = resolvePermittedHistoryType(currentTab, requestedTab, permittedTypes);
+
+    if (nextTab && nextTab !== currentTab) {
+      clearSelectedItems();
+      setActiveTab(nextTab);
+    } else if (!nextTab) {
+      clearSelectedItems();
     }
-  }, [mounted, searchParams, setActiveTab]);
+  }, [
+    mounted,
+    permissionReady,
+    searchParams,
+    permittedTypes,
+    setActiveTab,
+    clearSelectedItems,
+  ]);
 
   useEffect(() => {
     setMounted(true);
@@ -210,6 +247,8 @@ export function HistoryPage() {
 
   // 渲染Tab内容
   const renderTabContent = () => {
+    if (!hasActiveTabAccess) return null;
+
     const commonProps = {
       filters: useHistoryStore.getState().filters,
       sortConfig: useHistoryStore.getState().sortConfig,
@@ -290,7 +329,7 @@ export function HistoryPage() {
     }
   };
 
-  const bottomActions: ActionButton[] = [
+  const bottomActions: ActionButton[] = hasActiveTabAccess ? [
     { key: 'import', label: '导入', onClick: handleImport, variant: 'secondary', icon: Upload },
     { key: 'export', label: '导出', onClick: handleExport, variant: 'secondary', icon: Download },
     ...(selectedCount > 0 ? [{
@@ -301,7 +340,7 @@ export function HistoryPage() {
       loading: isDeleting,
       disabled: isDeleting,
     }] : []),
-  ];
+  ] : [];
 
   // 页面级权限守卫
   if (!permissionReady) {
@@ -352,20 +391,24 @@ export function HistoryPage() {
       </div>
 
       {/* 标签页 */}
-      <HistoryTabs onTabChange={handleTabChange} />
+      <HistoryTabs tabs={availableTabs} onTabChange={handleTabChange} />
 
       {/* 主要内容 */}
       <div className="flex-1 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-none">
           <div className="bg-white dark:bg-[#1c1c1e] rounded-lg">
-            {renderTabContent()}
+            {availableTabs.length > 0 ? renderTabContent() : (
+              <div className="px-6 py-16 text-center text-sm text-gray-500 dark:text-gray-400">
+                当前账号没有可查看的单据类型权限
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* 页脚 */}
       {/* 模态框 */}
-      {showExportModal && (
+      {hasActiveTabAccess && showExportModal && (
         <ExportModal
           isOpen={showExportModal}
           onClose={() => useHistoryStore.getState().setShowExportModal(false)}
@@ -373,14 +416,14 @@ export function HistoryPage() {
           selectedIds={useHistoryStore.getState().selectedItems}
         />
       )}
-      {showImportModal && (
+      {hasActiveTabAccess && showImportModal && (
         <ImportModal
           isOpen={showImportModal}
           onClose={() => useHistoryStore.getState().setShowImportModal(false)}
           activeTab={activeTab}
         />
       )}
-      {showPreview && previewItem && (
+      {hasActiveTabAccess && showPreview && previewItem && (
         <PDFPreviewModal
           isOpen={showPreview}
           onClose={() => useHistoryStore.getState().setShowPreview(false)}
@@ -390,7 +433,7 @@ export function HistoryPage() {
       )}
 
       {/* 删除确认对话框 */}
-      {showDeleteConfirm && (
+      {hasActiveTabAccess && showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
