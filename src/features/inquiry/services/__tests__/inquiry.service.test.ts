@@ -3,6 +3,10 @@ import type { InquiryRecord } from '../../types';
 
 const PENDING_SYNC_KEY = 'inquiry_pending_syncs';
 const STORAGE_KEY = 'inquiry_records';
+const SYNC_WATERMARK_KEY_FULL = 'inquiry_sync_watermark_full';
+const SYNC_WATERMARK_KEY_RESTRICTED = 'inquiry_sync_watermark_restricted';
+const LAST_FULL_SYNC_AT_KEY_FULL = 'inquiry_last_full_sync_at_full';
+const LAST_FULL_SYNC_AT_KEY_RESTRICTED = 'inquiry_last_full_sync_at_restricted';
 
 function mockRecord(overrides: Partial<InquiryRecord> = {}): InquiryRecord {
   return {
@@ -141,6 +145,40 @@ describe('inquiryService D1 sync queue', () => {
       '/api/inquiry',
       expect.objectContaining({ method: 'POST' })
     );
+  });
+});
+
+describe('inquiryService persisted sync baselines (TASK-139)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('stores full-view and restricted-view watermarks independently', () => {
+    inquiryService.setSyncWatermark(true, '2026-07-11T01:00:00.000Z');
+
+    expect(inquiryService.getSyncWatermark(true)).toBe('2026-07-11T01:00:00.000Z');
+    expect(inquiryService.getSyncWatermark(false)).toBeNull();
+    expect(localStorage.getItem(SYNC_WATERMARK_KEY_FULL)).toBe('2026-07-11T01:00:00.000Z');
+
+    inquiryService.setSyncWatermark(false, '2026-07-11T02:00:00.000Z');
+
+    expect(inquiryService.getSyncWatermark(true)).toBe('2026-07-11T01:00:00.000Z');
+    expect(inquiryService.getSyncWatermark(false)).toBe('2026-07-11T02:00:00.000Z');
+    expect(localStorage.getItem(SYNC_WATERMARK_KEY_RESTRICTED)).toBe('2026-07-11T02:00:00.000Z');
+  });
+
+  test('stores full-view and restricted-view full-sync times independently', () => {
+    inquiryService.setLastFullSyncAt(true, 1000);
+
+    expect(inquiryService.getLastFullSyncAt(true)).toBe(1000);
+    expect(inquiryService.getLastFullSyncAt(false)).toBe(0);
+    expect(localStorage.getItem(LAST_FULL_SYNC_AT_KEY_FULL)).toBe('1000');
+
+    inquiryService.setLastFullSyncAt(false, 2000);
+
+    expect(inquiryService.getLastFullSyncAt(true)).toBe(1000);
+    expect(inquiryService.getLastFullSyncAt(false)).toBe(2000);
+    expect(localStorage.getItem(LAST_FULL_SYNC_AT_KEY_RESTRICTED)).toBe('2000');
   });
 });
 

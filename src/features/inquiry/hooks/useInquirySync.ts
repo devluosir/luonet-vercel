@@ -53,13 +53,21 @@ export function useInquirySync({
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
+    const persistedWatermark = inquiryService.getSyncWatermark(mergeLocal);
+    const persistedLastFullSyncAt = inquiryService.getLastFullSyncAt(mergeLocal);
+    const hasFreshBaseline =
+      Boolean(persistedWatermark) &&
+      Date.now() - persistedLastFullSyncAt <= FORCE_FULL_SYNC_EVERY_MS;
 
     async function refreshMetaMemory() {
       const meta = await inquiryService.getMeta();
       if (!cancelled && meta.count >= 0) {
         lastMetaRef.current = getMetaKey(meta);
         // 用服务端 maxUpdatedAt 作为下一次增量同步的水位。
-        if (meta.maxUpdatedAt) syncWatermarkRef.current = meta.maxUpdatedAt;
+        if (meta.maxUpdatedAt) {
+          syncWatermarkRef.current = meta.maxUpdatedAt;
+          inquiryService.setSyncWatermark(mergeLocal, meta.maxUpdatedAt);
+        }
       }
     }
 
@@ -80,6 +88,7 @@ export function useInquirySync({
         if (!mergeLocal) inquiryService.save(nextRecords);
         useInquiryStore.setState({ records: nextRecords });
         lastFullSyncAtRef.current = Date.now();
+        inquiryService.setLastFullSyncAt(mergeLocal, lastFullSyncAtRef.current);
         setLastSyncedAt(new Date());
         setSyncStatus(inquiryService.getSyncStatus());
         await refreshMetaMemory();
@@ -140,7 +149,17 @@ export function useInquirySync({
       }
     }
 
-    void fullSync();
+    async function initialSync() {
+      if (hasFreshBaseline) {
+        syncWatermarkRef.current = persistedWatermark;
+        lastFullSyncAtRef.current = persistedLastFullSyncAt;
+        await incrementalSync();
+      } else {
+        await fullSync();
+      }
+    }
+
+    void initialSync();
 
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') void checkAndMaybeSync();

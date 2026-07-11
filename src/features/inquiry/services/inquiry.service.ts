@@ -5,6 +5,10 @@ const STORAGE_KEY = 'inquiry_records';
 const DELETED_KEY = 'inquiry_deleted_ids';  // id → deletedAt ISO string
 const PENDING_SYNC_KEY = 'inquiry_pending_syncs';
 const SYNC_STATUS_EVENT = 'inquiry-sync-status-change';
+const SYNC_WATERMARK_KEY_FULL = 'inquiry_sync_watermark_full';
+const SYNC_WATERMARK_KEY_RESTRICTED = 'inquiry_sync_watermark_restricted';
+const LAST_FULL_SYNC_AT_KEY_FULL = 'inquiry_last_full_sync_at_full';
+const LAST_FULL_SYNC_AT_KEY_RESTRICTED = 'inquiry_last_full_sync_at_restricted';
 const API_BASE = '/api/inquiry';
 
 type DeletedMap = Record<string, string>;
@@ -279,6 +283,30 @@ export const inquiryService = {
     } catch {
       return { count: -1, maxUpdatedAt: null };
     }
+  },
+
+  getSyncWatermark(isFullView: boolean): string | null {
+    if (typeof window === 'undefined') return null;
+    const key = isFullView ? SYNC_WATERMARK_KEY_FULL : SYNC_WATERMARK_KEY_RESTRICTED;
+    return localStorage.getItem(key);
+  },
+
+  setSyncWatermark(isFullView: boolean, iso: string): void {
+    if (typeof window === 'undefined') return;
+    const key = isFullView ? SYNC_WATERMARK_KEY_FULL : SYNC_WATERMARK_KEY_RESTRICTED;
+    localStorage.setItem(key, iso);
+  },
+
+  getLastFullSyncAt(isFullView: boolean): number {
+    if (typeof window === 'undefined') return 0;
+    const key = isFullView ? LAST_FULL_SYNC_AT_KEY_FULL : LAST_FULL_SYNC_AT_KEY_RESTRICTED;
+    return Number(localStorage.getItem(key) || 0);
+  },
+
+  setLastFullSyncAt(isFullView: boolean, ts: number): void {
+    if (typeof window === 'undefined') return;
+    const key = isFullView ? LAST_FULL_SYNC_AT_KEY_FULL : LAST_FULL_SYNC_AT_KEY_RESTRICTED;
+    localStorage.setItem(key, String(ts));
   },
 
   getSyncStatus(): InquirySyncStatus {

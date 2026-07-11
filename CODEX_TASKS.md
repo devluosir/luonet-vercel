@@ -1968,6 +1968,140 @@ export async function pullAllFromD1(force = false): Promise<void> {
 
 **Status:** completed
 
+## TASK-139：询报价四张登记表共享同步水位（按权限分组），跨页面切换不再各自整表拉取
+
+**状态**：已完成（2026-07-11）
+**背景来源**：用户发现询报价登记/订单状态表/采购部登记/采购订单表这四个页面，哪怕是同一个用户在同一次浏览器会话里依次点开，每进一个页面都会各自触发一次整表拉取，问"是不是这样"，排查确认属实。用户特别要求：这次修复要考虑到不同权限/视图之间的正确处理，不能简单粗暴共用一份水位。
+
+### 背景（根因）
+
+`useInquirySync`（`src/features/inquiry/hooks/useInquirySync.ts`）目前被 4 个页面各自独立调用一次：
+
+| 页面 | 权限模块 | `mergeLocal` | `pushLocal` | 视图 |
+|---|---|---|---|---|
+| `InquiryPage.tsx`（询报价登记） | `inquiry` | `true`（默认） | `true`（默认） | 完整字段（客户视角，含 `quotedStatuses`/`customerId`/`inquirer` 等） |
+| `OrderPage.tsx`（订单状态表） | `inquiry`（`hasOrderAccess` 读的也是 `inquiry` 权限） | `true`（默认） | `true`（默认） | 完整字段 |
+| `PurchaseRegistrationPage.tsx`（采购部登记） | `purchaseRegistration` | `false` | `false` | 受限视图（服务端裁剪掉部分字段，见 `bug_inquiry_restricted_view_cache_corruption`） |
+| `PurchaseOrderRegistrationPage.tsx`（采购订单表） | `purchaseRegistration` | `false` | `false` | 受限视图 |
+
+`syncWatermarkRef`/`lastFullSyncAtRef`（TASK-128 引入）都是组件级 `useRef`，只在这一个页面组件的挂载周期内有效。这四个页面是四个不同的路由组件，客户端路由切换时前一个组件卸载、后一个组件重新挂载，所有 ref 都会回到初值，`useEffect` 里第 143 行 `void fullSync();` 会无条件重新跑一次整表拉取（含 `flushPendingSyncs` + 视情况 `pushLocalToD1` + `pullFromD1()` 整表 + `mergeFromD1`/`mergeFieldsOnly`）。哪怕用户几分钟内把四个页面依次点一遍，也是四次整表拉取，水位在页面之间完全不共享——这跟 TASK-137 修复前 documents 同步的问题是同一类根因（状态存在内存里，一"卸载重装"就当从零开始），但比 documents 那次更容易触发：不需要刷新页面或新开 tab，切一下路由就现踪。
+
+**这次不能像 TASK-137/138 一样简单粗暴地做成"一份持久化水位、四个页面共用"**，原因是 `mergeLocal:true` 和 `mergeLocal:false` 两组页面需要的字段完整度不一样：
+
+- 如果用一份共享水位，某个用户先访问了受限视图页面（比如 `PurchaseRegistrationPage`，只做过 `mergeFieldsOnly` 增量/全量合并），水位被推进到较新的时间点；紧接着该用户如果也有 `inquiry` 权限、切到 `InquiryPage`，如果直接信任这份"最近同步过"的水位去跳过自己的整表拉取、改走增量（`pullFromD1(since=水位)`），那些**最近没有变化、但历史上只被受限视图污染过（缺 `quotedStatuses` 等字段）**的记录不会出现在这次增量响应里，`mergeFromD1` 里专门为这种情况写的自愈逻辑（约 364-372 行，"即便 updatedAt 没有变化也要用完整视图响应补全字段"）根本没有机会触发——因为这条记录压根不在增量响应集合里。结果是 `InquiryPage` 第一次挂载就被"优化"成了增量同步，但本地缓存里一堆历史记录还缺着字段，界面上会看到不完整的数据，且没有任何后续时机能自愈（要等 1 小时强制整表兜底才会修复）。
+- 反过来（`InquiryPage` 先同步过、水位很新，`PurchaseRegistrationPage` 复用这份水位跳过整表）方向上其实是安全的（完整字段是受限字段的超集，`mergeFieldsOnly` 是字段级 upsert，不会因为拿到"更多字段"的记录而出问题）。但为了避免实现时把这个方向性判断搞反（这个仓库过去半年至少两次因为类似的"缺席"/"字段裁剪"边界条件出过线上 bug，见 `bug_inquiry_restricted_view_cache_corruption`、`bug_inquiry_merge_pending_protection`），**本任务明确要求两组视图各自维护独立的持久化水位，互不复用**，哪怕这意味着"完整视图 → 受限视图"这个理论上安全的方向也放弃优化。这是本任务最重要的设计决策，Codex 实现时不要"顺手"把两组合并成一份或做成"取较新的那个"。
+
+分组规则：`mergeLocal === true` 的页面（`InquiryPage`、`OrderPage`）共享一组水位；`mergeLocal === false` 的页面（`PurchaseRegistrationPage`、`PurchaseOrderRegistrationPage`）共享另一组。两组之间不互相读取对方的水位。
+
+### Files in scope
+
+- `src/features/inquiry/services/inquiry.service.ts` —— 新增按视图分组的水位/上次整表同步时间读写函数
+- `src/features/inquiry/hooks/useInquirySync.ts` —— 挂载时改成"先看本组是否有新鲜的持久化水位，有就走增量，没有才整表"；`fullSync`/`refreshMetaMemory` 成功后把水位/整表同步时间写回对应分组
+- `src/features/inquiry/services/__tests__/inquiry.service.test.ts` —— 补新增函数的单测
+- 新建 `src/features/inquiry/hooks/__tests__/useInquirySync.test.ts`（当前不存在）—— 覆盖"同组共享水位跳过整表"和"跨组不共享"两个场景
+
+### 具体改动要求
+
+**1. `src/features/inquiry/services/inquiry.service.ts` —— 新增分组水位读写**
+
+新增（放在 `getMeta`/`getSyncStatus` 附近即可），用 `isFullView: boolean` 区分分组（`true` 对应 `mergeLocal:true` 的完整视图组，`false` 对应 `mergeLocal:false` 的受限视图组），不要引入新的字符串枚举增加不必要的复杂度：
+
+```ts
+const SYNC_WATERMARK_KEY_FULL = 'inquiry_sync_watermark_full';
+const SYNC_WATERMARK_KEY_RESTRICTED = 'inquiry_sync_watermark_restricted';
+const LAST_FULL_SYNC_AT_KEY_FULL = 'inquiry_last_full_sync_at_full';
+const LAST_FULL_SYNC_AT_KEY_RESTRICTED = 'inquiry_last_full_sync_at_restricted';
+
+// 挂在 inquiryService 对象上，风格跟现有的 getSyncStatus/getPendingSyncIds 一致
+getSyncWatermark(isFullView: boolean): string | null { ... }
+setSyncWatermark(isFullView: boolean, iso: string): void { ... }
+getLastFullSyncAt(isFullView: boolean): number { ... }
+setLastFullSyncAt(isFullView: boolean, ts: number): void { ... }
+```
+
+`typeof window === 'undefined'` 时读函数返回 `null`/`0`，写函数直接 return，跟 `d1Sync.ts` 里对应函数的写法一致。
+
+**2. `src/features/inquiry/hooks/useInquirySync.ts` —— 挂载逻辑改造**
+
+第 143 行 `void fullSync();` 替换为：
+
+```ts
+const persistedWatermark = inquiryService.getSyncWatermark(mergeLocal);
+const persistedLastFullSyncAt = inquiryService.getLastFullSyncAt(mergeLocal);
+const hasFreshBaseline =
+  Boolean(persistedWatermark) &&
+  Date.now() - persistedLastFullSyncAt <= FORCE_FULL_SYNC_EVERY_MS;
+
+async function initialSync() {
+  if (hasFreshBaseline) {
+    syncWatermarkRef.current = persistedWatermark;
+    lastFullSyncAtRef.current = persistedLastFullSyncAt;
+    await incrementalSync();
+  } else {
+    await fullSync();
+  }
+}
+
+void initialSync();
+```
+
+复用现有的 `FORCE_FULL_SYNC_EVERY_MS`（1 小时）常量做"水位是否新鲜"的判断，不要另外发明一个新的时间阈值。`hasFreshBaseline` 的两个读取（`getSyncWatermark`/`getLastFullSyncAt`）要在 effect 一开始就做（跟 `persistedWatermark`/`persistedLastFullSyncAt` 一起），不要放进 `initialSync()` 内部再读，避免每次 `enabled`/`mergeLocal`/`pushLocal` 变化重新跑这个 effect 时基准不一致（实际上目前这几个依赖值在单个页面生命周期内不会变，这里只是保持读取时机清晰）。
+
+`refreshMetaMemory()`（约第 57-64 行）加一行持久化：
+
+```ts
+async function refreshMetaMemory() {
+  const meta = await inquiryService.getMeta();
+  if (!cancelled && meta.count >= 0) {
+    lastMetaRef.current = getMetaKey(meta);
+    if (meta.maxUpdatedAt) {
+      syncWatermarkRef.current = meta.maxUpdatedAt;
+      inquiryService.setSyncWatermark(mergeLocal, meta.maxUpdatedAt);
+    }
+  }
+}
+```
+
+`fullSync()`（约第 67-89 行）里 `lastFullSyncAtRef.current = Date.now();` 那一行后面加一行：
+
+```ts
+lastFullSyncAtRef.current = Date.now();
+inquiryService.setLastFullSyncAt(mergeLocal, lastFullSyncAtRef.current);
+```
+
+`incrementalSync()` 不需要单独处理"上次整表同步时间"（它本来就不代表一次整表同步），末尾已有的 `await refreshMetaMemory();` 调用会顺带把水位持久化，足够了。
+
+`checkAndMaybeSync()`、`POLL_INTERVAL_MS`、`FORCE_FULL_SYNC_EVERY_MS` 的值、`pushLocalToD1`/`mergeFromD1`/`mergeFieldsOnly` 的调用逻辑本身均不改动。
+
+### Acceptance criteria
+
+- **同组共享水位生效**：模拟同一用户在 1 小时内依次访问 `InquiryPage` → `OrderPage`（都是 `mergeLocal:true`），第二个页面挂载时应该读到第一个页面写入的水位，走 `incrementalSync()` 而不是 `fullSync()`（可以通过 mock `inquiryService.pullFromD1` 断言调用参数：第一次是 `pullFromD1()`（无参，整表），第二次是 `pullFromD1(<水位>)`）。`PurchaseRegistrationPage` → `PurchaseOrderRegistrationPage`（都是 `mergeLocal:false`）同理。
+- **跨组不共享（核心安全要求）**：`PurchaseRegistrationPage`（受限视图）先同步过、写入了受限组的水位；紧接着挂载 `InquiryPage`（完整视图），必须仍然走 `fullSync()`（整表拉取），不能因为受限组水位新鲜就跳过——用 mock 断言 `InquiryPage` 对应的 hook 实例第一次调用 `pullFromD1` 时没有传 `since` 参数。反过来（完整视图先同步、受限视图页面挂载）同样必须独立走自己的 `fullSync()`，不复用完整视图组的水位。
+- 水位/上次整表同步时间没有持久化状态时（比如全新浏览器、清过缓存），任意一个页面首次挂载的行为和改动前完全一致：走一次整表 `fullSync()`。
+- 距离上次整表同步超过 1 小时（`FORCE_FULL_SYNC_EVERY_MS`），即使同组水位存在，也应该重新走 `fullSync()` 而不是无限期信任旧水位（复用现有常量，不新增阈值）。
+- 页面内的周期轮询（`checkAndMaybeSync`，30/60 秒探测 + 1 小时强制整表兜底）行为不变，不受这次挂载逻辑改造影响。
+- 4 个调用方（`InquiryPage.tsx`/`OrderPage.tsx`/`PurchaseRegistrationPage.tsx`/`PurchaseOrderRegistrationPage.tsx`）传给 `useInquirySync` 的参数（`enabled`/`suspended`/`pushLocal`/`mergeLocal`）不需要改动。
+
+### Non-goals / 红线
+
+- **不做跨组水位复用**，哪怕"完整视图水位喂给受限视图"这个方向理论上是安全的（`mergeFieldsOnly` 字段级 upsert 能扛住），也不要顺手做这个优化——本任务的红线是两组水位严格独立，见上面背景部分的详细论证。
+- 不改动 `mergeFromD1`/`mergeFieldsOnly`/`pushLocalToD1`/`flushPendingSyncs`/`pullFromD1`/`getMeta` 这些既有函数的内部逻辑。
+- 不改动 `POLL_INTERVAL_MS`（60 秒）、`FORCE_FULL_SYNC_EVERY_MS`（1 小时）这两个常量的值。
+- 不改动 `checkAndMaybeSync` 的判断逻辑本身（探测失败/强制整表周期走 `fullSync`，meta 变化走 `incrementalSync`），只改挂载时"第一次该走哪条路径"的判断。
+- 不新增"退出登录/切换账号清空询价本地缓存"的逻辑——`inquiry_records`/`inquiry_deleted_ids`/`inquiry_pending_syncs` 目前本来就没有像 documents 那边 `d1_active_user_id`/`clearD1DocumentLocalState` 那样的按用户清理机制（同一浏览器换账号登录，询价本地缓存不会被清空），这是一个已经存在、本任务之外的独立问题，不在这次修复范围内，但新增的这两组水位 key 要跟现状保持一致（不额外发明只给这两个 key 用的清理逻辑，避免行为不一致）。发现这个问题后建议后续单独开一个 TASK 处理。
+- 不改动 `src/worker.ts` 的 `/api/inquiry`、`/api/inquiry/meta` 相关 handler。
+- 不改动 4 个页面组件传给 `useInquirySync` 的参数取值。
+
+### Verification steps
+
+- `npx tsc --noEmit` 通过
+- `npx eslint src/features/inquiry/services/inquiry.service.ts src/features/inquiry/hooks/useInquirySync.ts` 无输出（连同新增测试文件一起过一遍 eslint）
+- `npx jest inquiry.service` 通过，新增覆盖 `getSyncWatermark`/`setSyncWatermark`/`getLastFullSyncAt`/`setLastFullSyncAt` 的读写和 `isFullView` 分组隔离（`isFullView:true` 写入不影响 `isFullView:false` 读出，反之亦然）。
+- `npx jest useInquirySync`（新建，用 `renderHook` + `jest.mock('../services/inquiry.service')`）通过，至少覆盖 Acceptance criteria 里"同组共享跳过整表"和"跨组不共享"这两个场景——断言方式建议直接 spy `inquiryService.pullFromD1` 的调用参数（有没有传 `since`），比断言最终 merge 结果更直接可靠。
+- 手动验证：登录后依次点开询报价登记→订单状态表，用浏览器 Network 面板确认第二个页面只发了 `GET /api/inquiry?...&since=...`（增量），不是整表；再点开采购部登记，确认这次因为跨组不复用水位，仍然发起了一次不带 `since` 的整表请求。
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |
