@@ -2583,6 +2583,94 @@ if (status === 'loading' || status === 'authenticated') {
 
 **Status:** completed
 
+## TASK-144：普通用户配置了"内销报价合同"权限，访问内销报价/合同页面仍提示"没有外贸报价合同的访问权限"
+
+**状态**：已完成
+**背景来源**：用户在管理后台单独给某普通用户开了"内销报价合同"（`domesticQuotation`）权限，侧边栏也正常显示"内销报价"/"内销合同"菜单项，但点开后页面报错"权限不足：您没有外贸报价合同的访问权限"。
+
+### 背景（根因）
+
+`src/features/quotation/app/QuotationPage.tsx` L82 的页面级权限守卫写死检查 `quotation`（外贸）这一个模块，不区分当前 tab：
+
+```tsx
+const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('quotation');
+```
+
+而侧边栏（`src/components/layout/AppSidebar.tsx` L74-77）和 migration 009（`migrations/009_split_domestic_quotation_permission.sql`，把 `domesticQuotation` 拆成独立权限位）早就把内销报价/合同（`tab=domestic`）和外贸报价/合同（`tab=quotation` / `tab=confirmation`）区分成两个权限模块了。`QuotationPage.tsx` 里唯一的页面守卫却没跟着拆分，永远只认 `quotation`。所以只要用户没有 `quotation` 权限——哪怕单独给了 `domesticQuotation`——一进 `/quotation` 页面（不管 URL 上 tab 是什么）都会被这道守卫拦截，L643 还写死了"您没有外贸报价合同的访问权限"这句提示，跟用户实际点的内销菜单对不上。
+
+另外要注意：页面里的 `activeTab`（`useQuotationStore(sel.tab)`，L94）不能直接拿来判断该查哪个权限模块——`src/features/quotation/hooks/useInitQuotation.ts`（L20-32、L58-86）里 `setTab` 是在 `useEffect` 里异步把 URL 的 tab 同步进 store 的，首次渲染时 store 的 `tab` 还是默认值，跟 URL 对不上，会有一帧用错权限模块的竞态。判断权限时应该直接从 URL 同步取 tab（`useSearchParams()` + 已有的 `getTabFromSearchParams`，`src/features/quotation/services/quotation.service.ts` L185），不要依赖 store。
+
+### Files in scope
+
+- `src/features/quotation/app/QuotationPage.tsx` — L82 权限守卫改成按 tab 动态选择模块；L643 错误文案跟着区分内销/外贸；顶部 import 补 `useSearchParams` 和 `getTabFromSearchParams`
+
+### 具体改动要求
+
+1. 顶部 import（L5、L24 附近）补充：
+
+```tsx
+import { usePathname, useSearchParams } from 'next/navigation';
+// ...
+import { getHistoryTypeFromTab, saveOrUpdate, getTabFromSearchParams, type QuotationTab } from '../services/quotation.service';
+```
+
+（`useSearchParams` 加进已有的 `next/navigation` import；`getTabFromSearchParams` 加进已有的 `quotation.service` import，不用新起一行）
+
+2. L77-82，在 `useModulePermissionGuard` 调用之前，从 URL 同步取当前 tab，据此选择要检查的权限模块：
+
+```tsx
+export default function QuotationPage() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { user, handleLogout } = useAppUser();
+  const { showToast } = useToast();
+  const confirm = useConfirm();
+  const currentTab = getTabFromSearchParams(searchParams || undefined);
+  const requiredModuleId = currentTab === 'domestic' ? 'domesticQuotation' : 'quotation';
+  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard(requiredModuleId);
+```
+
+3. L642-644 错误提示跟着区分：
+
+```tsx
+  if (!hasModuleAccess) {
+    return (
+      <PermissionDenied
+        message={currentTab === 'domestic' ? '您没有内销报价合同的访问权限' : '您没有外贸报价合同的访问权限'}
+      />
+    );
+  }
+```
+
+### Acceptance criteria
+
+- 普通用户只有 `domesticQuotation=1`、没有 `quotation` 权限时，访问 `/quotation?tab=domestic&docType=quotation` 和 `/quotation?tab=domestic&docType=contract`（内销报价、内销合同）都能正常打开，不再被拦截。
+- 同一用户访问 `/quotation?tab=quotation`（外贸报价）或 `/quotation?tab=confirmation`（外贸合同）时，仍然正确显示"您没有外贸报价合同的访问权限"并拦截。
+- 反过来，只有 `quotation=1`、没有 `domesticQuotation` 权限的用户，访问内销报价/合同时应显示"您没有内销报价合同的访问权限"并拦截；访问外贸报价/合同正常。
+- 管理员（`isAdmin`）不受影响，两类文档都能正常访问（`useModulePermissionGuard` 里 `isAdmin` 已经短路放行，不用改）。
+- 直接在地址栏输入 URL 首次进入内销报价/合同页面（非侧边栏点击切换、页面重新挂载）时也要正确放行，不能因为 store 里 `tab` 初始值还没被 `useInitQuotation` 的 effect 同步而误判成检查 `quotation` 权限。
+
+### Non-goals / 红线
+
+- 不改 `AppSidebar.tsx` 的菜单权限映射（`canCreateQuotation`/`canCreateDomesticQuotation`），那部分本来就是对的。
+- 不改 migration 009 或 `src/constants/permissionModules.ts` 的权限模块注册表，权限拆分本身没问题，问题只在页面守卫没跟上。
+- 不改 `src/hooks/useModulePermissionGuard.ts` 的实现（单模块检查的通用 hook 逻辑是对的，问题是 `QuotationPage.tsx` 传参写死了）。
+- 不去动 `useQuotationStore` 里 `tab` 的默认值或 `useInitQuotation.ts` 的同步时序，本任务只是让权限判断改成直接读 URL，不需要也不应该改状态管理时序本身。
+
+### Verification steps
+
+- `npx tsc --noEmit` 通过
+- `npx eslint src/features/quotation/app/QuotationPage.tsx` 无输出
+- 手动验证（用后台给一个测试普通用户分别配置 `quotation`/`domesticQuotation` 两种权限组合）：
+  - 只给 `domesticQuotation`：内销报价、内销合同可访问；外贸报价、外贸合同报"您没有外贸报价合同的访问权限"
+  - 只给 `quotation`：外贸报价、外贸合同可访问；内销报价、内销合同报"您没有内销报价合同的访问权限"
+  - 两个都给：四个都能访问
+  - 两个都不给：四个都被拦截，文案跟对应类型匹配
+  - 直接在地址栏输入 `/quotation?tab=domestic&docType=quotation`（不经过侧边栏点击）验证不会因为竞态误判
+- `npm run build` 通过
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { unstable_batchedUpdates as batch } from 'react-dom';
 import { AppLayout, type ActionButton } from '@/components/layout';
 import { PermissionDenied } from '@/components/PermissionDenied';
@@ -21,7 +21,7 @@ import { getInitialQuotationData } from '@/utils/quotationInitialData';
 import { useToast } from '@/components/ui/Toast';
 import { numberToWords } from '@/utils/quotationCalculations';
 import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
-import { getHistoryTypeFromTab, saveOrUpdate, type QuotationTab } from '../services/quotation.service';
+import { getHistoryTypeFromTab, saveOrUpdate, getTabFromSearchParams, type QuotationTab } from '../services/quotation.service';
 import { DOMESTIC_NOTES_CONFIG, DOMESTIC_QUOTATION_NOTES_CONFIG, isNotesConfigUnedited } from '../types/notes';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useGenerateService } from '../services/generate.service';
@@ -76,10 +76,13 @@ import { Clipboard, History, Save, Settings, Download, Eye, FileSpreadsheet } fr
 
 export default function QuotationPage() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user, handleLogout } = useAppUser();
   const { showToast } = useToast();
   const confirm = useConfirm();
-  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('quotation');
+  const currentTab = getTabFromSearchParams(searchParams || undefined);
+  const requiredModuleId = currentTab === 'domestic' ? 'domesticQuotation' : 'quotation';
+  const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard(requiredModuleId);
 
   // 性能调试开关（开发模式）
   if (process.env.NODE_ENV === 'development') {
@@ -640,7 +643,11 @@ export default function QuotationPage() {
     return <FullScreenSpinner />;
   }
   if (!hasModuleAccess) {
-    return <PermissionDenied message="您没有外贸报价合同的访问权限" />;
+    return (
+      <PermissionDenied
+        message={currentTab === 'domestic' ? '您没有内销报价合同的访问权限' : '您没有外贸报价合同的访问权限'}
+      />
+    );
   }
 
   // 守卫：等待数据初始化完成

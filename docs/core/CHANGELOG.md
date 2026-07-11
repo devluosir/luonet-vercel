@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+#### 内销报价合同页面权限（TASK-144）
+- `/quotation` 页面级守卫改为直接按 URL `tab` 选择权限模块：内销报价/合同检查 `domesticQuotation`，外贸报价/销售确认检查 `quotation`，避免仅有内销权限的普通用户被外贸权限守卫误拦截。
+- 权限不足提示同步区分内销与外贸；判断直接读取 URL，不依赖报价 store 的异步 tab 初始化，确保地址栏首次进入也不会产生权限竞态。
+
 #### 登录过渡期侧边栏时序（TASK-142）
 - 全局 `DesktopSidebarHost` 增加当前路径判断：登录页 `/` 无论会话是否已切换为 authenticated 都不渲染桌面侧边栏，避免登录成功到业务路由跳转完成之间出现“侧边栏 + 登录表单”的画面分裂。
 - 业务路由仍按原逻辑在 authenticated 状态下显示侧边栏；未认证和 session 加载阶段行为不变。

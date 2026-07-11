@@ -65,6 +65,7 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 
 ```text
 quotation
+domesticQuotation
 packing
 invoice
 purchase
@@ -84,7 +85,7 @@ rmb
 
 说明：
 
-- `quotation` 同时控制外贸报价单、内销报价单和销售确认。
+- `quotation` 控制外贸报价单和销售确认；`domesticQuotation` 独立控制内销报价与内销合同。报价页面守卫直接按 URL `tab` 选择对应权限模块，避免首次进入时受 store tab 异步初始化影响。
 - `inquiry` 控制完整询报价登记和订单状态表入口。
 - `purchaseRegistration` 控制采购部登记过滤视图；该视图不授予完整询报价登记权限。
 - `purchaseOrderTable` 控制采购订单表过滤视图（询报价登记的已成单子集）；该视图不授予完整询报价登记权限。
