@@ -20,13 +20,14 @@ interface UserDetailModalProps {
 
 /** 小型开关按钮 */
 function Toggle({
-  on, onChange, color = 'bg-blue-600', disabled = false,
-}: { on: boolean; onChange: () => void; color?: string; disabled?: boolean }) {
+  on, onChange, color = 'bg-blue-600', disabled = false, title,
+}: { on: boolean; onChange: () => void; color?: string; disabled?: boolean; title?: string }) {
   return (
     <button
       type="button"
       onClick={onChange}
       disabled={disabled}
+      title={title}
       className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
         on ? color : 'bg-gray-200 dark:bg-gray-700'
       }`}
@@ -171,7 +172,13 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                     <p className="text-[11px] text-gray-400 dark:text-gray-500">{isAdmin ? '是' : '否'}</p>
                   </div>
                 </div>
-                <Toggle on={isAdmin} onChange={toggleAdmin} color="bg-blue-600" disabled={isBusy} />
+                <Toggle
+                  on={isAdmin}
+                  onChange={toggleAdmin}
+                  color="bg-blue-600"
+                  disabled={isBusy || isCurrentUser}
+                  title={isCurrentUser ? '不能修改自己的管理员身份，请让其他管理员操作' : undefined}
+                />
               </div>
 
               {/* 账户状态开关 */}

@@ -589,6 +589,7 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
         email: user.email,
         isAdmin: user.isAdmin,
         status: user.status,
+        updatedAt: user.updatedAt,
         permissions: permissions.map(p => ({
           id: p.id,
           moduleId: p.moduleId,
@@ -893,6 +894,9 @@ async function handleUpdatePermissions(request: Request, env: Env): Promise<Resp
         });
       }
     }
+
+    await d1Client.touchUpdatedAt(userId);
+
     return new Response(
       JSON.stringify({ success: true }),
       {
@@ -964,6 +968,9 @@ async function handleBatchUpdatePermissions(request: Request, env: Env): Promise
         });
       }
     }
+
+    await d1Client.touchUpdatedAt(userId);
+
     return new Response(
       JSON.stringify({ success: true }),
       {

@@ -1,6 +1,6 @@
 # Current State
 
-最后更新：2026-07-10
+最后更新：2026-07-11
 当前分支：`main`
 当前提交：以 `git log -1 --oneline` 为准
 应用版本：`1.2.0`（`package.json`）
@@ -92,6 +92,8 @@ rmb
 - `order.financials` 是订单状态表金额、回款、到账金额高级权限。
 - `admin` 不是普通 moduleId，后台访问由 `isAdmin` 和中间件控制。
 - 左侧 `IMPA物料` 已从公开硬编码入口改为 `impa` 模块权限。
+- 管理员不能在用户详情弹窗中关闭自己的管理员身份；该开关会禁用并提示需由其他管理员操作。
+- Worker 在单个或批量模块权限更新成功后刷新目标用户 `User.updatedAt`。前端通过 `/api/auth/permissions-meta` 在可见标签页每 90 秒检查该时间戳，变化时复用 `usePermissionRefresh` 自动刷新 session/权限并重载；后台标签页停止轮询，恢复前台立即补检，首次挂载只建立基准而不刷新。
 
 ## 数据存储现状
 
@@ -159,7 +161,7 @@ theme-config
 - 主题系统只保留明暗模式，不再提供 `classic` / `colorful` 按钮主题；配置写入 `theme-config`，并兼容旧 `themeConfig`。
 - 深色模式层级：应用主背景为 `#1c1c1e`，弹层 / 用户菜单表面为 `#2c2c2e`；Tailwind 语义色为 `app.dark.base` 和 `app.dark.surface`。
 - Dashboard 模块卡片使用静态 Tailwind 背景类（浅色 `bg-*-50`，深色 `dark:bg-*-500/10`），不再依赖运行时 CSS 变量注入或 `!important` 覆盖。
-- 用户菜单个人信息子菜单的「账户工具」包含主题紧凑切换和权限刷新图标按钮；权限刷新通过 `usePermissionRefresh.ts` 调用 `/api/auth/force-refresh-session`。
+- 用户菜单个人信息子菜单的「账户工具」包含主题紧凑切换和权限刷新图标按钮；手动刷新与全局权限变更 watcher 都复用 `usePermissionRefresh.ts` 调用 `/api/auth/force-refresh-session`。
 - 预加载只保留真实阶段：静态资源到 50%，PDF 字体到 100%；空实现的表单页 / 脚本样式阶段已移除。完成后用户菜单中的预加载行直接隐藏，不再显示「资源已预加载 (100%)」（详见 `docs/features/PRELOAD_FEATURE.md`）。
 - 用户菜单个人信息子菜单在 <640px 屏幕下改为在按钮下方原地展开，避免移动端侧滑菜单空间有限导致子菜单溢出可视区域；`sm` 及以上保持原有向右弹出。
 - 移动端侧边栏和整体布局容器改用 `.app-h-dvh`（`100vh` 回退 + `100dvh` 覆盖），修复移动浏览器地址栏显示时固定侧边栏底部（用户菜单）被压到可视区域外的问题。

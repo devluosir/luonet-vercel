@@ -141,6 +141,12 @@ export class D1UserClient {
     return this.getUserById(id);
   }
 
+  async touchUpdatedAt(userId: string): Promise<void> {
+    await this.db.prepare(`
+      UPDATE User SET updatedAt = CURRENT_TIMESTAMP WHERE id = ?
+    `).bind(userId).run();
+  }
+
   async deleteUser(id: string): Promise<boolean> {
     const result = await this.db.prepare(`
       DELETE FROM User WHERE id = ?

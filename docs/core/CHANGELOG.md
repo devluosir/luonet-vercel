@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-07-11
+
+### Added
+
+#### 权限变更自动生效（TASK-141）
+- **轻量轮询**：新增 `/api/auth/permissions-meta` 与全局 `usePermissionChangeWatcher`；登录用户在页面前台时每 90 秒检查一次 `User.updatedAt`，切到后台暂停，恢复前台立即补检。
+- **按需刷新**：首次检查只建立本地基准；检测到变化后复用既有 `usePermissionRefresh` 流程刷新权限、提示并重载，失败时回滚基准以便后续重试。
+- **可靠变更信号**：Worker 的单个/批量权限更新成功后统一 touch 目标用户 `updatedAt`，按用户名查询响应同步返回该字段。
+
+### Fixed
+
+#### 管理员自我保护（TASK-141）
+- 管理员编辑自己的账号时，管理员身份开关禁用，并提示需由其他管理员操作；编辑其他用户时保持可用。
+
+### Tests
+- `npx jest src/hooks/__tests__/usePermissionChangeWatcher.test.ts --runInBand`（5 项）
+- `npx tsc --noEmit`
+- 改动文件 ESLint
+- `npm run build`（仅保留既有 purchase-registration exhaustive-deps warning）
+
 ## [Unreleased] - 2026-07-10
 
 ### Changed

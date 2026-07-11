@@ -2249,6 +2249,148 @@ export async function verifyPassword(password: string, stored: string): Promise<
 
 **Status:** in progress (implementation complete; production cutover pending)
 
+## TASK-141：管理员开关自我保护 + 权限变更后目标用户自动生效（不需手动点刷新）
+
+**状态**：已完成（代码与自动化验证完成，待部署后双账号手动验证）
+**背景来源**：用户按 TASK-140 的方案清库重建了新管理员账号（`admin`）并登录测试，发现两个既有问题：（1）管理员在「用户详情」弹窗里可以直接把自己的管理员开关关掉，没有任何提示或拦截；（2）管理员改了某个用户的权限后，对方要自己手动点「刷新权限」才会生效，没有自动检测机制。用户要求分析方案，确认后要求合并成一个任务。
+
+### 背景（根因）
+
+**问题一**：`src/features/admin/components/UserDetailModal.tsx` 里删除用户按钮（L273-285）已经做了自我保护——`disabled={isBusy || isCurrentUser}`，配 `title="不能删除当前登录用户"`。但管理员开关（L166-175）漏了同样的判断：
+
+```tsx
+<Toggle on={isAdmin} onChange={toggleAdmin} color="bg-blue-600" disabled={isBusy} />
+```
+
+`isCurrentUser`（L120，`currentUserId === user.id`）这个变量在同一个组件里已经算出来了，只是没有接到这个开关上——是实现时的遗漏，不是设计上故意允许自我降权。
+
+**问题二**：项目用的是 NextAuth JWT session（`src/lib/auth.ts`，`session.strategy: 'jwt'`），没有服务端 session 存储。token 里的 `permissions`/`isAdmin` 只在登录那一刻写入，之后除非：(a) 30 天 token 过期重新登录，或 (b) 本人主动触发——现成的 `usePermissionRefresh`（`src/hooks/usePermissionRefresh.ts`）+「刷新权限」按钮（`PermissionRefreshButton.tsx`，已经挂在 `UserProfilePanel.tsx` L220）——否则不会更新。`providers.tsx` 里 `SessionProvider` 设了 `refetchInterval={5*60}`，但这只是每 5 分钟重新读一次当前 JWT 的 claims，不会触发后端重新查询 D1，解决不了这个问题。
+
+服务端这边还有个不一致，会让「轮询检测变化」这个方案缺一个可靠信号：`D1UserClient.updateUser`（`src/lib/d1-client.ts` L119-142）改 `isAdmin`/`status` 时会顺手 `updatedAt = CURRENT_TIMESTAMP`；但 `handleUpdatePermissions`（`src/worker.ts` L849-918，路由 `PUT /api/admin/users/:id/permissions`）和 `handleBatchUpdatePermissions`（L920-992，路由 `POST /api/admin/users/:id/permissions/batch`）走的是 `updatePermission`/`batchUpdatePermissions`/`createPermission`（`d1-client.ts` L205-246），这几个方法只碰 `Permission` 表，完全不碰对应 `User.updatedAt`。也就是说光改模块权限开关（不动 isAdmin/账户状态），`User.updatedAt` 不会变。
+
+### Files in scope
+
+**问题一**：
+- `src/features/admin/components/UserDetailModal.tsx` —— 管理员开关加自我保护
+
+**问题二**：
+- `src/lib/d1-client.ts` —— 新增 `touchUpdatedAt(userId)` 方法
+- `src/worker.ts` —— `handleUpdatePermissions`/`handleBatchUpdatePermissions` 成功后调用 `touchUpdatedAt`
+- 新建 `src/app/api/auth/permissions-meta/route.ts` —— 极简元信息接口，只返回当前登录用户的 `updatedAt`
+- 新建 `src/hooks/usePermissionChangeWatcher.ts` —— 轮询检测 hook
+- `src/app/providers.tsx` —— 挂载新 watcher
+
+### 具体改动要求
+
+**1. `UserDetailModal.tsx`：管理员开关自我保护**
+
+```tsx
+<Toggle
+  on={isAdmin}
+  onChange={toggleAdmin}
+  color="bg-blue-600"
+  disabled={isBusy || isCurrentUser}
+/>
+```
+
+`Toggle` 这个本地小组件（L21-39）目前没有 `title` 透传，给它加一个可选 `title?: string` prop 并传给底层 `<button>`；管理员开关这里传 `title={isCurrentUser ? '不能修改自己的管理员身份，请让其他管理员操作' : undefined}`，跟删除按钮的提示文案风格保持一致。**做成禁用整个开关**，不要做成"允许关但弹确认框"——delete 按钮已经是"禁用"这个先例，保持一致，而且当前库里就一个 admin 账号，真误操作了又要走一遍 D1 手动改数据才能恢复，禁用比确认框更安全。
+
+**2. `d1-client.ts`：新增 `touchUpdatedAt`**
+
+放在 `updateUser` 方法附近：
+
+```ts
+async touchUpdatedAt(userId: string): Promise<void> {
+  await this.db.prepare(
+    `UPDATE User SET updatedAt = CURRENT_TIMESTAMP WHERE id = ?`
+  ).bind(userId).run();
+}
+```
+
+**3. `worker.ts`：权限变更后调用 `touchUpdatedAt`**
+
+`handleUpdatePermissions`（约 L849-918）和 `handleBatchUpdatePermissions`（约 L920-992）里，`userId` 已经从路由里解析出来了（`url.pathname.split('/')[4]`）。在批量更新/新增权限的数据库调用**全部成功之后、返回响应之前**，加一行：
+
+```ts
+await d1Client.touchUpdatedAt(userId);
+```
+
+两个 handler 都要加，因为两条路由都能改权限。
+
+**4. 新建 `src/app/api/auth/permissions-meta/route.ts`**
+
+参考 `src/app/api/auth/get-latest-permissions/route.ts` 的写法（从 `getServerSession(authOptions)` 拿 `username`，用 `API_TOKEN` bearer 查 Worker `/api/admin/users?username=`），但只挑 `updatedAt` 字段返回，不做权限数组转换，保持这个接口尽量轻（避免每 90 秒轮询一次还带着完整权限数据序列化）：
+
+```ts
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: '未授权访问' }, { status: 401 });
+  }
+  const userName = session.user.username || session.user.name || '';
+  // ...查 Worker，取 userData.updatedAt...
+  return NextResponse.json({ updatedAt: userData?.updatedAt ?? null });
+}
+```
+
+**5. 新建 `src/hooks/usePermissionChangeWatcher.ts`**
+
+思路跟项目里询报价同步那套「cheap meta 轮询、变了才拉全量」（`useInquirySync`/`checkAndMaybeSync`，见 TASK-128/137/139）保持一致，不要发明新模式：
+
+- 只在 `document.visibilityState === 'visible'` 时轮询，间隔 90 秒；标签页切到后台时清掉 interval，切回前台时立即补一次检查（监听 `visibilitychange`）。
+- 已知的 `updatedAt` 存 `localStorage`，key 用 `permissions_last_known_updated_at`（跟 `usePermissionRefresh.ts` 里已经在用的 `userCache`/`latestPermissions` 这类命名风格保持一致，不用 zustand store，因为这个值只是个比对基准，不需要参与渲染）。
+- **首次拿到 `updatedAt` 只写入本地缓存、不触发刷新**（避免用户刚登录就自动刷新一次）。之后每次轮询，如果拿到的 `updatedAt` 跟本地缓存的不一样，调用 `usePermissionRefresh()` 返回的 `refresh(username)`——这个函数已经会清缓存、必要时 silent-refresh、toast 提示、800ms 后重载页面，直接复用，不要重新实现。
+- 未登录（`session` 不存在）或 `usePermissionRefresh` 正在刷新中（`isRefreshing`）时不轮询。
+
+**6. `providers.tsx`：挂载**
+
+跟 `PermissionInitializer`/`D1SyncInitializer` 同样的模式：
+
+```tsx
+function PermissionChangeWatcher() {
+  usePermissionChangeWatcher();
+  return null;
+}
+```
+
+加进 `<Providers>` 里 `<PermissionInitializer />` 旁边。
+
+### Acceptance criteria
+
+- 管理员打开「用户详情」编辑自己的账号时，管理员开关是禁用状态，鼠标悬浮能看到"不能修改自己的管理员身份"提示；编辑别的用户时开关正常可用。
+- 管理员改了某用户的模块权限（走单个更新或批量更新任一路由）后，D1 里该用户的 `User.updatedAt` 会变化；改 isAdmin/账户状态的既有行为不受影响（`updateUser` 那条路径本来就会更新，不用动）。
+- 目标用户不需要手动点「刷新权限」按钮，在权限变更后最长 90 秒 + 一次轮询周期内（页面保持在前台的情况下），页面应该自动检测到变化并触发跟点按钮完全一样的刷新流程（toast 提示 + 重载）。
+- 标签页切到后台时不再发起轮询请求；切回前台立即补一次检查，不用等满 90 秒。
+- 刚登录/首次挂载时不会误触发一次"权限已变更"的自动刷新。
+
+### Non-goals / 红线
+
+- 不做"检测到用户正在编辑表单，暂缓自动刷新"这类复杂度——直接复用 `usePermissionRefresh` 现有的 toast + 800ms 延迟重载行为，跟手动点按钮的体验保持一致，这是已知的取舍，不在本任务范围内解决。
+- 不改动 `usePermissionRefresh.ts`/`PermissionRefreshButton.tsx` 内部逻辑，只是新增一个自动触发它的调用方。
+- 不改动 `SessionProvider` 的 `refetchInterval`（5 分钟）配置。
+- 不把权限元信息轮询做成全局共享单例跨标签页去重——多个标签页各自独立轮询即可，不必用 `BroadcastChannel` 之类的机制协调，避免过度设计。
+- 轮询间隔固定 90 秒，不要做成可配置项。
+- 不改动 D1 `Permission`/`User` 表结构。
+
+### Verification steps
+
+- `npx tsc --noEmit` 通过
+- `npx eslint` 改动到的文件无输出
+- 手动验证问题一：用当前登录的管理员账号打开自己的详情弹窗，确认开关禁用+提示文案；打开别的用户详情，确认开关正常。
+- 手动验证问题二：开两个浏览器（或一个普通窗口 + 一个隐私窗口）分别登录管理员和普通用户，管理员改普通用户的某个模块权限，观察普通用户那边的页面在无操作情况下最多 90 秒左右自动出现"权限刷新成功"提示并重载，新权限生效。
+- 手动验证：把普通用户那个标签页切到后台几分钟再切回来，确认没有在后台持续发轮询请求（可以用浏览器 Network 面板配合 `visibilitychange` 观察），切回前台后能立刻补一次检查。
+- `npm run build` 通过
+
+### 实施记录（2026-07-11）
+
+- 管理员编辑自己的账号时，管理员身份开关已禁用并提供悬浮提示；其他用户不受影响。
+- 单个/批量权限更新成功后都会刷新目标用户 `User.updatedAt`；按用户名查询用户的 Worker 响应补充返回该字段。
+- 新增 `/api/auth/permissions-meta` 和全局 `usePermissionChangeWatcher`：前台每 90 秒检查，后台暂停，回到前台立即补检；首次只建立基准，变化后复用既有权限刷新流程并显示 toast。
+- watcher 在刷新前更新基准以避免重载循环；刷新失败时回滚基准，下一轮可以重试。
+- watcher 5 项测试、`npx tsc --noEmit`、目标文件 ESLint、`npm run build` 均通过；构建仅保留既有的 purchase-registration exhaustive-deps warning。
+
+**Status:** completed (production dual-account verification pending deployment)
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

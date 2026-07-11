@@ -8,10 +8,16 @@ import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog';
 import { SidebarCollapseProvider } from '@/contexts/SidebarCollapseContext';
 import { DesktopSidebarHost } from '@/components/layout/DesktopSidebarHost';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { usePermissionChangeWatcher } from '@/hooks/usePermissionChangeWatcher';
 
 // ✅ 全局权限初始化组件
 function PermissionInitializer() {
   usePermissionInit();
+  return null;
+}
+
+function PermissionChangeWatcher() {
+  usePermissionChangeWatcher();
   return null;
 }
 
@@ -32,6 +38,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <ConfirmDialogProvider>
             <ToastProvider>
               <PermissionInitializer />
+              <PermissionChangeWatcher />
               <D1SyncInitializer />
               <DesktopSidebarHost />
               {children}
