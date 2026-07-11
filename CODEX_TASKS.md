@@ -2391,6 +2391,103 @@ function PermissionChangeWatcher() {
 
 **Status:** completed (production dual-account verification pending deployment)
 
+## TASK-142：登录成功后侧边栏提前出现，主内容区仍卡在登录表单，造成几秒"画面分裂"
+
+**状态**：已完成（2026-07-11）
+**背景来源**：用户在 `lc.luocompany.net` 登录后反馈"登陆后，它有好几秒时间都愣在这个画面"，并附截图：侧边栏导航已经完整渲染（首页/外贸报价/…/用户名 roger 都在），但主内容区仍显示登录表单（用户名 roger、密码点、"登录 →"按钮），持续几秒才跳转到实际首页。
+
+### 背景（根因）
+
+`src/components/layout/DesktopSidebarHost.tsx`（L13-20）是挂在根 `Providers` 里的全局单例（`src/app/providers.tsx` L43，`src/app/layout.tsx` L47-50 确认 `Providers` 包住所有路由，包括登录页 `/`），渲染条件只看 `useSession().status === 'authenticated'`，不看当前路由：
+
+```tsx
+export function DesktopSidebarHost() {
+  const { status } = useSession();
+  ...
+  if (status !== 'authenticated') {
+    return null;
+  }
+  return <AppSidebar ... />;
+}
+```
+
+组件注释写的是"登录页（未认证）不渲染"——这个假设在正常态下成立，但没考虑登录**瞬间**的过渡态：
+
+1. 用户在 `/`（`src/app/page.tsx`）提交表单，`handleSubmit`（L64-103）里 `signIn('credentials', { redirect: false, ... })` 成功后，NextAuth 客户端会话状态几乎立刻从 `unauthenticated` 变成 `authenticated`（cookie 已写入，`useSession()` 内部重新 fetch `/api/auth/session` 完成）。
+2. `DesktopSidebarHost` 只依赖这个全局 `status`，一变成 `authenticated` 立刻渲染完整侧边栏——**不管当前路由还停在哪**。
+3. 与此同时，`page.tsx` L94-95 调用 `router.push(callbackUrl)`（默认 `/dashboard`）做客户端跳转。这个跳转不是瞬时的：要经过 `src/middleware.ts` 的 `withAuth`（服务端重新校验 JWT cookie）、拉取 `/dashboard` 的路由数据并渲染，本身可能耗时几百毫秒到几秒（尤其 Netlify Functions 冷启动时更明显）。
+4. 在这几秒的窗口里，`page.tsx` 仍然挂载着、仍在渲染登录表单，而 `DesktopSidebarHost` 已经因为 `status === 'authenticated'` 提前渲染出完整侧边栏——两者叠在一起，就是用户截图看到的"侧边栏已经在，主内容区还是登录表单"的分裂画面。
+
+也就是说这不是登录变慢，而是侧边栏的显示时机比路由跳转本身领先了一步，纯前端渲染时序 bug，跟 Cloudflare Worker/D1 无关，不需要动后端。
+
+### Files in scope
+
+- `src/components/layout/DesktopSidebarHost.tsx` —— 渲染条件加上路径判断
+
+### 具体改动要求
+
+`DesktopSidebarHost` 增加 `usePathname()`（`next/navigation`），只要当前路径是登录页 `/`（对照 `src/middleware.ts` L6 的 `PUBLIC_ROUTES` 里 `'/'` 这一项，登录表单只在这个路径渲染），就不渲染侧边栏，即便 `status` 已经是 `authenticated`：
+
+```tsx
+'use client';
+
+import { Suspense } from 'react';
+import { useSession } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
+import { useSidebarCollapse } from '@/contexts/SidebarCollapseContext';
+import { useAppUser } from '@/hooks/useAppUser';
+import { AppSidebar } from './AppSidebar';
+
+export function DesktopSidebarHost() {
+  const { status } = useSession();
+  const pathname = usePathname();
+  const { user, handleLogout } = useAppUser();
+  const { collapsed, toggleCollapse } = useSidebarCollapse();
+
+  if (status !== 'authenticated' || pathname === '/') {
+    return null;
+  }
+
+  return (
+    <Suspense fallback={null}>
+      <AppSidebar
+        className="app-sidebar hidden lg:flex"
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapse}
+        user={user}
+        onLogout={handleLogout}
+      />
+    </Suspense>
+  );
+}
+```
+
+组件注释里"登录页（未认证）不渲染"那句话也顺手改成准确描述（比如"登录页不渲染（无论认证状态）"），避免以后又有人凭这句话去掉路径判断。
+
+### Acceptance criteria
+
+- 在 `/` 提交登录表单后，从提交到页面真正跳转到 `/dashboard` 这段时间里，侧边栏不应该出现——主内容区显示的登录表单（或"登录中…”状态）应该是画面上唯一内容，不会出现侧边栏+登录表单叠加的画面。
+- 跳转完成、路由变为 `/dashboard`（或其他业务路由）后，侧边栏正常出现，跟改动前行为一致。
+- 已登录用户直接访问 `/dashboard` 等业务路由（不经过登录表单），侧边栏渲染时机不受影响。
+- 已登录用户手动在地址栏输入 `/` 访问登录页（`page.tsx` 里已有的 `useEffect` 会自动 `router.push('/dashboard')`），在这次自动跳转完成前，侧边栏也不应该出现（同一条路径判断规则自然覆盖这个场景）。
+
+### Non-goals / 红线
+
+- 不改 `src/app/page.tsx` 的跳转逻辑（`handleSubmit` 里的 `router.push` 和 `useEffect` 里的自动跳转），本任务只治标在侧边栏这一层，不重构登录跳转流程。
+- 不改 `src/middleware.ts`、`src/lib/auth.ts`，跟 JWT/cookie/中间件校验逻辑无关。
+- 不动 `MobileBottomTab`（这个是路由内组件，挂在 `AppLayout` 里，不是全局单例，不受此问题影响，见 `src/components/layout/AppLayout.tsx` L67）。
+- 不引入额外的 loading/骨架屏之类的 UI，只是让侧边栏的渲染时机跟路由对齐。
+
+### Verification steps
+
+- `npx tsc --noEmit` 通过
+- `npx eslint src/components/layout/DesktopSidebarHost.tsx` 无输出
+- 手动验证：清缓存/隐私窗口登录一次，观察提交表单到跳转完成这段过程，确认不再出现侧边栏+登录表单叠加的画面；可以用浏览器 Network 面板的 Slow 3G 节流放大这个过渡窗口方便观察。
+- 手动验证：已登录状态下正常在各业务路由间切换，侧边栏显示/隐藏（收起/展开）行为跟改动前一致，没有意外闪烁。
+- `npm run build` 通过
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

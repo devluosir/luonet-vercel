@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+#### 登录过渡期侧边栏时序（TASK-142）
+- 全局 `DesktopSidebarHost` 增加当前路径判断：登录页 `/` 无论会话是否已切换为 authenticated 都不渲染桌面侧边栏，避免登录成功到业务路由跳转完成之间出现“侧边栏 + 登录表单”的画面分裂。
+- 业务路由仍按原逻辑在 authenticated 状态下显示侧边栏；未认证和 session 加载阶段行为不变。
+
 #### 管理员自我保护（TASK-141）
 - 管理员编辑自己的账号时，管理员身份开关禁用，并提示需由其他管理员操作；编辑其他用户时保持可用。
 
@@ -23,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 将供应商与待关联供应商匹配逻辑提升为模块级纯函数，使三个 `useMemo` 只依赖实际筛选值和数据数组，消除 `react-hooks/exhaustive-deps` warning，筛选行为保持不变。
 
 ### Tests
+- `npx jest src/components/layout/__tests__/DesktopSidebarHost.test.tsx --runInBand`（4 项）
 - `npx jest src/hooks/__tests__/usePermissionChangeWatcher.test.ts --runInBand`（5 项）
 - `npx tsc --noEmit`
 - 改动文件 ESLint
