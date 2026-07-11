@@ -2244,7 +2244,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
 - 已新增 Web Crypto PBKDF2-SHA256 哈希模块，并完成登录、创建用户、修改密码三条调用路径替换；明文与 bcrypt 回退均已移除。
 - 最终迭代次数为 `60,000`。本地 workerd 单操作实测：哈希 3–4ms；校验热态 3–4ms、首次约 6ms；Wrangler 整请求约 4–7ms（含路由和响应开销）。100,000 次时热态约 6ms，故按目标下调。
 - `bcryptjs` 已从 `package.json` / `package-lock.json` 移除。
-- `password-hash.test.ts` 9 项测试、`npx tsc --noEmit`、目标文件 ESLint、`npm run build` 均通过；构建仅保留既有的 purchase-registration exhaustive-deps warning。
+- `password-hash.test.ts` 9 项测试、`npx tsc --noEmit`、目标文件 ESLint、`npm run build` 均通过。
 - 尚未执行 `npx wrangler deploy`：部署会使现有 bcrypt 账号立即失效，需要与生产 D1 清库和账号重建安排在同一切换窗口。
 
 **Status:** in progress (implementation complete; production cutover pending)
@@ -2387,7 +2387,7 @@ function PermissionChangeWatcher() {
 - 单个/批量权限更新成功后都会刷新目标用户 `User.updatedAt`；按用户名查询用户的 Worker 响应补充返回该字段。
 - 新增 `/api/auth/permissions-meta` 和全局 `usePermissionChangeWatcher`：前台每 90 秒检查，后台暂停，回到前台立即补检；首次只建立基准，变化后复用既有权限刷新流程并显示 toast。
 - watcher 在刷新前更新基准以避免重载循环；刷新失败时回滚基准，下一轮可以重试。
-- watcher 5 项测试、`npx tsc --noEmit`、目标文件 ESLint、`npm run build` 均通过；构建仅保留既有的 purchase-registration exhaustive-deps warning。
+- watcher 5 项测试、`npx tsc --noEmit`、目标文件 ESLint、`npm run build` 均通过。
 
 **Status:** completed (production dual-account verification pending deployment)
 
@@ -2403,8 +2403,7 @@ function PermissionChangeWatcher() {
 
 1. E2E：补无模块权限账号的 `PermissionDenied` 断言（需专用测试账号）。
 2. 权限刷新链路：`fetchPermissions` 与 `usePermissionRefresh` 仍有重叠，可继续收敛。
-3. `purchase-registration` 既有 `react-hooks/exhaustive-deps` warning，可择机修。
-4. 删除 `components/admin/CreateUserModal` 兼容 re-export（确认无外部引用后）。
+3. 删除 `components/admin/CreateUserModal` 兼容 re-export（确认无外部引用后）。
 
 ## 新任务怎么写
 

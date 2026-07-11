@@ -16,6 +16,20 @@ import type { InquiryRecord } from '@/features/inquiry/types';
 import { PurchaseRegistrationTable } from '../components/PurchaseRegistrationTable';
 import { PurchaseInquiryEditModal } from '../components/PurchaseInquiryEditModal';
 
+function recordMatchesSupplier(record: InquiryRecord, supplier: string) {
+  return !supplier
+    || (record.purchaseSupplierStatuses ?? [])
+      .some((status) => status.supplierShortName === supplier);
+}
+
+function recordMatchesSupplierLink(
+  record: InquiryRecord,
+  supplierLinkFilter: 'all' | 'unlinked'
+) {
+  return supplierLinkFilter !== 'unlinked'
+    || (record.purchaseSupplierStatuses ?? []).length === 0;
+}
+
 export function PurchaseRegistrationPage() {
   const { status } = useSession();
   const router = useRouter();
@@ -78,21 +92,17 @@ export function PurchaseRegistrationPage() {
     [activeRecords]
   );
 
-  const matchesSupplier = (record: InquiryRecord) =>
-    !supplier || (record.purchaseSupplierStatuses ?? []).some((s) => s.supplierShortName === supplier);
-
   // "待关联供应商"：采购部登记自己的供应商列表（purchaseSupplierStatuses）还没有任何一条，
   // 替代原本复用询报价登记"待关联客户"（record.customerId，那是销售侧概念，采购部登记用不上）
-  const matchesSupplierLink = (record: InquiryRecord) =>
-    supplierLinkFilter !== 'unlinked' || (record.purchaseSupplierStatuses ?? []).length === 0;
-
   const supplierFilteredBase = useMemo(
-    () => baseFiltered.filter(matchesSupplier),
+    () => baseFiltered.filter((record) => recordMatchesSupplier(record, supplier)),
     [baseFiltered, supplier]
   );
 
   const linkFilteredBase = useMemo(
-    () => supplierFilteredBase.filter(matchesSupplierLink),
+    () => supplierFilteredBase.filter(
+      (record) => recordMatchesSupplierLink(record, supplierLinkFilter)
+    ),
     [supplierFilteredBase, supplierLinkFilter]
   );
 
@@ -102,7 +112,9 @@ export function PurchaseRegistrationPage() {
   );
 
   const finalRecords = useMemo(
-    () => filteredAndSorted.filter(matchesSupplier).filter(matchesSupplierLink),
+    () => filteredAndSorted
+      .filter((record) => recordMatchesSupplier(record, supplier))
+      .filter((record) => recordMatchesSupplierLink(record, supplierLinkFilter)),
     [filteredAndSorted, supplier, supplierLinkFilter]
   );
 

@@ -276,7 +276,6 @@ GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git f
 1. **测试覆盖**：本地/CI 跑通新增 E2E；补无权限账号的 PermissionDenied 断言（需专用测试账号）。
 2. **权限刷新简化（可选）**：`fetchPermissions` 与 `usePermissionRefresh` 仍有重叠，可继续收敛。
 3. **跨设备同步**：保持双写 + 登录拉取 + 本地补推（选 B）；不做 TASK-14。
-4. **purchase-registration exhaustive-deps**：既有 lint warning，可择机修。
 
 ## 文档索引
 
