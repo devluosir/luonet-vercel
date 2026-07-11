@@ -2102,6 +2102,153 @@ inquiryService.setLastFullSyncAt(mergeLocal, lastFullSyncAtRef.current);
 
 **Status:** completed
 
+## TASK-140：登录/改密码/建用户改用 Web Crypto PBKDF2，替换 bcryptjs，消除 Cloudflare Workers Free 版 CPU 超限风险
+
+**状态**：进行中（代码完成，待生产部署与手动重建账号）
+**背景来源**：用户把 `lc.luocompany.net`（Netlify 备用站）部署好之后，问 Worker 免费额度用得怎样。查 Cloudflare Dashboard「指标」页发现过去 24 小时 CPU 时间 P50 1.53ms 还算健康，但 P90 已到 12.39ms、P99 30.5ms、P999 图表尖峰到 ~130ms——已经明显超过官方文档写的 Free 版「每次调用 10ms CPU 硬上限」（[Workers Limits](https://developers.cloudflare.com/workers/platform/limits/)）。当时错误数是 0，查证是因为 Cloudflare 对偶发超限有「isolate 内建 flexibility」的容忍度，只有**持续性**超限才会真的触发 `Error 1102`（Dashboard 里对应 Metrics → Errors → Invocation Statuses → Exceeded CPU Time Limits）。用户确认账号是 Free 版，要求「从根上解决」，并明确表示**可以把现有 D1 `User` 表数据全部删除、重新建号**，不需要考虑新旧密码哈希格式兼容迁移。
+
+### 背景（根因）
+
+CPU 尖峰的根因是 `bcryptjs`（纯 JS 实现的 bcrypt，没有原生绑定）用在了 4 处密码哈希/校验：
+
+| 位置 | 函数 | 用途 | 触发频率 |
+|---|---|---|---|
+| `src/worker.ts` L2 | `import bcrypt from 'bcryptjs'` | — | — |
+| `src/worker.ts` `handleUserAuth`（约 L491-512，路由 `POST /api/auth/d1-users`） | `bcrypt.compare(password, user.password)` | 登录校验密码 | 每次真实用户名密码登录（NextAuth `silent-refresh` 走的是另一条不带密码的接口，不经过这里） |
+| `src/worker.ts` `handleCreateUser`（约 L1079-1080） | `bcrypt.hash(password, 10)` | 管理员创建新用户 | 低频 |
+| `src/lib/d1-client.ts` L1 | `import bcrypt from 'bcryptjs'` | — | — |
+| `src/lib/d1-client.ts` `validatePassword`（约 L249-264） | `bcrypt.compare(currentPassword, user.password)` | 改密码前校验当前密码 | 低频 |
+| `src/lib/d1-client.ts` `updatePassword`（约 L267-280） | `bcrypt.hash(newPassword, 10)` | 改密码写入新哈希 | 低频 |
+
+cost factor 10 的 bcrypt 在纯 JS（无原生绑定）环境下单次操作通常要花 30-100ms+ CPU，这跟观测到的 P99/P999 尖峰量级吻合。登录频率不算高（团队几个人、session 30 天有效），所以目前只是「偶发」超限、还没真正触发 1102 错误，但 P90 已经摸到 12ms，说明相当比例的登录请求已经稳定超过硬上限，风险会随登录频率（比如两个站叠加、或者短时间内多人登录）上升而增大。
+
+用户已确认可以清空重建账号，所以**不需要**做「新旧哈希格式并存、登录时按需迁移」那套兼容逻辑，直接切换算法即可，实现复杂度大幅降低。
+
+### Files in scope
+
+- 新建 `src/lib/password-hash.ts` —— 用 Cloudflare Workers 内置的 Web Crypto（`crypto.subtle`，运行时原生实现，不是 npm 包）实现 PBKDF2-SHA256 哈希与校验，替代 bcryptjs
+- `src/worker.ts` —— 删除 `import bcrypt from 'bcryptjs'`；`handleUserAuth` 里 L491-512 的密码分支、`handleCreateUser` 里 L1079-1080 的哈希调用改用新模块
+- `src/lib/d1-client.ts` —— 删除 `import bcrypt from 'bcryptjs'`；`validatePassword`（L249-264）、`updatePassword`（L267-280）改用新模块
+- `package.json` / `package-lock.json` —— 跑 `npm uninstall bcryptjs` 移除依赖（全仓库已确认只有这两个源文件引用 bcryptjs，其余命中都是 `docs/`、`package-lock.json`、`README.md` 里的文字提及，不需要改）
+
+### 具体改动要求
+
+**1. 新建 `src/lib/password-hash.ts`**
+
+自描述存储格式：`pbkdf2$<iterations>$<base64url salt>$<base64url hash>`，方便以后再换算法时能识别旧格式。核心实现：
+
+```ts
+const ITERATIONS = 100_000; // 起点值，见下方「验收标准」里的实测要求，必要时调低
+const SALT_BYTES = 16;
+const HASH_BYTES = 32; // 256 bit
+
+async function pbkdf2(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    keyMaterial,
+    HASH_BYTES * 8
+  );
+  return new Uint8Array(bits);
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
+  const hash = await pbkdf2(password, salt, ITERATIONS);
+  return `pbkdf2$${ITERATIONS}$${toBase64Url(salt)}$${toBase64Url(hash)}`;
+}
+
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  if (!stored || !password) return false;
+  const parts = stored.split('$');
+  if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
+  const iterations = Number(parts[1]);
+  if (!Number.isFinite(iterations) || iterations <= 0) return false;
+  try {
+    const salt = fromBase64Url(parts[2]);
+    const expected = fromBase64Url(parts[3]);
+    const actual = await pbkdf2(password, salt, iterations);
+    return constantTimeEqual(actual, expected);
+  } catch {
+    return false; // 格式损坏/非法 base64 时按校验失败处理，不抛异常
+  }
+}
+```
+
+`toBase64Url`/`fromBase64Url`/`constantTimeEqual` 自己实现（Workers 运行时没有 Node 的 `Buffer`，用 `btoa`/`atob` 或手写字节转换均可；`constantTimeEqual` 要逐字节异或比较、不能提前 return，避免时序攻击）。`verifyPassword` 对任何格式不对的输入（比如空字符串、被截断的历史脏数据）都必须返回 `false` 而不是抛异常，调用方（`handleUserAuth`/`validatePassword`）不需要额外包一层 `try/catch`。
+
+**2. `src/worker.ts` 改造**
+
+- 删除 `import bcrypt from 'bcryptjs'`（L2），改为 `import { hashPassword, verifyPassword } from './lib/password-hash'`。
+- `handleUserAuth` 里 L491-512 那段「bcrypt 格式走 bcrypt.compare / 明文走 `===`」的分支，改成统一调用 `await verifyPassword(password, user.password)`。**顺手去掉明文密码回退分支**（现有的 `else if (password === user.password)`）——账号即将全部清空重建，新建号只会写入 `pbkdf2$...` 格式，保留明文比较分支只是徒增攻击面，不用为了「兼容」保留。
+- `handleCreateUser` 里 L1079-1080 的 `bcrypt.hash(password, 10)` 改成 `await hashPassword(password)`。
+
+**3. `src/lib/d1-client.ts` 改造**
+
+- 删除 `import bcrypt from 'bcryptjs'`（L1），改为 `import { hashPassword, verifyPassword } from './password-hash'`。
+- `validatePassword`（L249-264）：把 bcrypt 分支和明文回退分支（L262-263 `return currentPassword === user.password`）都替换成 `return await verifyPassword(currentPassword, user.password)`，同样理由——不保留明文回退。
+- `updatePassword`（L267-280）：`bcrypt.hash(newPassword, 10)` 改成 `await hashPassword(newPassword)`。
+
+**4. 依赖清理**
+
+`npm uninstall bcryptjs`，确认 `package.json`/`package-lock.json` 里 `bcryptjs` 条目消失，`npm run build` 仍然通过。
+
+### Acceptance criteria
+
+- 登录（`POST /api/auth/d1-users`）、管理员创建用户、用户改密码三条路径全部改用 `password-hash.ts`，代码里不再出现任何 `bcrypt`/`bcryptjs` 引用。
+- `verifyPassword` 对空密码、空/损坏的存储哈希、非 `pbkdf2$...` 格式的输入统一返回 `false`，不抛异常导致对应 handler 返回 500。
+- 新建用户/改密码后写入 D1 的 `password` 字段格式为 `pbkdf2$<iterations>$<salt>$<hash>`。
+- **迭代次数需要实测调优**：本地 `npx wrangler dev` 或部署后用 Wrangler CPU profiling（`https://developers.cloudflare.com/workers/observability/dev-tools/cpu-usage/`）量一下 `hashPassword`/`verifyPassword` 单次实际 CPU 耗时。目标是让单次操作明显低于 10ms 硬上限、留出安全边际（比如控制在 3-5ms 以内）。如果 100,000 次迭代实测超出这个范围，调低迭代次数直到达标，并在 PR/commit 里写清楚最终选定的迭代次数和对应实测 CPU 时间。
+- 部署（`npx wrangler deploy`）后 24-48 小时，回到 Cloudflare Dashboard「指标」页确认 CPU 时间 P99 相比修复前的 30.5ms 有明显下降。
+
+### 部署后的手动步骤（不在 Codex 实现范围内，需要用户本人执行）
+
+这一步涉及生产数据库操作，Codex 完成代码改动、验证通过、`wrangler deploy` 之后，需要用户手动清空并重建账号：
+
+1. 清空 `User` 表（顺带清对应的 `Permission` 行，避免留下孤儿权限记录）：
+   ```
+   npx wrangler d1 execute mluonet-users --remote --command "DELETE FROM Permission WHERE userId NOT IN (SELECT id FROM User WHERE 1=0);"
+   npx wrangler d1 execute mluonet-users --remote --command "DELETE FROM Permission;"
+   npx wrangler d1 execute mluonet-users --remote --command "DELETE FROM User;"
+   ```
+   （第一条其实是多余的防御性写法，直接跑后两条「先删 Permission 再删 User」即可，避免外键孤儿数据。）
+2. 通过管理后台「新建用户」界面（会走到改造后的 `handleCreateUser`，自动用新算法哈希）重新创建所有账号，包括至少一个管理员账号。
+3. 用新账号在 Vercel 站和 Netlify 备用站各登录一次，确认都能正常登录、权限正常。
+
+### Non-goals / 红线
+
+- 不做 bcrypt 旧哈希兼容/自动迁移逻辑——用户已明确可以清空重建，不需要这个复杂度，Codex 不用「顺手」加。
+- 不改动 `checkAuthRateLimit`（登录限流）逻辑。
+- 不改动 NextAuth 侧（`src/lib/auth.ts`）的 session/JWT/`silent-refresh` 逻辑，这次只动 Worker 侧密码哈希算法本身。
+- 不改动 `Permission` 表结构或权限校验逻辑。
+- 不引入额外的第三方哈希库（`crypto.subtle` 是 Workers 运行时内置全局对象，不需要 polyfill 或新增 npm 依赖）。
+- 清空/重建 D1 `User` 表数据是用户手动执行的运维操作，不要在代码或脚本里加自动清库逻辑。
+
+### Verification steps
+
+- `npx tsc --noEmit` 通过
+- `npx eslint src/lib/password-hash.ts src/worker.ts src/lib/d1-client.ts` 无输出
+- 补 `src/lib/__tests__/password-hash.test.ts`（新建）：覆盖「哈希后能校验通过」「错误密码校验失败」「格式损坏的 stored 值返回 false 而不抛异常」「两次哈希同一密码 salt 不同、结果不同」
+- `npm run build` 通过
+- 本地 `npx wrangler dev` 手动跑一遍登录/创建用户/改密码三个流程，确认功能正常
+- 用 Wrangler CPU profiling 或部署后 Dashboard 实测新哈希函数的单次 CPU 耗时，写进 commit message 或 PR 描述
+
+### 实施记录（2026-07-11）
+
+- 已新增 Web Crypto PBKDF2-SHA256 哈希模块，并完成登录、创建用户、修改密码三条调用路径替换；明文与 bcrypt 回退均已移除。
+- 最终迭代次数为 `60,000`。本地 workerd 单操作实测：哈希 3–4ms；校验热态 3–4ms、首次约 6ms；Wrangler 整请求约 4–7ms（含路由和响应开销）。100,000 次时热态约 6ms，故按目标下调。
+- `bcryptjs` 已从 `package.json` / `package-lock.json` 移除。
+- `password-hash.test.ts` 9 项测试、`npx tsc --noEmit`、目标文件 ESLint、`npm run build` 均通过；构建仅保留既有的 purchase-registration exhaustive-deps warning。
+- 尚未执行 `npx wrangler deploy`：部署会使现有 bcrypt 账号立即失效，需要与生产 D1 清库和账号重建安排在同一切换窗口。
+
+**Status:** in progress (implementation complete; production cutover pending)
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

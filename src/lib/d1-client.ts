@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs';
+import { hashPassword, verifyPassword } from './password-hash';
 
 // 定义D1数据库接口
 interface D1PreparedStatement {
@@ -250,24 +250,14 @@ export class D1UserClient {
     const user = await this.getUserById(userId);
     if (!user || !user.password || !currentPassword) return false;
 
-    // bcrypt 哈希密码：使用 bcrypt.compare 验证
-    if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
-      try {
-        return await bcrypt.compare(currentPassword, user.password);
-      } catch {
-        return false;
-      }
-    }
-
-    // 明文密码（旧账户兼容）：直接比较
-    return currentPassword === user.password;
+    return await verifyPassword(currentPassword, user.password);
   }
 
-  // 更新用户密码（始终写入 bcrypt 哈希，与创建用户一致）
+  // 更新用户密码（始终写入 PBKDF2 哈希，与创建用户一致）
   async updatePassword(userId: string, newPassword: string): Promise<boolean> {
     try {
       if (!newPassword || newPassword.length < 1) return false;
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const hashedPassword = await hashPassword(newPassword);
       const result = await this.db.prepare(`
         UPDATE User SET password = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?
       `).bind(hashedPassword, userId).run();
