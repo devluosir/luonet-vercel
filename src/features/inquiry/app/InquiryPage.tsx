@@ -138,7 +138,7 @@ export function InquiryPage() {
   const hasInquiryAccess = useMemo(() => {
     if (!session?.user) return false;
     const permission = (session.user.permissions ?? []).find((item) => item.moduleId === 'inquiry');
-    return permission?.canAccess ?? session.user.isAdmin;
+    return permission?.canAccess === true;
   }, [session]);
   const { lastSyncedAt, syncStatus } = useInquirySync({
     enabled: permissionChecked && hasInquiryAccess,

@@ -135,16 +135,18 @@ export default function DashboardPage() {
           onActiveSourceChange={setTrendSource}
         />
 
-        <DashboardDocuments
-          documents={recentDocuments}
-          timeFilter={timeFilter}
-          typeFilter={typeFilter}
-          showAllFilters={showAllFilters}
-          onTimeFilterChange={setTimeFilter}
-          onTypeFilterChange={setTypeFilter}
-          onShowAllFiltersChange={setShowAllFilters}
-          permissionMap={permissionMap}
-        />
+        {permissionMap.permissions.history && (
+          <DashboardDocuments
+            documents={recentDocuments}
+            timeFilter={timeFilter}
+            typeFilter={typeFilter}
+            showAllFilters={showAllFilters}
+            onTimeFilterChange={setTimeFilter}
+            onTypeFilterChange={setTypeFilter}
+            onShowAllFiltersChange={setShowAllFilters}
+            permissionMap={permissionMap}
+          />
+        )}
       </div>
       {/* 调试组件已移除 */}
     </AppLayout>

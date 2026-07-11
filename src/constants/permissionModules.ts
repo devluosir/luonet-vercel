@@ -34,7 +34,7 @@ export const PERMISSION_MODULES: PermissionModuleDef[] = [
     ],
   },
   { moduleId: 'purchaseRegistration', label: '采购部登记 / 采购订单表', icon: '🧾', category: 'registration' },
-  { moduleId: 'history', label: '单据历史', icon: '📚', category: 'management' },
+  { moduleId: 'history', label: '单据历史', icon: '📚', category: 'document' },
   { moduleId: 'customer', label: '客户管理', icon: '👥', category: 'management' },
   { moduleId: 'ai-email', label: 'AI 邮件', icon: '🤖', category: 'tool' },
   { moduleId: 'impa', label: 'IMPA 物料', icon: '🔎', category: 'tool' },
@@ -42,6 +42,18 @@ export const PERMISSION_MODULES: PermissionModuleDef[] = [
   { moduleId: 'holidays', label: '全球假日', icon: '📅', category: 'tool' },
   { moduleId: 'rmb', label: 'RMB 大写', icon: '💴', category: 'tool' },
 ];
+
+/**
+ * 决定“单据历史”权限自动开启或关闭的单据类模块（不含 history 本身）。
+ * 任一开启时 history 自动开启，全部关闭时 history 自动关闭。
+ */
+export const DOCUMENT_TYPE_MODULE_IDS = [
+  'quotation',
+  'domesticQuotation',
+  'packing',
+  'invoice',
+  'purchase',
+] as const;
 
 export function getAllPermissionModules(): string[] {
   return PERMISSION_MODULES.flatMap((module) => [

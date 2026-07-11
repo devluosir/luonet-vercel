@@ -140,7 +140,7 @@ export function MobileBottomTab({ user, onLogout }: MobileBottomTabProps) {
     if (!link.moduleId) return true;
     if (isLoading || !permissionUser) return false;
     const permission = permissionUser.permissions?.find((p) => p.moduleId === link.moduleId);
-    return permission?.canAccess ?? permissionUser.isAdmin;
+    return permission?.canAccess === true;
   }
 
   function isCategoryActive(links: MobileMenuLink[]) {

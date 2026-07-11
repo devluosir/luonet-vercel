@@ -1,5 +1,4 @@
 import {
-  HISTORY_TYPE_ORDER,
   getPermittedHistoryTypes,
   isPermittedHistoryType,
   resolvePermittedHistoryType,
@@ -28,8 +27,8 @@ describe('historyPermissions', () => {
     ]);
   });
 
-  it('管理员没有模块配置记录时维持默认访问能力', () => {
-    expect(getPermittedHistoryTypes([], true)).toEqual(HISTORY_TYPE_ORDER);
+  it('管理员没有模块配置记录时不默认显示历史 tab', () => {
+    expect(getPermittedHistoryTypes([], true)).toEqual([]);
   });
 
   it('管理员存在模块配置时严格采用对应的 canAccess', () => {

@@ -105,14 +105,13 @@ async function proxyInquiryRequest(
     return NextResponse.json({ error: '未登录' }, { status: 401 });
   }
 
-  const isAdmin = session.user.isAdmin === true;
   const permissions = session.user.permissions ?? [];
   const inquiryPermission = permissions.find((permission) => permission.moduleId === 'inquiry');
-  const hasInquiryPermission = inquiryPermission?.canAccess ?? isAdmin;
+  const hasInquiryPermission = inquiryPermission?.canAccess === true;
   // TASK-111 起，purchaseRegistration 权限同时覆盖"采购部登记"+"采购订单表"两个页面
   // （原 purchaseOrderTable 权限已合并进来），不再单独判断
   const purchaseRegistrationPermission = permissions.find((permission) => permission.moduleId === 'purchaseRegistration');
-  const hasPurchaseRegistrationPermission = purchaseRegistrationPermission?.canAccess ?? isAdmin;
+  const hasPurchaseRegistrationPermission = purchaseRegistrationPermission?.canAccess === true;
 
   if (!hasInquiryPermission && !hasPurchaseRegistrationPermission) {
     return NextResponse.json({ error: '无询报价权限' }, { status: 403 });
@@ -128,7 +127,7 @@ async function proxyInquiryRequest(
   }
 
   const financialsPermission = permissions.find((permission) => permission.moduleId === 'order.financials');
-  const hasFinancialsPermission = financialsPermission?.canAccess ?? isAdmin;
+  const hasFinancialsPermission = financialsPermission?.canAccess === true;
 
   const url = new URL(request.url);
   const workerPath = pathSegments.length > 0

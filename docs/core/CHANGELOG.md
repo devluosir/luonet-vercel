@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+#### 单据历史权限联动（TASK-146）
+- `history` 改为由外贸报价合同、内销报价合同、箱单发票、财务发票、采购订单五类权限自动派生：任一开启则自动开启，全部关闭则自动关闭；管理后台归入“单据”分组并禁止手动切换。
+- Dashboard 单据搜索、时间筛选、管理按钮和文档区域改为仅对具备单据历史权限的用户显示；管理员也按模块权限配置显示，不再强制可见。
+- 管理员身份收敛为“可进入权限控制和账号控制”：业务模块入口、页面守卫、权限 store、客户/单据/询报价代理 API、AI 邮件 API 均改为只认显式模块权限。
+- 新增 `011_backfill_admin_full_permissions.sql`（给现有管理员账号补全全部模块的显式权限行）与 `012_sync_history_permission_with_documents.sql`（原编号 010，因撞号由 TASK-147 重新编号；一次性修正所有账号已有的不一致 `history` 权限行，管理员同样按单据类权限派生）；两者已按顺序在远程 D1 执行完毕。
+
 #### 退出登录过渡态（TASK-145）
 - 点击桌面端或移动端“退出登录”后立即显示全屏 Logo 遮罩，覆盖侧边栏和主内容区，避免清理会话期间继续冻结显示业务页面。
 - 退出流程改为 `signOut({ redirect: false })` 后单次客户端跳转到 `/`，不再先整页刷新当前业务路由、再由 middleware 二次重定向；请求失败时会收起遮罩并保留错误 Toast。
@@ -46,6 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - E2E 登录与退出流程通过；完整 E2E 在配置专用测试账号及所需环境变量后通过。
 - TASK-145 桌面端与移动端退出验证通过：点击后立即进入 Logo 过渡态，随后直接到登录页，无业务页面冻结或中间路由闪烁。
 - `npx jest src/hooks/__tests__/useAppUser.test.ts --runInBand`（3 项：重复调用、8 秒超时兜底、失败恢复）。
+- TASK-146 权限测试 5 项通过：hook 自动开启/关闭、手动 history 切换拦截、分组归类，以及权限弹窗中只读开关与实时联动。
+- migration 010 内存 SQLite 验证通过：无单据权限账号 `history` 关闭，有任一单据权限账号补插/更新为开启。
 
 ## [Unreleased] - 2026-07-10
 
@@ -66,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **改密哈希**：`d1-client.updatePassword` 写入前使用 `bcrypt.hash`，与创建用户一致，避免明文落库。
 - **登录限流**：Worker `/api/auth/d1-users` 按 IP 限流（1 分钟最多 10 次），超限返回 429。
 - **NEXTAUTH_SECRET**：生产环境未配置时直接抛错，禁止硬编码回退密钥；开发环境使用临时密钥并告警。
-- **AI 邮件权限**：`/api/generate` 除登录外校验 `ai-email` 模块权限（管理员放行）。
+- **AI 邮件权限**：`/api/generate` 除登录外校验 `ai-email` 模块权限；TASK-146 后管理员也必须具备该模块权限。
 - **日志收敛**：登录成功/失败日志不再输出密码明文或 hash 前缀。
 
 ### Added
@@ -249,7 +257,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### 权限 / 工具模块
-- **IMPA 物料模块权限**：左侧 `IMPA物料` 外部工具入口接入模块权限体系，后台用户权限弹窗新增 `IMPA 物料` 开关；非管理员只有拥有 `impa` 权限时才显示该入口，管理员默认可见
+- **IMPA 物料模块权限**：左侧 `IMPA物料` 外部工具入口接入模块权限体系，后台用户权限弹窗新增 `IMPA 物料` 开关；TASK-146 后管理员也必须具备该模块权限
 - **IMPA 权限生产迁移**：新增并已执行 `migrations/007_grant_default_impa_permission.sql`，给现有普通用户默认补上 `impa` 权限；生产 D1 复查结果为 `impa_permissions = 8`、`enabled_permissions = 8`
 
 #### 客户管理 / 客户分类

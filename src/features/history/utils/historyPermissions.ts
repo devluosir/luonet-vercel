@@ -23,7 +23,7 @@ export const HISTORY_TYPE_PERMISSION_MODULE: Record<HistoryType, string> = {
 
 export function getPermittedHistoryTypes(
   permissions: readonly Permission[],
-  isAdmin: boolean,
+  _isAdmin: boolean,
 ): HistoryType[] {
   const permissionsByModule = new Map(
     permissions.map((permission) => [permission.moduleId, permission.canAccess]),
@@ -31,7 +31,7 @@ export function getPermittedHistoryTypes(
 
   return HISTORY_TYPE_ORDER.filter((type) => {
     const configuredAccess = permissionsByModule.get(HISTORY_TYPE_PERMISSION_MODULE[type]);
-    return configuredAccess ?? isAdmin;
+    return configuredAccess === true;
   });
 }
 

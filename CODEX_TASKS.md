@@ -45,7 +45,7 @@
 
 这不是全新功能，而是把已有的三份数据/逻辑重新组合：
 - "新建"的 7 项与 `src/constants/dashboardModules.ts` 里的 `QUICK_CREATE_MODULES` 完全一致（id/label/path 都能直接复用）。
-- "登记""管理""工具"的子项与 `src/components/layout/AppSidebar.tsx` 里 `NAV_ITEMS` 的对应条目（含 `permissionKey`）完全一致，权限判断逻辑也要照抄 `AppSidebar.tsx` 的 `PERMISSION_MODULE_MAP` + `isVisible`（`permission?.canAccess ?? permissionUser.isAdmin`），保持两端权限口径一致。
+- "登记""管理""工具"的子项与 `src/components/layout/AppSidebar.tsx` 里 `NAV_ITEMS` 的对应条目（含 `permissionKey`）完全一致，权限判断逻辑也要照抄 `AppSidebar.tsx` 的 `PERMISSION_MODULE_MAP` + `isVisible`（TASK-146 后为显式 `canAccess === true`，不再用管理员兜底），保持两端权限口径一致。
 - "我"分类里的"个人信息"要复用 `src/components/layout/AppUserMenu.tsx` 里已有的资料/改密面板逻辑，不要重写一份。
 
 ### 文件范围
@@ -2647,7 +2647,7 @@ export default function QuotationPage() {
 - 普通用户只有 `domesticQuotation=1`、没有 `quotation` 权限时，访问 `/quotation?tab=domestic&docType=quotation` 和 `/quotation?tab=domestic&docType=contract`（内销报价、内销合同）都能正常打开，不再被拦截。
 - 同一用户访问 `/quotation?tab=quotation`（外贸报价）或 `/quotation?tab=confirmation`（外贸合同）时，仍然正确显示"您没有外贸报价合同的访问权限"并拦截。
 - 反过来，只有 `quotation=1`、没有 `domesticQuotation` 权限的用户，访问内销报价/合同时应显示"您没有内销报价合同的访问权限"并拦截；访问外贸报价/合同正常。
-- 管理员（`isAdmin`）不受影响，两类文档都能正常访问（`useModulePermissionGuard` 里 `isAdmin` 已经短路放行，不用改）。
+- 注：该口径已被 TASK-146 更新。管理员身份现在只控制后台管理入口，外贸/内销等业务模块仍需显式模块权限。
 - 直接在地址栏输入 URL 首次进入内销报价/合同页面（非侧边栏点击切换、页面重新挂载）时也要正确放行，不能因为 store 里 `tab` 初始值还没被 `useInitQuotation` 的 effect 同步而误判成检查 `quotation` 权限。
 
 ### Non-goals / 红线
@@ -2847,6 +2847,369 @@ import { LogoutTransitionOverlay } from '@/components/layout/LogoutTransitionOve
 - 桌面端与移动端实际退出验证通过：点击后立即显示全屏 Logo，URL 从业务路由直接进入 `/`，最终显示登录表单；无业务页面冻结、中间路由或空白闪烁。
 - 退出后重新登录验证通过，TASK-142 / TASK-143 既有过渡行为不受影响。
 - 退出失败恢复路径验证通过：遮罩能够收起并显示错误 Toast，不会停留在过渡画面。
+
+**Status:** completed
+
+## TASK-146："单据历史"权限跟单据类权限脱节——首页单据筛选一直显示，History 页却报"没有可查看的单据类型权限"
+
+**状态**：已完成（2026-07-11；生产 migration 010 待执行）
+**背景来源**：用户反馈，在权限管理里，如果给某用户开了"单据历史"开关，但没给任何单据类权限（外贸报价合同/内销报价合同/箱单发票/财务发票/采购订单），该用户点开 History 页面左侧标签会报"当前账号没有可查看的单据类型权限"；但首页的单据筛选区域（搜索框 + All/1D/3D/1W/1M + 管理按钮）却仍然完整显示（用户附了截图：搜索框、时间筛选、"今天暂无 所有类型 文档"空状态都在）。用户要求：① 首页单据筛选是否显示，跟"单据历史"权限同步；② 权限管理里"单据历史"改成跟单据类权限联动的自动开关（单据类权限全为空则自动关，任一有权限则自动开），并归类到"单据"分组。
+
+### 背景（根因）
+
+`src/constants/permissionModules.ts` L37 里，`history`（单据历史）是一个跟 `quotation`/`domesticQuotation`/`packing`/`invoice`/`purchase` 完全独立的权限位，`category: 'management'`，管理员在 `UserDetailModal` 里可以任意单独开关它，不受单据类权限影响。
+
+- History 页面（`src/features/history/app/HistoryPage.tsx` L83）先用 `useModulePermissionGuard('history')` 挡一层页面入口；进page之后，实际能看到哪些 tab 是另一套独立判断——`src/features/history/utils/historyPermissions.ts` L14-22 把每个 tab 映射回 `quotation`/`domesticQuotation`/`packing`/`invoice`/`purchase` 这五个单据类权限，`getPermittedHistoryTypes` 逐个检查。如果 `history=true` 但这五个都是 `false`，`availableTabs` 就是空数组，页面兜底显示 L402 那句"当前账号没有可查看的单据类型权限"。
+- 首页（`src/features/dashboard/app/DashboardPage.tsx` L138-147）的 `<DashboardDocuments>` 完全不检查 `history` 权限，无条件渲染；内部 `RecentDocumentsList`（`src/components/dashboard/RecentDocumentsList.tsx` L81-121, L174-195）只根据五个单据类权限过滤"具体显示哪些类型按钮/文档"，但外层的搜索框、All/时间筛选、管理按钮这一整条 UI 永远显示，哪怕五个单据类权限全是 `false`——这就是用户截图里"筛选栏还在，只是空空如也"的原因。
+
+两边的问题合起来看：`history` 这个独立开关的存在，让"页面入口权限"和"实际能看到的单据类型"这两件事可以互相矛盾，而首页又完全没有读这个开关。
+
+### 修法思路
+
+把 `history` 从"管理员手动独立设置的开关"改成"由五个单据类权限自动派生的只读状态"：单据类权限（`quotation`/`domesticQuotation`/`packing`/`invoice`/`purchase`）任一为 `true` → `history` 自动为 `true`；五个全部为 `false` → `history` 自动为 `false`。管理后台里把它挪到"单据"分组展示，但不能再手动点——这样"进 History 页面的资格"和"里面能看到的单据类型"永远保持一致，History 的兜底空状态提示理论上不会再触发（不用删，留着当防御性兜底即可）。首页拿同一个 `history` 派生值来决定整块单据筛选 UI 显示与否，跟 History 页面同步。管理员身份只控制后台权限/账号管理入口，业务模块同样按显式模块权限显示和访问。
+
+现有数据库里已经存在不一致的历史数据（比如这次报告的账号），只在管理后台改代码不会自动纠正已有记录，需要配一条迁移脚本一次性修正。
+
+### Files in scope
+
+- `src/constants/permissionModules.ts` —— `history` 模块 `category` 改成 `'document'`；新增一个导出的"单据类权限模块 id 列表"常量，供 admin 和文档判断复用
+- `src/features/admin/hooks/usePermissions.ts` —— 初始化和每次 toggle 单据类权限时，自动重新计算 `history` 的 `canAccess`
+- `src/features/admin/components/UserDetailModal.tsx` —— `history` 这一项渲染成禁止手动点击（`disabled`），并在"单据"分组下加一行说明文字
+- `src/features/dashboard/app/DashboardPage.tsx` —— `<DashboardDocuments>` 外层加 `permissionMap.permissions.history` 条件渲染
+- `migrations/012_sync_history_permission_with_documents.sql`（新建，原编号 010 与 `010_merge_purchase_registration_permissions.sql` 撞车，TASK-147 重新编号）—— 一次性修正现有用户的 `history` 权限，使其跟单据类权限保持一致
+
+### 具体改动要求
+
+1. `src/constants/permissionModules.ts`：
+
+```ts
+// L21-25 保持不动（quotation/domesticQuotation/packing/invoice/purchase）
+// ...
+{ moduleId: 'history', label: '单据历史', icon: '📚', category: 'document' }, // 原为 'management'，现归入"单据"分组
+// ...（customer 及之后条目不变）
+
+/**
+ * 决定"单据历史"开关自动开启/关闭的单据类模块（不含 history 本身）。
+ * 任一为 true → history 自动为 true；全部为 false → history 自动为 false。
+ * admin 页面（usePermissions.ts）和首页（DashboardPage.tsx 的 permissionMap.permissions.history）
+ * 共用同一份判断依据，此处只是权限模块的静态 id 列表，不含派生逻辑本身。
+ */
+export const DOCUMENT_TYPE_MODULE_IDS = ['quotation', 'domesticQuotation', 'packing', 'invoice', 'purchase'] as const;
+```
+
+（`history` 条目物理位置可以留在原处不用挪，`UserDetailModal.tsx` L222 是按 `category` 字段 `filter` 出分组，`Array.prototype.filter` 保留原始相对顺序，只改 `category` 字段就会让它自然排在"单据"分组的最后，不需要手动调整数组顺序。）
+
+2. `src/features/admin/hooks/usePermissions.ts`：新增派生函数，并在初始化、toggle 单据类权限两处应用：
+
+```ts
+import { PERMISSION_MODULES, getAllPermissionModules, DOCUMENT_TYPE_MODULE_IDS } from '@/constants/permissionModules';
+// ...
+
+/** 根据单据类权限重新计算 history 的 canAccess（任一为 true 则 true，否则 false） */
+function deriveHistoryPermission(perms: Permission[]): Permission[] {
+  const hasAnyDocumentPermission = DOCUMENT_TYPE_MODULE_IDS.some(
+    (moduleId) => perms.find((p) => p.moduleId === moduleId)?.canAccess === true
+  );
+  const existing = perms.find((p) => p.moduleId === 'history');
+  const historyEntry = { id: existing?.id ?? '', moduleId: 'history', canAccess: hasAnyDocumentPermission };
+  return perms.some((p) => p.moduleId === 'history')
+    ? perms.map((p) => (p.moduleId === 'history' ? historyEntry : p))
+    : [...perms, historyEntry];
+}
+```
+
+`initializePermissions` 里，`normalizePermissions` 之后立刻应用一次，确保打开弹窗时就能看到修正后的状态（不用等管理员先点一下别的开关）：
+
+```ts
+const initializePermissions = useCallback((userPermissions: Permission[], userIsAdmin: boolean, userIsActive: boolean) => {
+  const perms = deriveHistoryPermission(normalizePermissions(userPermissions || [], userIsAdmin));
+  setPermissions(perms);
+  setOriginalPermissions(perms);
+  // ...其余不变
+}, []);
+```
+
+`togglePermission` 里，在原有的父子级联逻辑（L54-65）之后，如果这次 toggle 的是单据类权限之一，重新派生 `history`：
+
+```ts
+const togglePermission = useCallback((moduleId: string) => {
+  setPermissions(prev => {
+    // ...原有 existing / next / parentModule / turnedOff 逻辑保持不动...
+
+    if ((DOCUMENT_TYPE_MODULE_IDS as readonly string[]).includes(moduleId)) {
+      next = deriveHistoryPermission(next);
+    }
+
+    return next;
+  });
+}, []);
+```
+
+3. `src/features/admin/components/UserDetailModal.tsx`：在渲染 `PermissionToggle` 那一段（约 L234-248），`history` 不允许手动点：
+
+```tsx
+{categoryModules.map((module) => {
+  const perm = permissions.find((p) => p.moduleId === module.moduleId);
+  const parentEnabled = perm?.canAccess ?? false;
+  const hasAdvanced = !!module.advancedFeatures?.length;
+  const isAutoManagedHistory = module.moduleId === 'history';
+
+  return (
+    <div key={module.moduleId} className={hasAdvanced ? 'col-span-2 sm:col-span-3' : undefined}>
+      <PermissionToggle
+        moduleId={module.moduleId}
+        name={module.label}
+        icon={module.icon}
+        isEnabled={parentEnabled}
+        onToggle={togglePermission}
+        disabled={isBusy || isAutoManagedHistory}
+      />
+      {/* ...hasAdvanced 分支不变... */}
+    </div>
+  );
+})}
+```
+
+并在"单据"分组（`category === 'document'`）的卡片里补一行说明，紧跟 `{CATEGORY_LABELS[category]}` 那个 `<p>` 之后：
+
+```tsx
+{category === 'document' && (
+  <p className="mb-2 px-0.5 text-[10px] text-gray-400 dark:text-gray-500">
+    "单据历史"根据本组其它单据类权限自动开启/关闭，无需单独设置
+  </p>
+)}
+```
+
+4. `src/features/dashboard/app/DashboardPage.tsx`：`<DashboardDocuments>`（L138-147）外层加条件渲染，跟 L116 `{(hasInquiryAccess || hasPurchaseAccess) && (...)}` 用同一种写法：
+
+```tsx
+{permissionMap.permissions.history && (
+  <DashboardDocuments
+    documents={recentDocuments}
+    timeFilter={timeFilter}
+    typeFilter={typeFilter}
+    showAllFilters={showAllFilters}
+    onTimeFilterChange={setTimeFilter}
+    onTypeFilterChange={setTypeFilter}
+    onShowAllFiltersChange={setShowAllFilters}
+    permissionMap={permissionMap}
+  />
+)}
+```
+
+5. `migrations/012_sync_history_permission_with_documents.sql`（新建，参考 `migrations/009_split_domestic_quotation_permission.sql` 的写法和执行方式；原本按写规格时的顺序应为 010，但跟 `010_merge_purchase_registration_permissions.sql` 撞号，TASK-147 重新编号为 012，并在其前新增了 011 给管理员账号补全权限）：
+
+```sql
+-- Migration 012: 同步"单据历史"（history）权限为单据类权限的自动派生值
+-- 背景：TASK-146 —— history 原本可以独立开关，导致"开着单据历史但没有任何单据类权限"的不一致状态
+--       （History 页面报"当前账号没有可查看的单据类型权限"，首页单据筛选栏却仍然显示）。
+--       管理后台从这次改动起把 history 变成只读派生状态，但已有数据需要一次性修正。
+-- 执行命令:
+-- npx wrangler d1 execute mluonet-users --file=./migrations/012_sync_history_permission_with_documents.sql --remote
+
+-- 1. 单据类权限全部为 0（或缺失）的账号 → 关闭 history
+UPDATE Permission
+SET canAccess = 0
+WHERE moduleId = 'history'
+  AND canAccess = 1
+  AND userId IN (
+    SELECT User.id FROM User
+    WHERE User.id NOT IN (
+        SELECT userId FROM Permission
+        WHERE moduleId IN ('quotation', 'domesticQuotation', 'packing', 'invoice', 'purchase')
+          AND canAccess = 1
+      )
+  );
+
+-- 2a. 单据类权限任一为 1、但尚无 history 记录的账号 → 插入 history=1
+INSERT INTO Permission (id, userId, moduleId, canAccess)
+SELECT 'history-' || User.id AS id, User.id AS userId, 'history' AS moduleId, 1 AS canAccess
+FROM User
+WHERE User.id IN (
+    SELECT userId FROM Permission
+    WHERE moduleId IN ('quotation', 'domesticQuotation', 'packing', 'invoice', 'purchase')
+      AND canAccess = 1
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM Permission WHERE Permission.userId = User.id AND Permission.moduleId = 'history'
+  );
+
+-- 2b. 单据类权限任一为 1、但现有 history 记录是 0 的账号 → 更新为 1
+UPDATE Permission
+SET canAccess = 1
+WHERE moduleId = 'history'
+  AND canAccess = 0
+  AND userId IN (
+    SELECT userId FROM Permission
+    WHERE moduleId IN ('quotation', 'domesticQuotation', 'packing', 'invoice', 'purchase')
+      AND canAccess = 1
+  );
+```
+
+### Acceptance criteria
+
+- 管理后台打开任意用户的权限弹窗：单据类权限（外贸报价合同/内销报价合同/箱单发票/财务发票/采购订单）五个全部关闭时，"单据历史"开关应自动显示为关闭状态，且点击它没有反应（`disabled`）。管理员账号缺失的业务模块权限也应默认显示为关闭。
+- 给其中任意一个单据类权限打开后，"单据历史"开关应立即自动变成打开状态（不需要额外点击"单据历史"本身）；再把这一个也关掉、且没有其它单据类权限打开时，"单据历史"应自动变回关闭。
+- "单据历史"这一项在 UI 上出现在"单据"分组卡片里（`quotation`/`domesticQuotation`/`packing`/`invoice`/`purchase` 同一张卡片），不再出现在"管理"分组。
+- 保存后重新打开同一个用户的权限弹窗，"单据历史"的状态应该正确地反映刚才保存的单据类权限组合（验证是持久化的，不是只有前端临时状态对）。
+- 前端跑一遍 `migrations/012_sync_history_permission_with_documents.sql` 后（本地 D1 或提供 mock 数据验证 SQL 逻辑），之前"history=1 但五个单据类权限全 0"的普通账号应变成 history=0；"history=0 或缺失但至少一个单据类权限=1"的普通账号应变成 history=1；迁移不修改管理员账号（`isAdmin=1`）的既有权限行。
+- 任意账号：五个单据类权限全部没有时，访问首页（`/dashboard`），单据筛选整块 UI（搜索框、All/1D/3D/1W/1M、管理按钮、文档网格/空状态）都不应该出现；给任意一个单据类权限后，这块 UI 应该正常出现，且里面的类型按钮只显示实际有权限的那些类型（`RecentDocumentsList` 原有的按类型过滤逻辑不变）。
+- 任意账号：五个单据类权限全部没有时，访问 `/history`，`useModulePermissionGuard('history')` 应该直接判定无权限，显示 `PermissionDenied`（走的是页面入口这一层，不再可能出现"进了页面但里面空空如也"这种中间态）。
+- 管理员账号只额外拥有 `/admin` 账号控制和权限控制入口；其它业务模块入口、页面和接口（含客户/单据/询报价代理与 AI 邮件 API）都必须按模块权限开通后才能用。
+
+### Non-goals / 红线
+
+- 不删除 `src/features/history/app/HistoryPage.tsx` L402 那句"当前账号没有可查看的单据类型权限"兜底文案——这次改动让它理论上不会再触发，但留着当防御性兜底没有坏处，不属于本任务范围。
+- 不改 `src/components/dashboard/RecentDocumentsList.tsx` 内部按单据类型过滤显示按钮/文档的逻辑（L81-121, L174-195），那部分本来就是对的，只是外层容器加一层 `history` 门槛。
+- 不改 `src/features/history/utils/historyPermissions.ts` 的 tab 权限映射逻辑，它本来就是对的，跟这次改动无关。
+- 不改 `src/features/admin/components/CreateUserModal.tsx` / `src/components/admin/CreateUserModal.tsx`（新建用户）——新建用户时不设置任何权限，管理员后续打开 `UserDetailModal` 配置权限时自然会走新的派生逻辑，不需要在建号环节额外处理。
+- 不改 `src/constants/permissionModules.ts` 里 `PERMISSION_MODULES` 数组里其它模块的 `category`、顺序或 `advancedFeatures` 结构，只改 `history` 这一条的 `category` 字段。
+- 迁移脚本处理所有账号，按单据类权限同步 `history`；管理员不再作为例外。
+
+### Verification results
+
+- `npx jest src/features/admin/hooks/__tests__/usePermissions.test.ts src/features/admin/components/__tests__/UserDetailModal.test.tsx src/features/history/utils/__tests__/historyPermissions.test.ts --runInBand` 通过（含派生逻辑、只读开关、弹窗实时联动、管理员缺失业务权限不默认全开，以及管理员无单据类权限时不默认显示历史 tab）。
+- `npx tsc --noEmit` 通过；相关改动文件 ESLint 无 warning / error。
+- migration 010 已在内存 SQLite 中用无单据权限、有单据权限但 history=0、有单据权限但缺 history、管理员四类数据验证通过；生产远程 D1 尚待手动执行。
+- `npm run build` 通过。
+
+**Status:** completed (production migrations 011/012 executed 2026-07-11, see TASK-147)
+
+## TASK-147：迁移文件编号撞车 + 管理员业务权限收紧前必须先补数据，否则管理员会被自己的系统锁在外面
+
+**状态**：未开始
+**背景来源**：TASK-146 落地时，实现范围被扩大到"去掉全仓库业务权限里的管理员兜底"（把所有 `permission?.canAccess ?? isAdmin` 改成 `permission?.canAccess === true`），涉及 `useModulePermissionGuard.ts`、`lib/permissions.ts`、`historyPermissions.ts`、`InquiryPage.tsx`、`UserCard.tsx`，以及 `/api/customers`、`/api/documents`、`/api/generate`、`/api/inquiry` 四个后端路由。verify 阶段发现这个策略变更是有意为之，但缺一步关键前置工作：**没有任何迁移给现有管理员账号补上完整的模块权限行**——历次迁移（`003`/`007`/`009`/`010_merge_purchase_registration_permissions`）全都写的是 `WHERE User.isAdmin = 0`，因为旧模型下管理员靠运行时兜底、本来就不需要显式权限行。旧模型下"是管理员就默认放行"被拿掉后，如果生产环境的管理员账号 Permission 表里没有把 `getAllPermissionModules()` 列出的每个模块都显式存一条 `canAccess=1`，这次改动上线后管理员会被锁在报价、箱单发票、财务发票、采购订单、客户管理、询报价、AI 邮件等几乎所有业务功能和对应 API 之外。用户已确认："确实要做，但需要先补数据"。
+
+另外发现一个独立的小 bug：TASK-146 新建的 `migrations/010_sync_history_permission_with_documents.sql` 跟已经存在的 `migrations/010_merge_purchase_registration_permissions.sql`（TASK-111 遗留，2026-07-10）编号撞车了，两个不同内容的迁移文件用了同一个前缀，需要重新编号。
+
+### Files in scope
+
+- `migrations/011_backfill_admin_full_permissions.sql`（新建）—— 给现有管理员账号补全所有模块权限
+- `migrations/010_sync_history_permission_with_documents.sql` → 重命名为 `migrations/012_sync_history_permission_with_documents.sql`（避免跟已有的 010 撞号；同时把文件内注释里的迁移编号、执行命令路径一并改掉）
+- `CODEX_TASKS.md` —— TASK-146 章节里引用旧文件名的地方（"Files in scope"、"具体改动要求"第5点、"Non-goals"、"Verification results"里的执行说明）改成新文件名
+- `docs/core/CHANGELOG.md` —— TASK-146 那条改动记录里的文件名引用
+- `docs/core/CURRENT_STATE.md` —— 迁移文件列表、迁移执行状态说明里的文件名引用
+
+### 具体改动要求
+
+1. 新建 `migrations/011_backfill_admin_full_permissions.sql`，给所有 `User.isAdmin = 1` 的账号，把 `src/constants/permissionModules.ts` 里 `getAllPermissionModules()` 会列出的每一个 moduleId（`quotation`、`domesticQuotation`、`packing`、`invoice`、`purchase`、`inquiry`、`inquiry.batchEdit`、`order.financials`、`purchaseRegistration`、`history`、`customer`、`ai-email`、`impa`、`clock`、`holidays`、`rmb`）都补一条 `canAccess=1`（没有记录的插入，记录是 0 的改成 1；已经是 1 的不动）：
+
+```sql
+-- Migration 011: 给现有管理员账号补全所有模块的显式权限行
+-- 背景：TASK-147 —— TASK-146 把全仓库业务权限判断从"?? isAdmin 兜底"改成"必须有显式 canAccess=1"，
+--       管理员账号不再自动获得任何业务模块访问权。旧模型下管理员本来就不需要显式权限行（历次迁移
+--       003/007/009/010_merge_purchase_registration_permissions 都特意排除了管理员），
+--       如果不补这条数据，管理员会被这次策略变更锁在自己系统的业务功能和 API 之外。
+--       本迁移必须在 TASK-146 的严格权限判断代码部署到生产之前（或同一批次内）执行完毕。
+-- 执行命令:
+-- npx wrangler d1 execute mluonet-users --file=./migrations/011_backfill_admin_full_permissions.sql --remote
+
+WITH admin_users AS (
+  SELECT id FROM User WHERE isAdmin = 1
+),
+modules(moduleId) AS (
+  VALUES
+    ('quotation'), ('domesticQuotation'), ('packing'), ('invoice'), ('purchase'),
+    ('inquiry'), ('inquiry.batchEdit'), ('order.financials'), ('purchaseRegistration'),
+    ('history'), ('customer'), ('ai-email'), ('impa'), ('clock'), ('holidays'), ('rmb')
+)
+INSERT INTO Permission (id, userId, moduleId, canAccess)
+SELECT
+  'admin-backfill-' || admin_users.id || '-' || modules.moduleId AS id,
+  admin_users.id AS userId,
+  modules.moduleId AS moduleId,
+  1 AS canAccess
+FROM admin_users
+CROSS JOIN modules
+WHERE NOT EXISTS (
+  SELECT 1 FROM Permission
+  WHERE Permission.userId = admin_users.id
+    AND Permission.moduleId = modules.moduleId
+);
+
+UPDATE Permission
+SET canAccess = 1
+WHERE canAccess = 0
+  AND moduleId IN (
+    'quotation', 'domesticQuotation', 'packing', 'invoice', 'purchase',
+    'inquiry', 'inquiry.batchEdit', 'order.financials', 'purchaseRegistration',
+    'history', 'customer', 'ai-email', 'impa', 'clock', 'holidays', 'rmb'
+  )
+  AND userId IN (SELECT id FROM User WHERE isAdmin = 1);
+```
+
+注意：这里的 moduleId 列表是根据当前 `getAllPermissionModules()` 手动列出的一次性快照，以后新增权限模块不会自动补给管理员，这跟项目里其它迁移一样都是一次性历史修正，不是长期触发器，不需要做成动态读取。
+
+2. 把 `migrations/010_sync_history_permission_with_documents.sql` 重命名为 `migrations/012_sync_history_permission_with_documents.sql`，文件内容不用改逻辑，只改开头注释里的编号说明和执行命令路径：
+
+```sql
+-- Migration 012: 同步"单据历史"（history）权限为单据类权限的自动派生值
+-- 背景：TASK-146 —— history 原本可以独立开关，导致"开着单据历史但没有任何单据类权限"的不一致状态。
+--       本迁移需要在 migrations/011_backfill_admin_full_permissions.sql 之后执行，
+--       确保管理员账号已经补全单据类权限后再做 history 的派生同步。
+-- 执行命令:
+-- npx wrangler d1 execute mluonet-users --file=./migrations/012_sync_history_permission_with_documents.sql --remote
+```
+
+（下面三段 UPDATE/INSERT SQL 逻辑本身不用动，TASK-146 里已经改成不排除管理员的版本是对的。）
+
+3. `CODEX_TASKS.md`：把 TASK-146 章节里所有 `migrations/010_sync_history_permission_with_documents.sql` 的引用改成 `migrations/012_sync_history_permission_with_documents.sql`（"Files in scope" 列表、"具体改动要求"第5点标题和里面的执行命令、"Non-goals"最后一条、"Verification results" 里那句手动验证说明）。
+
+4. `docs/core/CHANGELOG.md`：TASK-146 那条记录里"新增 `010_sync_history_permission_with_documents.sql`"改成"新增 `migrations/011_backfill_admin_full_permissions.sql`（管理员权限补全）和 `migrations/012_sync_history_permission_with_documents.sql`（history 派生同步，需在补全之后执行）"。
+
+5. `docs/core/CURRENT_STATE.md`：迁移文件列表那段代码块，把
+
+```
+009_split_domestic_quotation_permission.sql
+010_sync_history_permission_with_documents.sql
+```
+
+改成
+
+```
+009_split_domestic_quotation_permission.sql
+010_merge_purchase_registration_permissions.sql
+011_backfill_admin_full_permissions.sql
+012_sync_history_permission_with_documents.sql
+```
+
+（顺手把 `010_merge_purchase_registration_permissions.sql` 也补进这个列表——它是 TASK-111 遗留的迁移，现有列表里漏掉了，这次顺手补全，不算额外范围）。下面"生产确认"那段文字里关于 `010_sync_history_permission_with_documents.sql` 的状态说明改成分别描述 011 和 012 两条的状态，并注明 011 必须先于 012、且必须先于 TASK-146 严格权限代码上线执行。
+
+### Acceptance criteria
+
+- `migrations/` 目录下不再有编号重复的文件；`ls migrations/` 里 010/011/012 分别对应 `merge_purchase_registration_permissions`、`backfill_admin_full_permissions`、`sync_history_permission_with_documents` 三个不同内容。
+- 用构造的测试数据验证 011：某管理员账号原本只有 3 条权限记录（比如 `quotation=1`、`history=0`、`customer=0`）→ 跑完 011 后，`getAllPermissionModules()` 里列出的全部 16 个 moduleId 都应该有一条 `canAccess=1` 的记录（原本就是 1 的不受影响，原本是 0 或缺失的都变成 1）。
+- 011 不应该修改任何非管理员账号（`isAdmin=0`）的权限行。
+- 012（原 010）的三段 UPDATE/INSERT 逻辑跟 TASK-146 时的版本完全一致，只有文件名和头部注释变化，不引入行为差异。
+- `CODEX_TASKS.md`、`CHANGELOG.md`、`CURRENT_STATE.md` 里不再出现任何对 `migrations/010_sync_history_permission_with_documents.sql` 这个旧文件名的引用（可以用 `grep -r "010_sync_history_permission_with_documents"` 确认全仓库为空）。
+
+### Non-goals / 红线
+
+- 不重新讨论"是否应该去掉管理员业务权限兜底"这个策略本身——用户已经确认这是要做的，本任务只解决"先补数据再上线"这个前置条件和迁移编号撞车问题，不回滚 TASK-146 的策略变更代码。
+- 不改 TASK-146 涉及的任何 `.ts`/`.tsx` 代码文件（`useModulePermissionGuard.ts`、`lib/permissions.ts`、四个 API 路由等），那些逻辑已经验证过是对的，本任务只补数据和修文件名。
+- 不去动 `migrations/010_merge_purchase_registration_permissions.sql` 这个已有文件的内容，只是在文档列表里把它补上，不重新执行它。
+- 011 只处理管理员账号（`isAdmin=1`），不去动普通用户的权限行——普通用户这次策略变更本来就没有行为差异（`?? isAdmin` 对非管理员原本就等价于 `=== true`，只有管理员这条分支的兜底被拿掉了）。
+
+### Verification steps
+
+- `grep -rn "010_sync_history_permission_with_documents" .`（排除 `node_modules`/`.git`）应该没有任何匹配
+- 在本地/测试 D1（或内存 SQLite 模拟，参考 TASK-146 时用的验证方式）依次跑 011 → 012，用构造数据验证：① 管理员账号权限被补全；② 普通用户账号不受影响；③ 补全后再跑 012，管理员的 `history` 值能正确按其单据类权限（这时已经是 1）派生为 1。
+- `npm run build` 通过（本任务不改代码，理论上不会影响构建，但按项目惯例仍需确认一遍）
+- 手动确认：这两条迁移必须在 TASK-146 的代码变更部署到生产之前，或者在同一次发布窗口内、且 011 先于代码上线执行完毕——生产环境执行命令：
+  ```bash
+  npx wrangler d1 execute mluonet-users --file=./migrations/011_backfill_admin_full_permissions.sql --remote
+  npx wrangler d1 execute mluonet-users --file=./migrations/012_sync_history_permission_with_documents.sql --remote
+  ```
+
+### Verification results（2026-07-11，直接在远程 D1 上执行并复查）
+
+- `migrations/` 目录编号撞车已解决：`010_merge_purchase_registration_permissions.sql`（原有）、`011_backfill_admin_full_permissions.sql`（新建）、`012_sync_history_permission_with_documents.sql`（原 010 重命名）三个文件互不冲突；`grep -rn "010_sync_history_permission_with_documents" .` 全仓库无匹配。
+- 执行 011 前复查生产 D1：两个管理员账号（roger、dex）合计有 12 条业务模块 `canAccess=0` 的显式记录（roger 10 条：`quotation`/`domesticQuotation`/`packing`/`invoice`/`purchase`/`customer`/`history`/`ai-email`/`inquiry.batchEdit`/`order.financials`；dex 2 条：`inquiry.batchEdit`/`order.financials`）——证实了背景里的风险评估：TASK-146 拿掉 `?? isAdmin` 兜底后，这两个管理员账号会被这些显式 0 值直接锁在对应业务模块之外。
+- 011 的 INSERT 语句：`changes=0`（两个管理员账号本来就有全部 16 个 moduleId 的记录行，没有缺失需要插入）。
+- 011 的 UPDATE 语句：`changes=12`，跟执行前复查的 12 条显式 0 记录数一致。执行后复查 `SELECT ... WHERE userId IN (roger, dex) AND canAccess = 0` 结果为空，两个管理员账号已无任何业务模块显式 0 记录。
+- 012 三段 SQL 依次执行：第一段（清空无单据权限账号的 history）`changes=0`；第二段（补插 history=1）`changes=0`；第三段（history=0→1）`changes=1`（某普通账号）。
+- 全表复查：`history=1 AND 五个单据类权限全 0` 或 `五个单据类权限任一为1 AND history≠1` 的账号数为 0，无残留不一致记录。
+- 011、012 均已先于 TASK-146 代码变更部署到生产前执行完毕（本次改动目前仍在本地未提交，尚未部署）。
 
 **Status:** completed
 

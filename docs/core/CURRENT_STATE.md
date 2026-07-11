@@ -91,7 +91,9 @@ rmb
 - `purchaseOrderTable` 控制采购订单表过滤视图（询报价登记的已成单子集）；该视图不授予完整询报价登记权限。
 - `inquiry.batchEdit` 是询报价批量编辑 / 导入导出高级权限。
 - `order.financials` 是订单状态表金额、回款、到账金额高级权限。
-- `admin` 不是普通 moduleId，后台访问由 `isAdmin` 和中间件控制。
+- `admin` 不是普通 moduleId，后台访问由 `isAdmin` 和中间件控制；管理员身份只代表可进入权限控制和账号控制，不自动获得业务模块权限。
+- 业务模块统一按显式权限开通后才能使用：侧边栏/移动端入口、页面级守卫、权限 store、客户/单据/询报价代理 API、AI 邮件 API 都不再用 `isAdmin` 兜底。
+- `history` 不再是独立可编辑权限：由 `quotation`、`domesticQuotation`、`packing`、`invoice`、`purchase` 任一开启自动开启，五项全关时自动关闭；管理后台只读展示该派生状态。Dashboard 单据筛选区域、侧边栏“单据历史”入口与 History 页面入口共用这一权限结果，管理员也按该模块权限配置显示和访问。
 - 左侧 `IMPA物料` 已从公开硬编码入口改为 `impa` 模块权限。
 - 管理员不能在用户详情弹窗中关闭自己的管理员身份；该开关会禁用并提示需由其他管理员操作。
 - Worker 在单个或批量模块权限更新成功后刷新目标用户 `User.updatedAt`。前端通过 `/api/auth/permissions-meta` 在可见标签页每 90 秒检查该时间戳，变化时复用 `usePermissionRefresh` 自动刷新 session/权限并重载；后台标签页停止轮询，恢复前台立即补检，首次挂载只建立基准而不刷新。
@@ -120,6 +122,10 @@ rmb
 006_backfill_inquiry_customer_links.sql
 007_grant_default_impa_permission.sql
 008_add_domestic_document_type.sql
+009_split_domestic_quotation_permission.sql
+010_merge_purchase_registration_permissions.sql
+011_backfill_admin_full_permissions.sql
+012_sync_history_permission_with_documents.sql
 ```
 
 生产确认：
@@ -128,6 +134,7 @@ rmb
 - 执行后复查：`impa_permissions = 8`，`enabled_permissions = 8`。
 - `008_add_domestic_document_type.sql` 已在远程 D1 执行（2026-07-08 复查确认）。
 - 复查结果：`Document` 表 `type` CHECK 约束已包含 `'domestic'`；当前分组计数为 `confirmation=60`、`inquiry=967`、`invoice=9`、`packing=11`、`purchase=50`、`quotation=265`。
+- `011_backfill_admin_full_permissions.sql`、`012_sync_history_permission_with_documents.sql`（原编号 010，TASK-147 重新编号避免跟 `010_merge_purchase_registration_permissions.sql` 撞号）已于 2026-07-11 在远程 D1 依次执行完毕。执行前复查发现两个管理员账号（roger、dex）Permission 表里合计有 12 条业务模块显式 `canAccess=0` 记录（例如 roger 的 `quotation`/`packing`/`invoice`/`purchase`/`customer`/`domesticQuotation`/`history`/`ai-email` 等，共 10 条；dex 的 `inquiry.batchEdit`/`order.financials`，共 2 条）——这些账号在 TASK-146 拿掉全仓库的 `?? isAdmin` 兜底之后会被这些显式 0 值直接拦截，因此在 TASK-146 代码部署前先执行了 011 补全。011 执行后复查两个管理员账号已无任何 `canAccess=0` 记录；012 执行后全表复查（`history=1` 但五个单据类权限全 0`，或反之）结果为空，无残留不一致账号。
 
 ### localStorage
 

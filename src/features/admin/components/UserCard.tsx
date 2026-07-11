@@ -20,7 +20,7 @@ export function UserCard({ user, onEdit }: UserCardProps) {
   const initial = user.username.charAt(0).toUpperCase();
   const enabledModules = getAllPermissionModules().filter((moduleId) => {
     const permission = user.permissions.find((p) => p.moduleId === moduleId);
-    return permission?.canAccess ?? user.isAdmin;
+    return permission?.canAccess === true;
   }).length;
 
   return (

@@ -1,5 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
-import { PERMISSION_MODULES, getAllPermissionModules } from '@/constants/permissionModules';
+import {
+  DOCUMENT_TYPE_MODULE_IDS,
+  PERMISSION_MODULES,
+  getAllPermissionModules,
+} from '@/constants/permissionModules';
 import { Permission } from '../types';
 
 export const MODULE_PERMISSIONS = PERMISSION_MODULES.map(({ moduleId, label, icon }) => ({
@@ -8,16 +12,33 @@ export const MODULE_PERMISSIONS = PERMISSION_MODULES.map(({ moduleId, label, ico
   icon,
 }));
 
-function normalizePermissions(userPermissions: Permission[], defaultCanAccess = false): Permission[] {
+function normalizePermissions(userPermissions: Permission[]): Permission[] {
   return getAllPermissionModules().map((moduleId) => {
     const existing = userPermissions.find((permission) => permission.moduleId === moduleId);
 
     return {
       id: existing?.id ?? '',
       moduleId,
-      canAccess: existing?.canAccess ?? defaultCanAccess,
+      canAccess: existing?.canAccess ?? false,
     };
   });
+}
+
+/** 根据单据类权限重新计算 history：任一开启则开启，否则关闭。 */
+export function deriveHistoryPermission(perms: Permission[]): Permission[] {
+  const hasAnyDocumentPermission = DOCUMENT_TYPE_MODULE_IDS.some(
+    (moduleId) => perms.find((permission) => permission.moduleId === moduleId)?.canAccess === true
+  );
+  const existing = perms.find((permission) => permission.moduleId === 'history');
+  const historyEntry: Permission = {
+    id: existing?.id ?? '',
+    moduleId: 'history',
+    canAccess: hasAnyDocumentPermission,
+  };
+
+  return existing
+    ? perms.map((permission) => permission.moduleId === 'history' ? historyEntry : permission)
+    : [...perms, historyEntry];
 }
 
 export function usePermissions() {
@@ -30,7 +51,7 @@ export function usePermissions() {
 
   // 初始化权限数据
   const initializePermissions = useCallback((userPermissions: Permission[], userIsAdmin: boolean, userIsActive: boolean) => {
-    const perms = normalizePermissions(userPermissions || [], userIsAdmin);
+    const perms = deriveHistoryPermission(normalizePermissions(userPermissions || []));
     setPermissions(perms);
     setOriginalPermissions(perms);
     setIsAdmin(userIsAdmin);
@@ -42,6 +63,8 @@ export function usePermissions() {
   // 切换权限开关
   const togglePermission = useCallback((moduleId: string) => {
     setPermissions(prev => {
+      if (moduleId === 'history') return prev;
+
       const existing = prev.find(p => p.moduleId === moduleId);
       let next = existing
         ? prev.map(p =>
@@ -62,6 +85,10 @@ export function usePermissions() {
             ? { ...permission, canAccess: false }
             : permission
         );
+      }
+
+      if ((DOCUMENT_TYPE_MODULE_IDS as readonly string[]).includes(moduleId)) {
+        next = deriveHistoryPermission(next);
       }
 
       return next;

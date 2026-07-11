@@ -230,11 +230,17 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                     <p className="mb-2 px-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                       {CATEGORY_LABELS[category]}
                     </p>
+                    {category === 'document' && (
+                      <p className="mb-2 px-0.5 text-[10px] text-gray-400 dark:text-gray-500">
+                        “单据历史”根据本组其它单据类权限自动开启/关闭，无需单独设置
+                      </p>
+                    )}
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {categoryModules.map((module) => {
                         const perm = permissions.find((p) => p.moduleId === module.moduleId);
                         const parentEnabled = perm?.canAccess ?? false;
                         const hasAdvanced = !!module.advancedFeatures?.length;
+                        const isAutoManagedHistory = module.moduleId === 'history';
 
                         return (
                           <div key={module.moduleId} className={hasAdvanced ? 'col-span-2 sm:col-span-3' : undefined}>
@@ -244,7 +250,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                               icon={module.icon}
                               isEnabled={parentEnabled}
                               onToggle={togglePermission}
-                              disabled={isBusy}
+                              disabled={isBusy || isAutoManagedHistory}
                             />
                             {hasAdvanced && (
                               <div className="mt-1.5 grid grid-cols-1 gap-1.5 border-l-2 border-gray-200 pl-3 dark:border-gray-700 sm:grid-cols-2">

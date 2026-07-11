@@ -19,6 +19,11 @@ async function proxyCustomerRequest(request: NextRequest, pathSegments: string[]
     return NextResponse.json({ error: '未登录' }, { status: 401 });
   }
 
+  const customerPermission = (session.user.permissions ?? []).find((permission) => permission.moduleId === 'customer');
+  if (customerPermission?.canAccess !== true) {
+    return NextResponse.json({ error: '无客户管理权限' }, { status: 403 });
+  }
+
   const userId = session.user.id || session.user.username;
   if (!userId) {
     return NextResponse.json({ error: '无法识别当前用户' }, { status: 401 });

@@ -205,7 +205,7 @@ export function AppSidebar({
     const moduleId = PERMISSION_MODULE_MAP[item.permissionKey];
     if (!moduleId) return true;
     const permission = permissionUser.permissions?.find((p) => p.moduleId === moduleId);
-    return permission?.canAccess ?? permissionUser.isAdmin;
+    return permission?.canAccess === true;
   }
 
   const widthClass = isMobile ? 'w-[260px]' : 'app-sidebar';
