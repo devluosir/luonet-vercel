@@ -2671,6 +2671,180 @@ export default function QuotationPage() {
 
 **Status:** completed
 
+## TASK-145：退出登录后，主内容区/侧边栏会冻结停留一段时间，才跳到登录页——补一个 logo 过渡态
+
+**状态**：已完成（2026-07-11）
+**背景来源**：用户反馈点击"退出登录"后，画面里业务页面（侧边栏+主内容区）还会停留一段时间，之后才跳到登录窗口，问是否也该像 [[TASK-142]]/[[TASK-143]] 那样在退出到登录页出现之间补一个 logo 过渡态。
+
+### 背景（根因）
+
+跟 TASK-142/143 是同一类"异步过渡态没人管"的问题，但方向相反、链路更长：
+
+1. `src/components/layout/AppUserMenu.tsx` L273-283 的"退出登录"按钮点击直接调用 `onLogout()`（即 `src/hooks/useAppUser.ts` L21-35 的 `handleLogout`），点击瞬间没有任何本地过渡状态——按钮只是关掉下拉菜单，页面该长什么样还长什么样。
+2. `handleLogout` 调用的是不带参数的 `signOut()`。NextAuth 默认行为：先 POST `/api/auth/signout` 清 session，然后用默认 `redirect: true` + 默认 `callbackUrl`（当前页面 URL，比如 `/dashboard`）做**整页刷新跳转**——不是 SPA 内部跳转。
+3. 这段"清 session 请求 + 整页刷新"期间，浏览器按整页导航的默认行为，会一直冻结显示当前这页（侧边栏 + 主内容区），这就是用户看到的"主体部分还在"。
+4. 整页刷新回到 `/dashboard` 后，`src/middleware.ts` 的 `withAuth` 发现没 session，又重定向到 `/?callbackUrl=%2Fdashboard`——等于**两次整页导航**才落到登录页 `/`。
+5. 到了登录页，`src/app/page.tsx` L105-118（TASK-143 加的）才会显示 logo 过渡态——但前面两跳整页导航期间完全没有任何东西覆盖，logo 出现得太晚，跟用户描述的现象吻合。
+
+修法思路（跟 TASK-142/143 的"控制过渡期展示什么"是同一类手法，但这里同时要收窄链路）：
+
+- 把 `signOut()` 改成 `signOut({ redirect: false })` 之后手动 `router.push('/')`，跳过"整页刷新 `/dashboard` 再被中间件重定向到 `/`"这多余的一跳，改成一次 SPA 内部跳转（`DesktopSidebarHost.tsx` L20 本来就靠 `pathname === '/'` 隐藏侧边栏，`/page.tsx` 本来就靠 `useSession().status` 展示 logo/表单，两边逻辑都不用动）。
+- 但即使去掉多余的整页跳转，点击到 `signOut()` 的 POST 请求返回、再到 `router.push('/')` 完成渲染之间，仍有一小段异步等待——这段时间业务页面还挂载着。所以要在点击"退出登录"的**瞬间**就铺一层全屏 logo 遮罩盖住当前页面（侧边栏+主内容区一起盖住），直到真正落到登录页且 session 状态确认为 `unauthenticated`（即登录表单该出现的时机）再收起遮罩，跟 `page.tsx` 自己的 logo 画面无缝衔接。
+
+### Files in scope
+
+- `src/hooks/useLogoutTransition.ts`（新建）—— 一个极简 Zustand store，只有 `isLoggingOut: boolean` 和 `setLoggingOut`，跟 `src/lib/permissions.ts` 用同一套 `create()` 写法
+- `src/components/layout/LogoutTransitionOverlay.tsx`（新建）—— 全屏 logo 遮罩组件，读上面的 store
+- `src/hooks/useAppUser.ts` —— `handleLogout` 改成先 `setLoggingOut(true)`，`signOut({ redirect: false })` 之后手动 `router.push('/')`；失败时 `setLoggingOut(false)` 并保留原有错误提示
+- `src/app/providers.tsx` —— 挂载新的 `LogoutTransitionOverlay`（跟 `DesktopSidebarHost` 挂在同一层级）
+
+### 具体改动要求
+
+1. `src/hooks/useLogoutTransition.ts`：
+
+```ts
+import { create } from 'zustand';
+
+interface LogoutTransitionState {
+  isLoggingOut: boolean;
+  setLoggingOut: (value: boolean) => void;
+}
+
+export const useLogoutTransitionStore = create<LogoutTransitionState>((set) => ({
+  isLoggingOut: false,
+  setLoggingOut: (value) => set({ isLoggingOut: value }),
+}));
+```
+
+2. `src/components/layout/LogoutTransitionOverlay.tsx`：跟 `src/app/page.tsx` L105-118 的 logo 过渡态视觉保持一致（同一个 `LOGO_CONFIG.web.logo`、同样的 `animate-pulse`），全屏 fixed 定位、z-index 要盖过侧边栏和一切下拉菜单（`AppUserMenu` 用到 `z-[9999]`，这里用比它更高的值，比如 `z-[10000]`）：
+
+```tsx
+'use client';
+
+import { useEffect } from 'react';
+import Image from 'next/image';
+import { useSession } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
+import { LOGO_CONFIG } from '@/lib/logo-config';
+import { useLogoutTransitionStore } from '@/hooks/useLogoutTransition';
+
+export function LogoutTransitionOverlay() {
+  const isLoggingOut = useLogoutTransitionStore((s) => s.isLoggingOut);
+  const setLoggingOut = useLogoutTransitionStore((s) => s.setLoggingOut);
+  const pathname = usePathname();
+  const { status } = useSession();
+
+  // 真正落到登录页、且 session 已确认为未登录（登录表单该出现的时机）才收起遮罩，
+  // 跟 page.tsx 自己的 logo 画面无缝衔接，不会露出中间态。
+  useEffect(() => {
+    if (isLoggingOut && pathname === '/' && status === 'unauthenticated') {
+      setLoggingOut(false);
+    }
+  }, [isLoggingOut, pathname, status, setLoggingOut]);
+
+  if (!isLoggingOut) return null;
+
+  return (
+    <div className="fixed inset-0 z-[10000] flex min-h-screen flex-col items-center justify-center bg-[var(--bg-primary)]">
+      <Image
+        src={LOGO_CONFIG.web.logo}
+        alt="LC APP"
+        width={96}
+        height={96}
+        className="object-contain animate-pulse"
+        priority
+      />
+    </div>
+  );
+}
+```
+
+3. `src/hooks/useAppUser.ts`：补 `useRouter`、引入 store，`handleLogout` 改为：
+
+```ts
+import { useCallback, useState } from 'react';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { usePermissionStore } from '@/lib/permissions';
+import { useLogoutTransitionStore } from './useLogoutTransition';
+import { clearD1DocumentLocalState } from '@/utils/d1Sync';
+import { useToast } from '@/components/ui/Toast';
+
+export function useAppUser() {
+  const permUser = usePermissionStore((state) => state.user);
+  const { data: session } = useSession();
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const { showToast } = useToast();
+  const router = useRouter();
+
+  const user = {
+    name: permUser?.username || session?.user?.name || session?.user?.username || '用户',
+    isAdmin: permUser?.isAdmin ?? session?.user?.isAdmin ?? false,
+    email: permUser?.email || session?.user?.email || null,
+  };
+
+  const handleLogout = useCallback(async () => {
+    setLogoutError(null);
+    useLogoutTransitionStore.getState().setLoggingOut(true);
+    try {
+      usePermissionStore.getState().clearUser();
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('userCache');
+        clearD1DocumentLocalState();
+      }
+      await signOut({ redirect: false });
+      router.push('/');
+    } catch (error) {
+      useLogoutTransitionStore.getState().setLoggingOut(false);
+      const message = error instanceof Error ? error.message : '退出登录失败，请稍后重试';
+      setLogoutError(message);
+      showToast(message, 'error');
+    }
+  }, [showToast, router]);
+
+  return { user, handleLogout, logoutError };
+}
+```
+
+4. `src/app/providers.tsx`：引入并挂载 `LogoutTransitionOverlay`，放在 `DesktopSidebarHost` 后面（同一层级，谁在前在后不影响，因为遮罩是 `fixed` 定位）：
+
+```tsx
+import { LogoutTransitionOverlay } from '@/components/layout/LogoutTransitionOverlay';
+// ...
+<DesktopSidebarHost />
+<LogoutTransitionOverlay />
+{children}
+```
+
+### Acceptance criteria
+
+- 桌面端：在任意业务页面（比如 `/dashboard`、`/quotation`）点击侧边栏用户菜单里的"退出登录"，**点击的瞬间**就应该看到全屏 logo 遮罩盖住侧边栏和主内容区，不应该再看到业务页面内容冻结停留。
+- 移动端：`MobileBottomTab.tsx` 里同一个"退出登录"入口（同样走 `onLogout` → `handleLogout`）行为一致，点击瞬间出现同一个 logo 遮罩。
+- 遮罩出现后，应该只经过一次 SPA 内部跳转（不再是"整页刷新 `/dashboard` 再被中间件重定向到 `/`"这两跳），最终停在 `/`，遮罩收起后露出的是登录表单（`unauthenticated` 状态），不会露出中间态或空白。
+- 退出登录整个过程中 URL 地址栏最多只变化一次（从原业务路径直接变成 `/`），不应该先短暂出现 `/dashboard`（说明还在走整页刷新那条旧路径）。
+- `signOut` 请求失败（比如断网）时，遮罩应该收起、恢复原页面，并像现在一样弹出错误 toast（`showToast(message, 'error')`），不能卡在遮罩画面出不来。
+- 不影响正常登录、`TASK-142`（侧边栏路径判断）、`TASK-143`（登录页 logo 过渡）已有行为——用普通登录（不经过退出）访问业务路由，侧边栏/内容区显示时机跟改动前一致。
+
+### Non-goals / 红线
+
+- 不改 `src/app/page.tsx` 现有的 logo/表单切换逻辑（TASK-143 的成果），本任务只是在它前面补一层遮罩，衔接空窗期，不重复实现。
+- 不改 `src/components/layout/DesktopSidebarHost.tsx` 的路径判断逻辑（TASK-142 的成果），它本来就会在 `pathname === '/'` 时隐藏侧边栏，不需要跟新遮罩联动。
+- 不改 `src/middleware.ts` 的重定向规则本身；本任务通过在客户端跳过"整页刷新触发中间件重定向"这条路径来减少跳转次数，不是去改中间件的行为。
+- 不改 `src/lib/auth.ts` 的 `redirect` 回调或 NextAuth 配置。
+- 不引入额外依赖（遮罩用现有 Tailwind + Next `Image`，状态管理用项目已有的 `zustand`，别加别的状态库）。
+- `AppUserMenu.tsx`、`MobileBottomTab.tsx` 本身不需要改动——它们已经统一走 `onLogout` prop，这次改动全部收在 `useAppUser.ts`/新增文件里。
+
+### Verification steps
+
+- `npx tsc --noEmit` 通过
+- `npx eslint src/hooks/useAppUser.ts src/hooks/useLogoutTransition.ts src/components/layout/LogoutTransitionOverlay.tsx src/app/providers.tsx` 无输出
+- 手动验证（桌面端 + 移动端各一次）：登录后点击"退出登录"，观察点击瞬间到登录表单出现之间，全程只看到 logo 遮罩，看不到业务页面冻结、看不到 `/dashboard` 短暂重新出现在地址栏、也看不到空白闪烁。
+- 手动验证：退出后重新登录一次，确认登录流程（TASK-142/143 的过渡态）行为不受影响。
+- 手动验证：断网状态下点击"退出登录"，确认能正确收起遮罩并弹出错误提示，不会卡死。
+- `npm run build` 通过（注意：此仓库沙盒里 `npm run build` 稳定超过 40s 超时，本地/CI 环境需完整跑一遍确认；参考 [[TASK-142]] 的沙盒超时经验）
+
+**Status:** completed
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

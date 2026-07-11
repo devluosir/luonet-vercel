@@ -7,6 +7,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog';
 import { SidebarCollapseProvider } from '@/contexts/SidebarCollapseContext';
 import { DesktopSidebarHost } from '@/components/layout/DesktopSidebarHost';
+import { LogoutTransitionOverlay } from '@/components/layout/LogoutTransitionOverlay';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { usePermissionChangeWatcher } from '@/hooks/usePermissionChangeWatcher';
 
@@ -41,6 +42,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <PermissionChangeWatcher />
               <D1SyncInitializer />
               <DesktopSidebarHost />
+              <LogoutTransitionOverlay />
               {children}
             </ToastProvider>
           </ConfirmDialogProvider>

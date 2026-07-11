@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+#### 退出登录过渡态（TASK-145）
+- 点击桌面端或移动端“退出登录”后立即显示全屏 Logo 遮罩，覆盖侧边栏和主内容区，避免清理会话期间继续冻结显示业务页面。
+- 退出流程改为 `signOut({ redirect: false })` 后单次客户端跳转到 `/`，不再先整页刷新当前业务路由、再由 middleware 二次重定向；请求失败时会收起遮罩并保留错误 Toast。
+- Dashboard、时区汇率、全球假日移除各自复制的旧退出逻辑，统一复用 `useAppUser`；全仓库退出流程只保留一个实现入口。
+
 #### 内销报价合同页面权限（TASK-144）
 - `/quotation` 页面级守卫改为直接按 URL `tab` 选择权限模块：内销报价/合同检查 `domesticQuotation`，外贸报价/销售确认检查 `quotation`，避免仅有内销权限的普通用户被外贸权限守卫误拦截。
 - 权限不足提示同步区分内销与外贸；判断直接读取 URL，不依赖报价 store 的异步 tab 初始化，确保地址栏首次进入也不会产生权限竞态。

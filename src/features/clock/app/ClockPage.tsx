@@ -1,16 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Clock, Plus, RefreshCw, Search, X } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { PermissionDenied } from '@/components/PermissionDenied';
 import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { Button } from '@/components/ui/Button';
+import { useAppUser } from '@/hooks/useAppUser';
 import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
-import { usePermissionStore } from '@/lib/permissions';
-import { clearD1DocumentLocalState } from '@/utils/d1Sync';
 
 interface CityDef {
   id: string;
@@ -888,6 +887,7 @@ function TimeGrid({
 export function ClockPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { handleLogout } = useAppUser();
   const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('clock');
   const [mounted, setMounted] = useState(false);
   const [tab, setTab] = useState<TabKey>('clock');
@@ -907,15 +907,6 @@ export function ClockPage() {
     const timer = setInterval(() => setCurrentUtcMs(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [mounted, realtime]);
-
-  const handleLogout = useCallback(async () => {
-    usePermissionStore.getState().clearUser();
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('userCache');
-      clearD1DocumentLocalState();
-    }
-    await signOut();
-  }, []);
 
   useEffect(() => {
     if (mounted && status === 'unauthenticated') router.push('/');

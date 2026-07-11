@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { AppLayout } from '@/components/layout';
-import { usePermissionStore } from '@/lib/permissions';
-import { clearD1DocumentLocalState } from '@/utils/d1Sync';
+import { useAppUser } from '@/hooks/useAppUser';
 import { usePermissionRefresh } from '@/hooks/usePermissionRefresh';
 
 // 导入新的模块化组件
@@ -24,6 +23,7 @@ import type { Granularity } from '@/features/dashboard/utils/inquiryStats';
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { handleLogout } = useAppUser();
   const [mounted, setMounted] = useState(false);
 
   // 使用自定义hooks管理状态
@@ -72,17 +72,6 @@ export default function DashboardPage() {
   // 初始化逻辑
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  // 优化的退出逻辑
-  const handleLogout = useCallback(async () => {
-    usePermissionStore.getState().clearUser();
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('userCache');
-      clearD1DocumentLocalState();
-    }
-
-    await signOut();
   }, []);
 
   // 使用 useEffect 处理重定向

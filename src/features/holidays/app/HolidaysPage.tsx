@@ -1,14 +1,13 @@
 'use client';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Globe, ChevronDown, Info } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { PermissionDenied } from '@/components/PermissionDenied';
 import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
+import { useAppUser } from '@/hooks/useAppUser';
 import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
-import { usePermissionStore } from '@/lib/permissions';
-import { clearD1DocumentLocalState } from '@/utils/d1Sync';
 import { HOLIDAYS_2026, CATEGORY_LABEL, getHolidayDetail, type Holiday, type HolidayCategory } from '../data/holidays2026';
 
 // ── 工具函数 ──────────────────────────────────────────────────────────────────
@@ -229,6 +228,7 @@ const CAT_TABS: { key: CategoryFilter; label: string; dot?: string }[] = [
 export function HolidaysPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { handleLogout } = useAppUser();
   const { ready: permissionReady, allowed: hasModuleAccess } = useModulePermissionGuard('holidays');
   const [mounted, setMounted] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -240,15 +240,6 @@ export function HolidaysPage() {
   const currentMonthKey = useMemo(() => todayStr().slice(0, 7), []);
 
   useEffect(() => { setMounted(true); }, []);
-
-  const handleLogout = useCallback(async () => {
-    usePermissionStore.getState().clearUser();
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('userCache');
-      clearD1DocumentLocalState();
-    }
-    await signOut();
-  }, []);
 
   useEffect(() => {
     if (mounted && status === 'unauthenticated') router.push('/');
