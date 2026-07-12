@@ -206,9 +206,28 @@ export function OrderEditModal({
   const [receivedNumStr, setReceivedNumStr] = useState('');
   const [subStatus, setSubStatus] = useState<OrderSubStatus | undefined>(undefined);
   const [subStatusRemark, setSubStatusRemark] = useState('');
+  const initializedRecordIdRef = useRef<string | null>(null);
+  const subStatusDirtyRef = useRef(false);
 
   useEffect(() => {
-    if (!isOpen || !record) return;
+    if (!isOpen || !record) {
+      initializedRecordIdRef.current = null;
+      subStatusDirtyRef.current = false;
+      return;
+    }
+
+    // 后台同步会替换 record 对象。完整表单只在每次打开时初始化，避免刷新吞掉未保存输入；
+    // 用户尚未操作状态区时，C/P/S 状态和备注则继续跟随最新记录。
+    if (initializedRecordIdRef.current === record.id) {
+      if (!subStatusDirtyRef.current) {
+        setSubStatus(record.orderSubStatus);
+        setSubStatusRemark(record.orderSubStatusRemark ?? '');
+      }
+      return;
+    }
+
+    initializedRecordIdRef.current = record.id;
+    subStatusDirtyRef.current = false;
     setDeliveryDate(record.orderDeliveryDate ? stripDateBrackets(record.orderDeliveryDate) : '');
     setConfirmDate(record.orderConfirmDate ? stripDateBrackets(record.orderConfirmDate) : '');
     const customerNoFallback = (record.customerNo ?? '').replace(/RFQ/g, 'PO');
@@ -236,6 +255,12 @@ export function OrderEditModal({
     const amountN = parseFloat(trimmedAmount);
     const trimmedReceived = receivedNumStr.trim();
     const receivedN = parseFloat(trimmedReceived);
+    const subStatusPatch: Partial<InquiryRecord> = subStatusDirtyRef.current
+      ? {
+          orderSubStatus: subStatus,
+          orderSubStatusRemark: subStatus ? subStatusRemark.trim() || undefined : undefined,
+        }
+      : {};
 
     onSave(record.id, {
       orderDeliveryDate: deliveryDate.trim() ? normalizeShortDateInput(deliveryDate.trim()) : undefined,
@@ -250,8 +275,7 @@ export function OrderEditModal({
             orderReceivedAmount: !isNaN(receivedN) && trimmedReceived ? `${currency}${receivedN.toFixed(2)}` : undefined,
           }
         : {}),
-      orderSubStatus: subStatus,
-      orderSubStatusRemark: subStatus ? subStatusRemark.trim() || undefined : undefined,
+      ...subStatusPatch,
     });
     onClose();
   };
@@ -334,6 +358,7 @@ export function OrderEditModal({
             <div className="space-y-1">
               <label className={LABEL_CLS}>执行情况</label>
               <input
+                aria-label="执行情况"
                 value={deliveryStatus}
                 onChange={(e) => setDeliveryStatus(e.target.value)}
                 className={FIELD_CLS}
@@ -415,7 +440,10 @@ export function OrderEditModal({
                 <button
                   key={val}
                   type="button"
-                  onClick={() => setSubStatus((prev) => (prev === val ? undefined : val))}
+                  onClick={() => {
+                    subStatusDirtyRef.current = true;
+                    setSubStatus((prev) => (prev === val ? undefined : val));
+                  }}
                   className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
                     subStatus === val
                       ? 'bg-red-500 text-white'
@@ -433,7 +461,10 @@ export function OrderEditModal({
                 </span>
                 <input
                   value={subStatusRemark}
-                  onChange={(e) => setSubStatusRemark(e.target.value)}
+                  onChange={(e) => {
+                    subStatusDirtyRef.current = true;
+                    setSubStatusRemark(e.target.value);
+                  }}
                   className={
                     'min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm ' +
                     'text-gray-700 outline-none placeholder:text-gray-300 ' +

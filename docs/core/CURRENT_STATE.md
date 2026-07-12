@@ -1,6 +1,6 @@
 # Current State
 
-最后更新：2026-07-11
+最后更新：2026-07-12
 当前分支：`main`
 当前提交：以 `git log -1 --oneline` 为准
 应用版本：`1.2.0`（`package.json`）
@@ -202,8 +202,8 @@ theme-config
 
 - 询报价记录已支持 `customerId`、`contactId` 结构化关联。
 - 采购部登记复用 `InquiryRecord` 的 `description` 字段读写内容描述（与询报价登记共享同一份数据）；新增 `purchaseSupplierStatuses` 与 `purchaseQuotedStatuses` 两个采购部专用字段，结构与询报价登记的 `supplierStatuses` / `quotedStatuses` 相同，但数据独立存储，通过点击整行弹出的"编辑询价"弹窗编辑；不展示/不读写 `orderDeliveryStatus` / `orderDeliveryConsignee`（那是订单状态表 `/order` 和采购订单表 `/purchase-order-table` 共同维护的共享字段，两边编辑的是同一份数据）。
-- 询价成单后支持 `orderSubStatus` 标记：`cancelled`（辙销C）、`suspended`（悬挂P）、`followup`（善后S）。
-- 编辑询价时选择 C/P/S 标记会出现单行「情况备注」，保存到 `orderSubStatusRemark`；取消标记或清空订单编号会清空该备注。
+- 询价成单后支持 `orderSubStatus` 标记：`cancelled`（辙销C）、`suspended`（悬挂P）、`followup`（善后S）；状态标记和 `orderSubStatusRemark` 情况备注统一在订单状态表的“编辑订单”弹窗维护。
+- “编辑订单”弹窗按记录 ID 读取 store 刷新后的最新对象；后台同步不会重置用户正在编辑的普通订单字段，且保存时只在用户明确操作过 C/P/S 状态区后才提交状态字段，避免编辑执行情况时用旧快照覆盖其它标签页刚更新的状态（TASK-151）。
 - 询价 Excel 导入导出包含 `订单标记`、`订单备注` 两列；D1 仍通过 `Document.data` JSON 透传，无需 schema 迁移。
 - 新增询价要求选择客户/联络人；旧记录可保留文本继续编辑。
 - 批量关联客户会写入 `customerId`、`contactId` 和规范化 `inquirer`。

@@ -83,7 +83,10 @@ export function OrderTable({
   const confirmDateCol = showConfirmDateCol(bp);
   const lgCols = showLgCols(bp);
   const adminCols = showAdminCols(bp, canViewFinancials);
-  const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  const editingRecord = editingRecordId
+    ? records.find((record) => record.id === editingRecordId) ?? null
+    : null;
   const allIds = records.map((r) => r.id);
   const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
   const someSelected = allIds.some((id) => selectedIds.has(id)) && !allSelected;
@@ -196,7 +199,7 @@ export function OrderTable({
               canViewFinancials={canViewFinancials}
               consigneeOptions={consigneeOptions}
               onUpdate={(patch) => onUpdate(record.id, patch)}
-              onOpenEdit={setEditingRecord}
+              onOpenEdit={(record) => setEditingRecordId(record.id)}
               canBatchEdit={canBatchEdit}
               selected={selectedIds.has(record.id)}
               onToggleSelect={onToggleSelect}
@@ -206,11 +209,11 @@ export function OrderTable({
       </table>
     </div>
     <OrderEditModal
-      isOpen={editingRecord !== null}
+      isOpen={editingRecordId !== null}
       record={editingRecord}
       canViewFinancials={canViewFinancials}
       consigneeOptions={consigneeOptions}
-      onClose={() => setEditingRecord(null)}
+      onClose={() => setEditingRecordId(null)}
       onSave={(id, patch) => onUpdate(id, patch)}
     />
     </>

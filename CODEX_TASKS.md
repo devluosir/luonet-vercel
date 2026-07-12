@@ -3508,6 +3508,62 @@ WHERE canAccess = 0
 `order.financials` 仍是独立权限，不要求同时拥有 `inquiry` 父权限；`purchaseRegistration.financials` 这次按更严格口径实现，必须同时拥有 `purchaseRegistration` 父权限才生效。这种不对称是这次拆分后显性的行为差异，但没有改变订单状态表的既有权限逻辑。
 
 
+## TASK-151：修复"编辑订单"弹窗用旧快照回写 orderSubStatus，导致订单意外脱离"正常"筛选
+
+**状态：** 已完成（2026-07-12）
+
+**背景：**
+
+用户反馈：订单状态表里，有些订单在编辑「执行情况」后，会从"正常"筛选（`OrderPage.tsx` 第 64–65 行 `matchesOrderStatus`）里消失。已核实"正常"筛选条件本身是对的（`record.orderSubStatus === undefined || record.orderSubStatus === 'suspended'`，即只排除撤销/善后，与用户预期一致），问题不在筛选公式，而在数据层——`orderSubStatus` 被意外写成了 `'cancelled'` 或 `'followup'`。
+
+根因定位在 `src/features/order/components/OrderTable.tsx` 与 `src/features/order/components/OrderEditModal.tsx`（该弹窗 2026-07-10 新增，见 `OrderEditModal.tsx` 顶部注释）：
+
+1. `OrderTable.tsx` 第 86 行：`const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);`，第 199 行 `onOpenEdit={setEditingRecord}` 只在用户点击打开弹窗那一刻赋值一次。弹窗打开期间，如果 store 里这条记录因为后台同步（`useInquirySync` 周期拉取 D1，或另一台设备/另一个标签页的编辑）而发生变化，`editingRecord` 这个局部快照不会跟着刷新——它是弹窗打开瞬间的冻结引用。
+2. `OrderEditModal.tsx` 第 207、226 行：`subStatus` 状态只在 `useEffect(..., [isOpen, record])`（第 210–228 行）里从 `record.orderSubStatus` 初始化一次。因为上面那条，`record` 这个 prop 引用在弹窗打开期间基本不变，`subStatus` 就一直停留在弹窗刚打开时的值。
+3. `handleSave`（第 234–257 行）无条件把 `orderSubStatus: subStatus` 和 `orderSubStatusRemark` 塞进保存的 patch 里（第 253–254 行），不管用户这次到底有没有碰"订单状态标记"这几个按钮。
+4. 保存走 `OrderTable.tsx` 第 214 行 `onSave={(id, patch) => onUpdate(id, patch)}` → `OrderPage.tsx` 第 480 行 `onUpdate={(id, patch) => updateRecord(id, patch)}` → `useInquiryStore.updateRecord`（`inquiry.store.ts` 第 71–75 行）→ `inquiryService.update` 整条合并本地记录 → `syncUpdatedRecord` → `updateInD1` 把合并后的**完整记录**推给 D1。
+
+净效果：只要弹窗打开时间跨越了一次后台同步/别处的状态变更，用户在弹窗里仅仅编辑"执行情况"这一个字段并保存，就会把弹窗打开那一刻的旧 `orderSubStatus` 快照重新写回去，悄悄覆盖掉期间已经发生的真实状态（包括把本该是"正常"的订单重新打上撤销/善后标记，或反向清掉别人刚打的标记）。这与本项目已知的"整条覆盖冲字段"系列问题同源（参见 `bug_inquiry_merge_pending_protection`、`bug_inquiry_restricted_view_cache_corruption`、`bug_inquiry_sync_phantom_records` 这几类历史修复），根源都是"共享 store 上，某个局部编辑态拿着旧快照做整条覆盖式保存"。
+
+**Files in scope：**
+
+- `src/features/order/components/OrderTable.tsx` — 把 `editingRecord: InquiryRecord | null` 改成只存 `editingRecordId: string | null`；渲染 `OrderEditModal` 时，`record` prop 改成每次从当前 `records`（该组件已有的最新数组 prop）里按 id 现查现取（如 `records.find(r => r.id === editingRecordId) ?? null`），保证弹窗拿到的始终是最新记录，而不是打开瞬间的冻结引用。
+- `src/features/order/components/OrderEditModal.tsx` — 确认/依赖上面这个改动后，`useEffect`（第 210–228 行）的依赖 `record` 会在底层数据变化时拿到新的对象引用而重新初始化 `deliveryStatus`/`subStatus`/`subStatusRemark` 等本地状态，不需要额外改依赖数组本身；但要检查这一步会不会打断用户"正在弹窗里没保存的输入"（见下方验收标准的取舍要求）。
+
+**Acceptance criteria：**
+
+- 复现场景：打开某订单的"编辑订单"弹窗后，在弹窗仍打开时，让该记录的 `orderSubStatus` 在别处发生变化（比如另一个标签页/浏览器把它标记为"善后"，或清除已有标记），之后仅在这个已打开的弹窗里编辑"执行情况"并保存——保存后该记录的 `orderSubStatus` 应该是"别处刚变化后的最新值"，而不是弹窗打开瞬间的旧值。也就是说，本次编辑不应该把无关的 `orderSubStatus` 悄悄改回旧状态。
+- 正常操作路径不受影响：用户在弹窗里点击"撤销C/悬挂P/善后S"按钮改变标记、填写情况备注、点击保存，依然按用户在弹窗里的操作生效并正确持久化。
+- 如果弹窗打开期间用户已经开始编辑但还没保存（比如已经在"执行情况"输入框里打了字），此时如果底层记录因后台同步刷新导致 `record` prop 变化、`useEffect` 重新触发，不能让用户已经打的字被静默清空——需要判断当前 `deliveryStatus`/`customerNo` 等字段是否与打开时的初始值不同，如果用户已经有未保存的改动，本次弹窗刷新只更新用户明确没有碰过的字段（至少要保证不因为这个改动引入"打字打到一半被吃掉"的新问题；如果实现上一时做不到精细的按字段判断，可以退而求其次：只让"订单状态标记"（`subStatus`/`subStatusRemark`）这部分状态跟着最新记录刷新，其余表单字段维持"仅在弹窗刚打开的那次挂载时初始化一次，之后不再因为底层数据变化被重置"——两种方案任选其一，但必须在实现说明里写清楚选的是哪种，以及为什么这样不会丢用户输入）。
+- `OrderTable.tsx` 里其它使用 `editingRecord`（如 `isOpen={editingRecord !== null}`、`onClose={() => setEditingRecord(null)}`）相应改成基于 `editingRecordId` 判断/重置。
+
+**Non-goals / 红线：**
+
+- 不改 `matchesOrderStatus`/`countByStatus`（`OrderPage.tsx` 第 61–67、198–208 行）里"正常"筛选的判定公式——已确认这段逻辑本身是对的，不要动。
+- 不改 `src/worker.ts` 里 `INQUIRY_CLEARABLE_FIELDS`（第 205–211 行）和 PUT handler 里"整条记录推送 + 按 body 是否含该字段决定是否清空"的机制（第 1622–1664 行）——这是同一类问题的服务端一侧，但影响面更大（涉及所有走 `updateInD1` 全量推送的调用方，不止这个弹窗），如果本任务改完前端快照问题后 Claude/用户判断还需要动服务端这块，会另开一个 TASK，这次不要顺手改。
+- 不影响 `src/features/purchase-order-registration/` 下的采购订单表/采购部登记页面——它们有自己独立的 `PurchaseOrderEditModal.tsx`/`PurchaseOrderRegistrationPage.tsx`，本任务只改订单状态表（`src/features/order/`）这一侧，除非用户后续单独提出采购订单表也有同样问题。
+- 不新增数据库字段或改 `InquiryRecord` 的数据结构，只改前端组件如何取/传 `record`。
+
+**Verification steps（供实现者跑）：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/order/components/OrderTable.tsx src/features/order/components/OrderEditModal.tsx`
+- `npm run build`（本仓库沙箱历史上多次因 45 秒硬超时在 Next.js 编译阶段被打断，属已知限制，建议用户本地或 CI 补跑一次完整确认）
+- 手动验证（建议在浏览器里做，可以用两个标签页模拟"别处发生变化"）：
+  1. 标签页 A 打开某条正常订单（无 撤销/悬挂/善后 标记）的"编辑订单"弹窗，不要关闭。
+  2. 标签页 B 打开同一条订单，标记为"善后S"并保存。
+  3. 回到标签页 A（弹窗仍开着），只编辑"执行情况"文本，点击保存。
+  4. 检查这条订单最终状态：应该仍然是"善后S"（标签页 B 的改动应保留），而不是被标签页 A 的保存冲回"正常"（或反过来验证：B 清除标记，A 保存后不应该把标记重新写回去）。
+  5. 额外验证：在弹窗打开时不涉及任何"别处变化"的最普通路径下（单人操作），编辑执行情况、日期、金额、状态标记等字段保存后都符合预期，没有引入新的回归。
+
+**实现结论：**
+
+- `OrderTable` 改为只保存编辑记录 ID，并从最新 `records` prop 实时解析弹窗记录，移除打开瞬间的冻结对象快照。
+- `OrderEditModal` 的普通订单字段只在每次打开时初始化，后台同步只刷新用户尚未触碰的 C/P/S 状态区，避免覆盖正在输入的执行情况等草稿。
+- 保存时只有用户明确操作过状态按钮或状态备注才提交 `orderSubStatus` / `orderSubStatusRemark`；未操作时省略这两个字段，从补丁层彻底避免无关编辑回写旧状态。
+- 新增 2 个组件测试，覆盖“后台刷新不吞输入且不提交旧状态”和“用户明确修改状态优先保存”。
+- 验证通过：定向 Jest（2 项）、相关 ESLint、`npx tsc --noEmit`、`npm run build`、`git diff --check`。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

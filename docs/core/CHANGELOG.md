@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2026-07-11
+## [Unreleased] - 2026-07-12
 
 ### Added
 
@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **可靠变更信号**：Worker 的单个/批量权限更新成功后统一 touch 目标用户 `updatedAt`，按用户名查询响应同步返回该字段。
 
 ### Fixed
+
+#### 编辑订单并发状态保护（TASK-151）
+- 订单状态表的编辑弹窗改为按记录 ID 从最新列表解析当前记录，不再长期持有打开弹窗时的旧对象快照。
+- 后台同步刷新时保留用户尚未保存的执行情况、日期、客户订单号等输入，只同步用户未触碰的 C/P/S 状态区。
+- 保存普通订单字段时不再附带未被用户操作的 `orderSubStatus` / `orderSubStatusRemark`，避免编辑执行情况时把另一标签页刚更新的撤销、悬挂或善后状态覆盖回旧值。
+- 新增组件回归测试，覆盖后台刷新与用户明确修改状态两条路径。
 
 #### 单据历史权限联动（TASK-146）
 - `history` 改为由外贸报价合同、内销报价合同、箱单发票、财务发票、采购订单五类权限自动派生：任一开启则自动开启，全部关闭则自动关闭；管理后台归入“单据”分组并禁止手动切换。
