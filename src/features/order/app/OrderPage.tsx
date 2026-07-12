@@ -16,6 +16,7 @@ import { getCustomersForDropdown } from '@/features/customer/services/customerSe
 import { useInquirySync } from '@/features/inquiry/hooks/useInquirySync';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import type { InquiryRecord, OrderSubStatus } from '@/features/inquiry/types';
+import { isNormalOrder } from '@/features/inquiry/utils/orderStatus';
 import { OrderTable, type SortField } from '../components/OrderTable';
 
 // ── 时间范围类型 ──────────────────────────────────────────────────────────────
@@ -61,8 +62,7 @@ function isInProgressOrder(record: InquiryRecord): boolean {
 function matchesOrderStatus(record: InquiryRecord, filter: OrderStatusFilter): boolean {
   if (filter === 'all') return true;
   if (filter === 'inProgress') return isInProgressOrder(record);
-  if (filter === 'normal')
-    return record.orderSubStatus === undefined || record.orderSubStatus === 'suspended';
+  if (filter === 'normal') return isNormalOrder(record);
   return record.orderSubStatus === filter;
 }
 
@@ -199,7 +199,7 @@ export function OrderPage() {
     () => ({
       all: baseFiltered.length,
       inProgress: baseFiltered.filter(isInProgressOrder).length,
-      normal: baseFiltered.filter((r) => r.orderSubStatus === undefined || r.orderSubStatus === 'suspended').length,
+      normal: baseFiltered.filter(isNormalOrder).length,
       cancelled: baseFiltered.filter((r) => r.orderSubStatus === 'cancelled').length,
       suspended: baseFiltered.filter((r) => r.orderSubStatus === 'suspended').length,
       followup: baseFiltered.filter((r) => r.orderSubStatus === 'followup').length,

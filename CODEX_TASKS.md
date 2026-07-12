@@ -3622,6 +3622,27 @@ WHERE canAccess = 0
 - 相关 ESLint、`npx tsc --noEmit`、`npm run build`、`git diff --check` 均通过。
 - `npm run pre-release` 的 selector 自检通过；随后全量 Jest 被仓库既有的无关失败中断（报价解析旧 mapping 断言、报价 store 日志断言、CustomerTimeline 缺少 `ToastProvider`、Jest 误加载 Playwright E2E），本次涉及的询报价测试没有失败。
 
+## TASK-154：修复订单“正常”筛选漏掉 `orderSubStatus: null`
+
+**状态：** 已完成（2026-07-12）
+
+**背景：**
+
+FL2627、FL2629、FL2630、FL2632、FL2633、FL2637、FL2640、FL2641、FL2644、KD2601、KD2602、`KD2603(FL2605)` 等有效订单在 D1 中保存了显式 `orderSubStatus: null`。旧“正常”筛选只接受 `undefined` 或 `suspended`，导致这些无 C/P/S 标记的订单被漏掉；根因是同步层用 `null` 传递清空意图，而 Worker 将其原样保存在 JSON 中。
+
+**实现与验收：**
+
+- 新增共享 `isNormalOrder`，订单状态表和采购订单表的列表、角标统一兼容 `undefined` / `null` / `suspended`。
+- 新增 `mergeInquiryPayload`；Worker 对五个可清空字段的显式 `null` 执行属性删除，完整记录缺字段清理规则保持不变。
+- 新增迁移 013，删除既有 `Document.data.orderSubStatus = null` 并刷新 `updatedAt`/`updated_at`，确保客户端增量同步能拉到清理结果。
+- 增加状态分类与 payload 合并测试；同步更新 `ORDER_STATUS_TABLE.md`、`INQUIRY_MODULE.md`、`CURRENT_STATE.md`、`CHANGELOG.md`。
+
+**执行与验证：**
+
+- 远端迁移 013 已执行：显式 `orderSubStatus: null` 从 18 条降为 0；上述 12 条有效订单均确认字段已删除、记录仍为 active。
+- Worker 已部署至 `udb.luocompany.net`，版本 `98e92379-def9-4b5c-b3a9-340a8cf20118`。
+- 定向 Jest：3 个测试文件、13 个用例全部通过；相关 ESLint、`npx tsc --noEmit`、`npm run build`、`git diff --check` 均通过。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

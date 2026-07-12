@@ -203,7 +203,8 @@ interface CustomerQuoteStatus {
 - **主存储**: `localStorage` key = `inquiry_records`
 - **D1 同步**: Cloudflare Worker `udb.luocompany.net/api/inquiry`
   - 全量 JSON 存入 `Document.data` 列（无需 schema 迁移即可扩展字段）
-  - `orderNo`、`orderSubStatus`、`orderSubStatusRemark`、`customerId`、`contactId` 是可清空字段；完整记录 PUT 时若字段缺失，Worker 会从旧 JSON 中移除，避免远端保留旧值
+  - `orderNo`、`orderSubStatus`、`orderSubStatusRemark`、`customerId`、`contactId` 是可清空字段；完整记录 PUT 时若字段缺失，或任意 PUT 显式传入 `null`，Worker 都会从旧 JSON 中移除，避免远端保留旧值或持久化无业务含义的 `null`
+  - `migrations/013_remove_null_inquiry_order_sub_status.sql` 已清理旧数据中显式为 `null` 的 `orderSubStatus`；前端“正常”筛选仍兼容历史/缓存中的 `null`
   - 新增 → `POST /api/inquiry`
   - 更新 → `PUT /api/inquiry/:id`
   - 删除 → `DELETE /api/inquiry/:id`（软删除）

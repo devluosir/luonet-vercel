@@ -1,4 +1,5 @@
 import { D1UserClient } from './lib/d1-client';
+import { mergeInquiryPayload } from './lib/inquiryPayload';
 import { hashPassword, verifyPassword } from './lib/password-hash';
 
 // 定义D1数据库接口
@@ -201,14 +202,6 @@ type InquiryRecordPayload = {
   updatedAt?: string;
   [key: string]: unknown;
 };
-
-const INQUIRY_CLEARABLE_FIELDS = [
-  'orderNo',
-  'orderSubStatus',
-  'orderSubStatusRemark',
-  'customerId',
-  'contactId',
-] as const;
 
 function serializeDocument(row: DocumentRow) {
   return {
@@ -1630,15 +1623,14 @@ async function handleInquiryRequest(
       ).bind(id).first<{ created_at: string; data: string | null }>();
       const createdAt = existingRow?.created_at ?? now;
       const existingData = parseJsonData<InquiryRecordPayload>(existingRow?.data ?? null, {});
-      const mergedData: InquiryRecordPayload = { ...existingData, ...body, id, updatedAt: now };
       const isFullInquiryRecord = typeof body.inquiryNo === 'string'
         && Array.isArray(body.supplierStatuses)
         && Array.isArray(body.quotedStatuses);
-      if (isFullInquiryRecord) {
-        for (const field of INQUIRY_CLEARABLE_FIELDS) {
-          if (!(field in body)) delete mergedData[field];
-        }
-      }
+      const mergedData = mergeInquiryPayload<InquiryRecordPayload>(
+        existingData,
+        { ...body, id, updatedAt: now },
+        isFullInquiryRecord
+      );
       const inquiryNo = typeof mergedData.inquiryNo === 'string' ? mergedData.inquiryNo : '';
       const customerNo = typeof mergedData.customerNo === 'string' ? mergedData.customerNo : '';
       const customerId = typeof mergedData.customerId === 'string' && mergedData.customerId ? mergedData.customerId : null;

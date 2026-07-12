@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+#### 订单“正常”筛选兼容空状态（TASK-154）
+- 订单状态表与采购订单表的「正常」列表和角标改为共用 `isNormalOrder`，同时接受未设置、历史 `null` 和悬挂P；撤销C、善后S仍保持独立状态。
+- Worker PUT 收到 `orderNo`、`orderSubStatus`、`orderSubStatusRemark`、`customerId`、`contactId` 的显式 `null` 时删除对应 `Document.data` JSON 属性，避免清空操作再次持久化 `orderSubStatus: null`。
+- 新增迁移 `013_remove_null_inquiry_order_sub_status.sql`，清理既有显式空状态并刷新同步时间；新增前端状态判定和 Worker payload 合并回归测试。
+
 #### 询报价“已成单”筛选口径（TASK-153）
 - 「已成单」改为包含所有具有有效订单编号的记录，不再排除标记为辙销C或善后S的订单；「已辙销」与「善后」继续作为可重叠的细分筛选。
 - 列表筛选与状态角标复用同一个订单编号判定，并新增回归测试覆盖普通、C/P/S、空白订单号和缺少订单号的记录。
