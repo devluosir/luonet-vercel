@@ -18,6 +18,11 @@ export type QuoteStatusFilter =
 
 export type LinkStatusFilter = 'all' | 'unlinked';
 
+/** “已成单”的统一口径：只要存在非空订单编号即可，C/P/S 仅作为可重叠的细分状态。 */
+export function hasOrderNumber(record: Pick<InquiryRecord, 'orderNo'>): boolean {
+  return Boolean(record.orderNo?.trim());
+}
+
 export interface InquiryFilterState {
   timeRange: TimeRange;
   customerNo: string;
@@ -157,10 +162,7 @@ export function useInquiryFilter(records: InquiryRecord[]) {
               (s) => s.type === 'unavailable' || s.type === 'closed'
             );
           case 'has_order':
-            return (
-              Boolean(record.orderNo?.trim()) &&
-              (record.orderSubStatus === undefined || record.orderSubStatus === 'suspended')
-            );
+            return hasOrderNumber(record);
           case 'cancelled':
             return record.orderSubStatus === 'cancelled';
           case 'followup':

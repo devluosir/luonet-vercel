@@ -57,3 +57,32 @@ describe('useInquiryFilter keyword search', () => {
     expect(search(records, keyword).map((record) => record.id)).toEqual(['target']);
   });
 });
+
+describe('useInquiryFilter order status', () => {
+  it('includes every record with an order number in 已成单 regardless of C/P/S sub-status', () => {
+    const records = [
+      createRecord('normal', { orderNo: 'ORDER-NORMAL' }),
+      createRecord('suspended', { orderNo: 'ORDER-P', orderSubStatus: 'suspended' }),
+      createRecord('cancelled', { orderNo: 'ORDER-C', orderSubStatus: 'cancelled' }),
+      createRecord('followup', { orderNo: 'ORDER-S', orderSubStatus: 'followup' }),
+      createRecord('blank', { orderNo: '   ', orderSubStatus: 'cancelled' }),
+      createRecord('missing', { orderNo: undefined }),
+    ];
+    const { result } = renderHook(() => useInquiryFilter(records));
+
+    act(() => {
+      result.current.setFilter({
+        ...result.current.filter,
+        timeRange: 'all',
+        quoteStatus: 'has_order',
+      });
+    });
+
+    expect(result.current.filteredAndSorted.map((record) => record.id).sort()).toEqual([
+      'cancelled',
+      'followup',
+      'normal',
+      'suspended',
+    ]);
+  });
+});

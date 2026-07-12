@@ -4,9 +4,10 @@ import { useEffect } from 'react';
 import { FilterChip } from '@/components/FilterChip';
 import { MonthRangeNav } from '@/components/MonthRangeNav';
 import type { InquiryRecord } from '../types';
-import type {
-  InquiryFilterState,
-  QuoteStatusFilter,
+import {
+  hasOrderNumber,
+  type InquiryFilterState,
+  type QuoteStatusFilter,
 } from '../hooks/useInquiryFilter';
 
 interface SecondarySelectConfig {
@@ -52,11 +53,7 @@ function countByStatus(records: InquiryRecord[], status: QuoteStatusFilter): num
            quotedStatuses.some((s) => !s.type || s.type === 'quoted')
         );
       case 'unavailable': return quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed');
-      case 'has_order':
-        return (
-          Boolean(r.orderNo?.trim()) &&
-          (r.orderSubStatus === undefined || r.orderSubStatus === 'suspended')
-        );
+      case 'has_order':   return hasOrderNumber(r);
       case 'cancelled':   return r.orderSubStatus === 'cancelled';
       case 'followup':    return r.orderSubStatus === 'followup';
       default:            return false;

@@ -3601,6 +3601,27 @@ WHERE canAccess = 0
 - 新增 hook 测试，覆盖订单号部分匹配、大小写不敏感、缺少订单号，以及原有询价编号/客户编号/内容简述三类搜索。
 - 验证通过：定向 Jest（4 项）、相关 ESLint、`npx tsc --noEmit`、`npm run build`、`git diff --check`。
 
+## TASK-153：修正询报价“已成单”筛选为全部成单记录
+
+**状态：** 已完成（2026-07-12）
+
+**背景：**
+
+询报价登记在“全部”中能搜索到部分已有订单编号的记录，但切换到「已成单」后，带辙销C或善后S标记的记录会消失。原筛选把「已成单」定义成普通订单与悬挂P，和“所有已经成单”的业务理解不一致。
+
+**文件与验收：**
+
+- `useInquiryFilter.ts`：`has_order` 只判断非空 `orderNo`，普通、辙销C、悬挂P、善后S 全部纳入。
+- `InquiryFilterBar.tsx`：角标与列表共用同一订单编号判定；「已辙销」「善后」继续作为可重叠细分筛选。
+- `useInquiryFilter.test.ts`：覆盖四类成单状态，并确认空白/缺失订单编号不会误计入。
+- 同步更新 `INQUIRY_MODULE.md`、`CURRENT_STATE.md` 与 `CHANGELOG.md`；不改数据结构、D1、订单状态表的独立状态筛选。
+
+**验证结果：**
+
+- 定向 Jest：`useInquiryFilter.test.ts` 5 个用例全部通过。
+- 相关 ESLint、`npx tsc --noEmit`、`npm run build`、`git diff --check` 均通过。
+- `npm run pre-release` 的 selector 自检通过；随后全量 Jest 被仓库既有的无关失败中断（报价解析旧 mapping 断言、报价 store 日志断言、CustomerTimeline 缺少 `ToastProvider`、Jest 误加载 Playwright E2E），本次涉及的询报价测试没有失败。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

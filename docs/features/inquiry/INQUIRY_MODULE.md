@@ -137,9 +137,11 @@ interface CustomerQuoteStatus {
 | `customer_pending` | 未报价 | `quotedStatuses.length === 0` |
 | `customer_quoted` | 已报价 | 有 type='quoted' 且无 unavailable/closed |
 | `unavailable` | 无法报价 | 有 type='unavailable' 或 'closed' |
-| `has_order` | 已成单 | `orderNo` 有值 且 `orderSubStatus` 为 undefined 或 'suspended' |
+| `has_order` | 已成单 | `orderNo` 有值；包含普通、辙销C、悬挂P、善后S 的全部成单记录 |
 | `cancelled` | 已辙销 | `orderSubStatus === 'cancelled'` |
 | `followup` | 善后 | `orderSubStatus === 'followup'` |
+
+「已辙销」与「善后」是「已成单」的可重叠细分状态，不会再从「已成单」总集合中排除；这样“已成单”数量始终等于当前其它筛选条件下所有具有有效订单编号的记录数。
 
 ### activeCount 计算
 
@@ -183,9 +185,9 @@ interface CustomerQuoteStatus {
 
 | 按钮 | 值 | 表格中显示 | 筛选归属 |
 |------|----|-----------|---------|
-| 辙销C | `cancelled` | 订单编号后红色粗体 **C**，边框变红 | 「已辙销」筛选 |
-| 悬挂P | `suspended` | 订单编号后红色粗体 **P**，边框变红 | 保留在「已成单」 |
-| 善后S | `followup` | 订单编号后红色粗体 **S**，边框变红 | 「善后」筛选 |
+| 辙销C | `cancelled` | 订单编号后红色粗体 **C**，边框变红 | 「已成单」及「已辙销」筛选 |
+| 悬挂P | `suspended` | 订单编号后红色粗体 **P**，边框变红 | 「已成单」筛选 |
+| 善后S | `followup` | 订单编号后红色粗体 **S**，边框变红 | 「已成单」及「善后」筛选 |
 
 当选择任意 C/P/S 标记时，编辑弹窗会显示「情况备注」单行输入框，用于记录客户撤销、订单悬挂或善后处理的简短原因。保存规则：
 
