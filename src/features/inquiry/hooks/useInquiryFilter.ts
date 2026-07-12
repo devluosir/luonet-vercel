@@ -109,7 +109,8 @@ export function useInquiryFilter(records: InquiryRecord[]) {
         const hit =
           record.inquiryNo.toLowerCase().includes(kw) ||
           (record.customerNo ?? '').toLowerCase().includes(kw) ||
-          (record.description ?? '').toLowerCase().includes(kw);
+          (record.description ?? '').toLowerCase().includes(kw) ||
+          (record.orderNo ?? '').toLowerCase().includes(kw);
         if (!hit) return false;
       }
 

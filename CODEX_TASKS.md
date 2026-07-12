@@ -3564,6 +3564,43 @@ WHERE canAccess = 0
 - 新增 2 个组件测试，覆盖“后台刷新不吞输入且不提交旧状态”和“用户明确修改状态优先保存”。
 - 验证通过：定向 Jest（2 项）、相关 ESLint、`npx tsc --noEmit`、`npm run build`、`git diff --check`。
 
+## TASK-152：询报价登记表搜索框支持搜索订单号
+
+**状态：** 已完成（2026-07-12）
+
+**背景：**
+
+用户要求：询报价登记表（`/inquiry`）的搜索框目前只匹配询价编号、客户编号、内容简述，希望也能按订单号（`orderNo`）搜索，方便已成单记录直接用订单号定位。
+
+**Files in scope：**
+
+- `src/features/inquiry/hooks/useInquiryFilter.ts` — `baseFiltered` 里的关键词匹配逻辑（第 107–114 行），在现有 `record.inquiryNo`/`record.customerNo`/`record.description` 三个 `includes(kw)` 判断基础上，加一个 `(record.orderNo ?? '').toLowerCase().includes(kw)`。
+
+**Acceptance criteria：**
+
+- 在搜索框输入某条记录的订单号（完整或部分子串，大小写不敏感，与现有询价编号/客户编号搜索行为一致）能命中该记录。
+- 原有按询价编号、客户编号、内容简述搜索的行为不变。
+- 没有订单号的记录（`orderNo` 为 `undefined`）不受影响，不报错。
+
+**Non-goals / 红线：**
+
+- 不改搜索框的 placeholder 文案、不新增独立的"按订单号搜索"输入框或筛选维度——就是把 `orderNo` 加进现有这一个关键词搜索的判断里。
+- 不改订单状态表（`OrderPage.tsx`）自己的搜索逻辑（`matchesKeyword`，已经包含订单相关字段），本任务只动询报价登记表这一处。
+- 不改 `useInquiryFilter.ts` 里其它筛选条件（客户、联络人、状态角标等）。
+
+**Verification steps（供实现者跑）：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/inquiry/hooks/useInquiryFilter.ts`
+- 如有该 hook 的现有单测，跑一下确认不回归；如没有，建议顺手补一条"按订单号子串能搜到"的用例。
+- 手动验证：在询报价登记表搜索框输入一个已成单记录的订单号，确认能筛出对应行。
+
+**实现结论：**
+
+- 在 `useInquiryFilter` 现有关键词判断中加入 `orderNo` 的空值安全、小写子串匹配；未改 placeholder、其它筛选条件或订单状态表逻辑。
+- 新增 hook 测试，覆盖订单号部分匹配、大小写不敏感、缺少订单号，以及原有询价编号/客户编号/内容简述三类搜索。
+- 验证通过：定向 Jest（4 项）、相关 ESLint、`npx tsc --noEmit`、`npm run build`、`git diff --check`。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |
