@@ -61,6 +61,24 @@ describe('history permission derivation', () => {
     expect(result.current.permissions.every((item) => item.canAccess === false)).toBe(true);
   });
 
+  it('disables purchase order amount permission when purchase registration is turned off', () => {
+    const { result } = renderHook(() => usePermissions());
+
+    act(() => {
+      result.current.initializePermissions([
+        permission('purchaseRegistration', true),
+        permission('purchaseRegistration.financials', true),
+      ], false, true);
+    });
+
+    act(() => result.current.togglePermission('purchaseRegistration'));
+
+    expect(result.current.permissions.find((item) => item.moduleId === 'purchaseRegistration')?.canAccess)
+      .toBe(false);
+    expect(result.current.permissions.find((item) => item.moduleId === 'purchaseRegistration.financials')?.canAccess)
+      .toBe(false);
+  });
+
   it('places history in the document category', () => {
     expect(PERMISSION_MODULES.find((module) => module.moduleId === 'history')?.category)
       .toBe('document');

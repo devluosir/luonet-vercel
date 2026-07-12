@@ -283,6 +283,35 @@ function MonthPickerCell({ field, activeField, value, textClassName, onActivate,
 
 type Currency = '¥' | '$';
 
+function parseAmount(v: string | number | undefined): { currency: Currency; numStr: string } {
+  if (v === undefined || v === null) return { currency: '¥', numStr: '' };
+  const s = String(v).trim();
+  const currency: Currency = s.startsWith('$') ? '$' : '¥';
+  const numStr = s.replace(/^[¥$]/, '').replace(/,/g, '');
+  return { currency, numStr };
+}
+
+function formatAmountDisplay(v: string | number | undefined, currencyOverride?: Currency): string | null {
+  if (v === undefined || v === null) return null;
+  const { currency, numStr } = parseAmount(v);
+  const n = parseFloat(numStr);
+  if (isNaN(n)) return null;
+  return `${currencyOverride ?? currency}${n.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function getRecordCurrency(record: InquiryRecord): Currency {
+  if (record.orderAmount !== undefined && record.orderAmount !== null) {
+    return parseAmount(record.orderAmount).currency;
+  }
+  if (record.orderReceivedAmount !== undefined && record.orderReceivedAmount !== null) {
+    return parseAmount(record.orderReceivedAmount).currency;
+  }
+  return '¥';
+}
+
 interface AmountCellProps {
   field: 'amount' | 'receivedAmount';
   activeField: EditField;
@@ -291,58 +320,54 @@ interface AmountCellProps {
   onActivate: (f: EditField) => void;
   onSave: (val: string | undefined) => void;
   onCancel: () => void;
+  currency?: Currency;
+  defaultCurrency?: Currency;
+  onCurrencyToggle?: (next: Currency) => void;
 }
 
-function AmountCell({ field, activeField, value, textClassName, onActivate, onSave, onCancel }: AmountCellProps) {
+function AmountCell({
+  field, activeField, value, textClassName, onActivate, onSave, onCancel,
+  currency, defaultCurrency, onCurrencyToggle,
+}: AmountCellProps) {
   const [editCurrency, setEditCurrency] = useState<Currency>('¥');
   const [editAmount, setEditAmount] = useState('');
   const editing = activeField === field;
 
-  /** 解析存储值 → { currency, numStr } */
-  const parseStored = (v: string | number | undefined): { currency: Currency; numStr: string } => {
-    if (v === undefined || v === null) return { currency: '¥', numStr: '' };
-    const s = String(v).trim();
-    const currency: Currency = s.startsWith('$') ? '$' : '¥';
-    const numStr = s.replace(/^[¥$]/, '').replace(/,/g, '');
-    return { currency, numStr };
-  };
-
-  /** 格式化展示：¥120,000.00 */
-  const formatDisplay = (v: string | number | undefined): string | null => {
-    if (v === undefined || v === null) return null;
-    const { currency, numStr } = parseStored(v);
-    const n = parseFloat(numStr);
-    if (isNaN(n)) return null;
-    return `${currency}${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
   const handleActivate = () => {
-    const { currency, numStr } = parseStored(value);
-    setEditCurrency(currency);
-    setEditAmount(numStr);
+    const parsed = parseAmount(value);
+    setEditCurrency(currency ?? defaultCurrency ?? parsed.currency);
+    setEditAmount(parsed.numStr);
     onActivate(field);
   };
 
   const handleSave = () => {
     const n = parseFloat(editAmount);
-    onSave(!isNaN(n) && editAmount.trim() ? `${editCurrency}${n.toFixed(2)}` : undefined);
+    onSave(!isNaN(n) && editAmount.trim() ? `${currency ?? editCurrency}${n.toFixed(2)}` : undefined);
   };
 
-  const display = formatDisplay(value);
+  const display = formatAmountDisplay(value, currency);
 
   if (editing) {
     return (
       <div className="flex items-center gap-0.5">
-        {/* 货币符号切换 */}
-        <button type="button"
-          onMouseDown={(e) => {
-            e.preventDefault(); // 阻止 input blur
-            setEditCurrency(c => c === '¥' ? '$' : '¥');
-          }}
-          className="w-4 shrink-0 rounded text-xs font-bold text-blue-500 hover:text-blue-700 dark:text-blue-400"
-        >
-          {editCurrency}
-        </button>
+        {currency === undefined ? (
+          <button type="button"
+            onMouseDown={(e) => {
+              e.preventDefault(); // 阻止 input blur
+              const next = editCurrency === '¥' ? '$' : '¥';
+              setEditCurrency(next);
+              onCurrencyToggle?.(next);
+            }}
+            className="w-4 shrink-0 rounded text-xs font-bold text-blue-500 hover:text-blue-700 dark:text-blue-400"
+            aria-label="切换订单币种"
+          >
+            {editCurrency}
+          </button>
+        ) : (
+          <span className="w-4 shrink-0 text-center text-xs font-bold text-gray-500 dark:text-gray-400">
+            {currency}
+          </span>
+        )}
         <input autoFocus type="number" step="0.01" min="0"
           value={editAmount}
           onChange={(e) => setEditAmount(e.target.value)}
@@ -352,6 +377,7 @@ function AmountCell({ field, activeField, value, textClassName, onActivate, onSa
             if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
           }}
           className="w-full rounded border border-blue-300 bg-white px-1 py-0.5 text-right text-xs outline-none
+            [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none
             focus:ring-1 focus:ring-blue-200 dark:border-blue-600 dark:bg-gray-900 dark:text-gray-100"
         />
       </div>
@@ -550,9 +576,20 @@ export function OrderRow({
             <div className="min-w-0">
               <AmountCell field="amount" activeField={activeField}
                 value={record.orderAmount}
+                defaultCurrency={getRecordCurrency(record)}
                 textClassName={rowTextClass}
                 onActivate={activate}
                 onSave={(val) => { setActiveField(null); onUpdate({ orderAmount: val }); }}
+                onCurrencyToggle={(next) => {
+                  const amountNum = parseAmount(record.orderAmount).numStr;
+                  const receivedNum = parseAmount(record.orderReceivedAmount).numStr;
+                  onUpdate({
+                    orderAmount: record.orderAmount !== undefined ? `${next}${amountNum}` : undefined,
+                    orderReceivedAmount: record.orderReceivedAmount !== undefined
+                      ? `${next}${receivedNum}`
+                      : undefined,
+                  });
+                }}
                 onCancel={cancel}
               />
             </div>
@@ -570,6 +607,7 @@ export function OrderRow({
             <div className="min-w-0">
               <AmountCell field="receivedAmount" activeField={activeField}
                 value={record.orderReceivedAmount}
+                currency={getRecordCurrency(record)}
                 textClassName={rowTextClass}
                 onActivate={activate}
                 onSave={(val) => { setActiveField(null); onUpdate({ orderReceivedAmount: val }); }}

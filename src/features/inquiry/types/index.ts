@@ -68,7 +68,7 @@ export interface InquiryRecord {
   purchaseOrderNo?: string;
   /** 供应商（采购订单表专属，与询报价登记的 supplierStatuses/purchaseSupplierStatuses 无关） */
   purchaseOrderSupplier?: string;
-  /** 采购金额（需要 order.financials 权限），含币种符号自由录入，如 ¥120000 / $15000 / €1000 */
+  /** 采购金额（需要 purchaseRegistration.financials 权限），含币种符号自由录入，如 ¥120000 / $15000 / €1000 */
   purchaseOrderAmount?: string;
   // 交货日期(orderDeliveryDate)、执行情况(orderDeliveryStatus/orderDeliveryConsignee) 与订单状态表双向共享，直接复用上面的字段；
   // 确认日期(orderConfirmDate)、客户订单号(orderCustomerNo) 同样复用上面的字段，但采购订单表这边只读展示，不允许编辑。

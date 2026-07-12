@@ -15,7 +15,7 @@ import { STATUS_PRESETS } from '@/features/order/components/DeliveryStatusCell';
  *   确认日期、客户订单号、订单状态备注）——确认日期/客户订单号本来就是采购订单表这边只读展示、
  *   不允许编辑（见 InquiryRecord 类型注释），撤销C/悬挂P/善后S 状态标记及其情况备注也只在订单状态表
  *   的"编辑订单"弹窗编辑，这里同样只读展示，不提供编辑入口。
- * - 可编辑区：采购单号、供应商、采购金额（需要 order.financials 权限）——采购订单表专属字段；
+ * - 可编辑区：采购单号、供应商、采购金额（需要 purchaseRegistration.financials 权限）——采购订单表专属字段；
  *   交货日期、执行情况——跟订单状态表双向共享的字段，这里也允许编辑（与行内点击编辑并存）。
  */
 
@@ -25,6 +25,8 @@ const FIELD_CLS =
   'dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:border-blue-400';
 
 const LABEL_CLS = 'block text-xs font-medium text-gray-400 dark:text-gray-500';
+const NUMBER_INPUT_NO_SPINNER_CLS =
+  '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
 
 type PurchaseCurrency = '¥' | '$' | '€';
 const CURRENCY_CYCLE: Record<PurchaseCurrency, PurchaseCurrency> = { '¥': '$', '$': '€', '€': '¥' };
@@ -310,7 +312,7 @@ export function PurchaseOrderEditModal({
                     min="0"
                     value={amountNumStr}
                     onChange={(e) => setAmountNumStr(e.target.value)}
-                    className={`${FIELD_CLS} text-right`}
+                    className={`${FIELD_CLS} text-right ${NUMBER_INPUT_NO_SPINNER_CLS}`}
                   />
                 </div>
               </div>

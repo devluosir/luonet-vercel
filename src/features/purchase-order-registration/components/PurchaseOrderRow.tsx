@@ -64,6 +64,9 @@ function OrderNoText({ record, textClassName }: { record: InquiryRecord; textCla
 
 type EditField = 'purchaseOrderNo' | 'purchaseOrderSupplier' | 'amount' | 'deliveryDate' | 'deliveryStatus' | null;
 
+const NUMBER_INPUT_NO_SPINNER_CLS =
+  '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
+
 // ── EditableText（采购单号 / 供应商，纯文本） ─────────────────────────────────
 
 interface EditableTextProps {
@@ -206,7 +209,7 @@ function DateEditCell({ editing, value, textClassName, onActivate, onSave, onCan
   );
 }
 
-// ── AmountEditCell（采购金额：¥ / $ / € 循环切换，需要 order.financials 权限） ─
+// ── AmountEditCell（采购金额：¥ / $ / € 循环切换，需要 purchaseRegistration.financials 权限） ─
 
 type PurchaseCurrency = '¥' | '$' | '€';
 const CURRENCY_CYCLE: Record<PurchaseCurrency, PurchaseCurrency> = { '¥': '$', '$': '€', '€': '¥' };
@@ -275,7 +278,7 @@ function AmountEditCell({ editing, value, textClassName, onActivate, onSave, onC
             if (e.key === 'Enter') e.currentTarget.blur();
             if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
           }}
-          className="w-full rounded border border-blue-300 bg-white px-1 py-0.5 text-right text-xs outline-none focus:ring-1 focus:ring-blue-200 dark:border-blue-600 dark:bg-gray-900 dark:text-gray-100"
+          className={`w-full rounded border border-blue-300 bg-white px-1 py-0.5 text-right text-xs outline-none focus:ring-1 focus:ring-blue-200 dark:border-blue-600 dark:bg-gray-900 dark:text-gray-100 ${NUMBER_INPUT_NO_SPINNER_CLS}`}
         />
       </div>
     );
@@ -375,7 +378,7 @@ export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptio
         />
       </td>
 
-      {/* 金额（需要 order.financials 权限） */}
+      {/* 金额（需要 purchaseRegistration.financials 权限） */}
       {canViewFinancials && (
         <td className="max-w-0 overflow-hidden px-2 py-2">
           <AmountEditCell

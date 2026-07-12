@@ -1,6 +1,6 @@
 # CODEX_TASKS.md — 任务索引（精简）
 
-最后更新：2026-07-10
+最后更新：2026-07-12
 
 执行前阅读 `AGENTS.md`。当前事实以 `docs/core/CURRENT_STATE.md`、`docs/core/CHANGELOG.md` 为准。
 
@@ -3411,6 +3411,101 @@ WHERE canAccess = 0
 `npx tsc --noEmit`、`npx eslint AppSidebar.tsx` 每一轮修改后都跑过，均无输出。**当前定稿（2026-07-11 收尾）：分组标题纯文字、无图标、不可折叠；菜单项 14px 文字 + 20px 图标（跟 TASK-114 最初设计一致）；子项引导线 `ml-4`；收缩图标态有分组分隔小短线。** 后续如果还有微调需求，直接在这个基础上改，不用再回溯前面的中间状态。
 
 **Status:** completed
+
+
+## TASK-149：订单状态表「编辑订单」弹窗——回款月份选择器补齐 + 金额/到账金额币种改为整单联动一个按钮 + 去掉金额输入框上下箭头
+
+**Background：** 订单状态表（`OrderTable` → `OrderRow.tsx`）行内可编辑单元格和「编辑订单」弹窗（`OrderEditModal.tsx`，TASK-125 引入）本应是同一批字段的两套编辑入口，但两边实现是各自独立写的，出现了三处不一致，用户在弹窗里对比表格截图后指出：
+
+1. 回款月份（`orderPaymentDate`）：表格里的 `MonthPickerCell`（`OrderRow.tsx` 203–280 行）除了文本框，还有一个隐藏的 `<input type="month">` + 日历图标，可以原生月份选择器点选；弹窗里的同一字段（`OrderEditModal.tsx` 336–344 行）只是一个裸 `<input>` 文本框，没有选择器，两处体验不一致。
+2. 金额（`orderAmount`）与到账金额（`orderReceivedAmount`）目前各自有独立的 ¥/$ 切换按钮——表格里 `AmountCell`（`OrderRow.tsx` 296–373 行）编辑态各有一个按钮，弹窗里 `AmountField`（`OrderEditModal.tsx` 107–130 行）两处调用（329–335 行、345–351 行）也是各自独立的 `amountCurrency`/`receivedCurrency` state。用户明确要求：**一条订单记录只应该有一种币种**，金额和到账金额永远同币种，只保留一个切换按钮统一控制（已向用户确认：完全联动，不是"默认同步、允许后续单独改"）。
+3. 金额录入框是原生 `<input type="number">`，未隐藏浏览器自带的上下调节箭头，视觉多余、容易误触。项目里 `src/features/quotation/components/ItemsTable.tsx` 1283–1286 / 1318–1321 行已经有去掉这个箭头的现成写法（`[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`），照抄这个 class 组合即可，不用重新发明。
+
+`orderAmount`/`orderReceivedAmount` 目前都是"币种符号+数字"拼在一起的自由字符串（如 `¥120000`/`$15000`，见 `src/features/inquiry/types/index.ts` 51–56 行注释），数据库/schema **不新增币种字段**，币种始终是从这两个字符串里解析出来的前缀——本任务只改"币种从哪来、谁能点按钮"，不改存储格式。
+
+用户还提到"后续要按回款月份和不同币种做统计分析"，**这条明确说了"待后续明确再开发"，本任务不做，只在下面 Non-goals 里占位，不要顺手实现或加相关 UI**。
+
+**Files in scope：**
+- `src/features/order/components/OrderRow.tsx`
+  - 把 `AmountCell` 内部私有的 `parseStored`/`formatDisplay` 逻辑对应的解析函数提升为文件级函数（如 `parseAmount`/`formatAmountDisplay`，两处调用点复用），并新增一个 `getRecordCurrency(record: InquiryRecord): Currency` 辅助函数：优先取 `orderAmount` 的币种前缀，`orderAmount` 未定义则取 `orderReceivedAmount` 的，两者都未定义则默认 `'¥'`。
+  - `AmountCell` 组件改造：新增可选 props，让「金额」单元格（`field === 'amount'`）保留可点击的币种切换按钮，但按钮的 `onClick` 除了更新自己内部的 `editCurrency`，还要通过新增的回调 prop（如 `onCurrencyToggle?: (next: Currency) => void`）立即把新币种同步写回「到账金额」——即调用 `onUpdate` 时把 `orderReceivedAmount` 的前缀也一并改成同一个币种（数字部分不变；`orderReceivedAmount` 本身未定义时不用管，等它以后有值时会走 `getRecordCurrency` 自动带出正确币种）。
+  - 「到账金额」单元格（`field === 'receivedAmount'`）的 `AmountCell` 不再渲染自己的币种切换按钮：改成接收一个外部传入的 `currency: Currency`（父组件传 `getRecordCurrency(record)`），编辑态里币种展示为纯文字/不可点的标签，输入框旁不再有按钮；保存时用这个外部传入的 currency 拼接前缀，不再使用内部 `editCurrency` state。
+  - 两处 `AmountCell` 用法（约 549–559 行「金额」、569–579 行「到账金额」）按上面的 props 改造对应调整；「金额」这处要把 `onCurrencyToggle` 接到 `onUpdate({ orderReceivedAmount: ... })`。
+  - `<input type="number" step="0.01" min="0">`（346 行）补上去箭头的 class：`[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`。
+- `src/features/order/components/OrderEditModal.tsx`
+  - 新增 `MonthField` 组件（仿照文件里已有的 `DateField`，60–97 行，及 `OrderRow.tsx` 里 `MonthPickerCell` 的 `toMonthISO`/`fromMonthISO` 转换逻辑 220–233 行）：文本框（placeholder `"m"`）+ 一个日历图标按钮，按钮内叠一个透明的 `<input type="month">`，点开原生月份选择器后把 `YYYY-MM` 转回纯数字月份 `m` 写回 `onChange`。
+  - 336–344 行「回款月份」的裸 `<input>` 替换成 `<MonthField label="回款月份" value={paymentDate} onChange={setPaymentDate} />`。
+  - 把 `amountCurrency`/`receivedCurrency` 两个 state（149、152 行）合并成一个 `currency` state；`useEffect` 里的初始化逻辑（165–171 行）改成：优先用 `parseAmount(record.orderAmount).currency`，`orderAmount` 未定义时用 `parseAmount(record.orderReceivedAmount).currency`，都未定义则 `'¥'`。
+  - `AmountField` 组件（107–130 行）新增 `locked?: boolean` prop：为 `true` 时不渲染可点击的 `<button>`，改成一个视觉一致但不可交互的币种标签（同样的宽度/字号，去掉 `onClick`、`hover` 样式，避免用户误以为还能点）。
+  - 「金额」的 `AmountField`（329–335 行）传 `currency={currency} onCurrencyChange={setCurrency}`（不锁定）；「到账金额」的 `AmountField`（345–351 行）传 `currency={currency} locked`（不再传 `onCurrencyChange`，或传空函数）。
+  - `handleSave`（180–203 行）里 `orderAmount`/`orderReceivedAmount` 的前缀统一用同一个 `currency`。
+  - `AmountField` 里的 `<input type="number">`（119–126 行）同样补上箭头隐藏 class。
+
+**Acceptance criteria：**
+- 弹窗「回款月份」字段跟表格行内的 `MonthPickerCell` 视觉、交互一致：文本框可以直接打"m"这样的数字，旁边有日历图标，点开是原生月份选择器，选完自动把 `YYYY-MM` 转成纯数字月份填回文本框。
+- 表格行和弹窗里，「金额」和「到账金额」显示的币种符号永远相同；界面上只保留一个可点击的 ¥/$ 切换按钮（挂在"金额"这一侧），点一下会同时改变"金额"和"到账金额"当前显示/将要保存的币种；"到账金额"那一侧不再有可点击的币种按钮。
+- 已有数据验证：如果某条历史记录 `orderAmount` 和 `orderReceivedAmount` 币种本来就不一致（脏数据），打开编辑时以 `orderAmount` 的币种为准（`orderAmount` 有值优先），保存后两者币种统一。
+- 金额、到账金额的数字输入框（表格行内编辑态 + 弹窗）都不再显示浏览器原生的上下调节小箭头，鼠标悬浮/聚焦时也不出现。
+- 上述改动只影响订单状态表这两个组件里的"金额/到账金额/回款月份"相关渲染，其它字段（交货/确认日期、客户订单号、执行情况、订单状态标记）行为不变。
+
+**Non-goals / 红线：**
+- 不新增数据库字段或迁移脚本：币种依然是从 `orderAmount`/`orderReceivedAmount` 字符串前缀解析出来的，不引入独立的 `orderCurrency` 存储字段。
+- 不做"按回款月份 + 币种做统计分析"功能——用户已明确这是"待后续明确再开发"的占位需求，本任务范围只是把编辑体验和币种统一这两件事做好，不要顺手加统计入口、图表或汇总卡片。
+- 不改 `orderPaymentDate` 的存储格式（依旧是纯数字 `m` 或 `m.D`），只补交互，不改数据结构。
+- 不影响采购部登记/采购订单表（`PurchaseOrderRow.tsx` 等，TASK-126）里类似的金额/执行情况字段——那边是独立组件，不在本任务范围内，除非用户后续单独提。
+- 不去动 `src/features/quotation/components/ItemsTable.tsx` 里已有的箭头隐藏写法，只是照抄同一段 class，不重构那个文件。
+
+**Verification steps（供实现者跑）：**
+- `npx tsc --noEmit`
+- `npx eslint src/features/order/components/OrderRow.tsx src/features/order/components/OrderEditModal.tsx`
+- `npm run build`（本仓库沙箱跑这条历史上多次因 45 秒硬超时在 Next.js 编译阶段被打断，属已知限制——建议用户本地或 CI 补跑一次完整确认）
+- 手动验证（建议用户在浏览器里过一遍）：打开"编辑订单"弹窗，回款月份能用日历图标选月份；点金额旁的币种按钮，确认到账金额的币种符号跟着联动变化，且到账金额那侧没有独立可点的币种按钮；金额、到账金额输入框聚焦时鼠标悬浮数字上不出现上下箭头；表格行内编辑态重复以上验证；找一条历史"金额¥/到账金额$"不一致的脏数据记录（如没有就手动改一条测试数据模拟），确认打开编辑后以金额币种为准、保存后两者统一。
+
+**Status:** completed（2026-07-12，Codex 实现并验证）
+
+
+## TASK-150：采购订单表金额输入框去掉上下箭头 + 金额列改为独立权限开关
+
+**Status:** completed（2026-07-12，Codex 实现，Claude 复核通过）
+**日期:** 2026-07-12
+
+### 背景
+
+用户要求采购订单表 `/purchase-order-table` 的金额框也取消浏览器原生上下调节按钮，并且采购订单表的「金额」列要能在权限管理界面单独控制。此前采购订单表金额复用 `order.financials`，会和订单状态表的订单金额/回款/到账金额权限绑在一起，权限边界不够清楚。
+
+### 执行记录
+
+- `src/constants/permissionModules.ts`：在 `purchaseRegistration` 下新增二级权限 `purchaseRegistration.financials`，显示名为「采购订单表金额」，沿用现有 `advancedFeatures` 模型；父权限关闭时，现有 `usePermissions` 通用逻辑会自动关闭该子权限。
+- `src/features/purchase-order-registration/app/PurchaseOrderRegistrationPage.tsx`：采购订单表金额列的可见性从 `order.financials` 改为读取 `purchaseRegistration.financials`。
+- `src/features/purchase-order-registration/components/PurchaseOrderRow.tsx`：行内采购金额 `type="number"` 输入框补上隐藏原生 spinner 的 Tailwind class。
+- `src/features/purchase-order-registration/components/PurchaseOrderEditModal.tsx`：编辑弹窗里的采购金额输入框同步隐藏原生 spinner。
+- `src/app/api/inquiry/[[...path]]/route.ts`：把金额字段过滤拆成两组：
+  - `orderAmount` / `orderPaymentDate` / `orderReceivedAmount` 仍由 `order.financials` 控制；
+  - `purchaseOrderAmount` 改由 `purchaseRegistration.financials` 控制。
+  GET 响应清洗和 PUT/POST 请求体清洗两条路径都同步更新，避免前端显示权限和接口字段权限不一致。
+- `src/features/admin/hooks/__tests__/usePermissions.test.ts`、`src/features/admin/components/__tests__/UserDetailModal.test.tsx`：补测试，覆盖采购订单表金额开关在权限管理界面的展示，以及父权限关闭时子权限级联关闭/禁用。
+- `src/features/inquiry/types/index.ts`、`src/features/purchase-order-registration/utils/purchaseOrderTableLayout.ts`：同步更新注释，避免继续把采购订单表金额描述为 `order.financials` 控制。
+
+### 验收标准
+
+- 采购订单表行内金额编辑态和编辑弹窗里的采购金额输入框都不显示浏览器原生上下调节按钮。
+- 权限管理界面中，「采购部登记 / 采购订单表」下面出现「采购订单表金额」二级开关。
+- 关闭「采购部登记 / 采购订单表」父权限时，「采购订单表金额」子权限自动关闭且不可操作。
+- 采购订单表金额列只受 `purchaseRegistration.financials` 控制，不再受 `order.financials` 控制。
+- API 读取和写入都遵守新权限：没有 `purchaseRegistration.financials` 时不返回/不接受 `purchaseOrderAmount`；订单状态表自己的金额字段仍保持原 `order.financials` 逻辑。
+- 不新增数据库字段，不改 `purchaseOrderAmount` 的存储格式。
+
+### 验证
+
+- `npx tsc --noEmit`：通过。
+- `npx eslint`（本次改动相关文件）：通过，无输出。
+- `npm run test -- src/features/admin/hooks/__tests__/usePermissions.test.ts src/features/admin/components/__tests__/UserDetailModal.test.tsx`：2 个测试文件、7 个用例全部通过。
+- `git diff --check`：通过。
+- residual grep：确认采购订单表不再从 `order.financials` 读取金额列权限；`OrderPage.tsx` 保留 `order.financials` 属于订单状态表既有逻辑。
+
+### 说明
+
+`order.financials` 仍是独立权限，不要求同时拥有 `inquiry` 父权限；`purchaseRegistration.financials` 这次按更严格口径实现，必须同时拥有 `purchaseRegistration` 父权限才生效。这种不对称是这次拆分后显性的行为差异，但没有改变订单状态表的既有权限逻辑。
 
 
 ## 已关闭 / 不做

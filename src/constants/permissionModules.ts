@@ -33,7 +33,15 @@ export const PERMISSION_MODULES: PermissionModuleDef[] = [
       { moduleId: 'order.financials', label: '订单金额 / 回款 / 到账金额', icon: '💰' },
     ],
   },
-  { moduleId: 'purchaseRegistration', label: '采购部登记 / 采购订单表', icon: '🧾', category: 'registration' },
+  {
+    moduleId: 'purchaseRegistration',
+    label: '采购部登记 / 采购订单表',
+    icon: '🧾',
+    category: 'registration',
+    advancedFeatures: [
+      { moduleId: 'purchaseRegistration.financials', label: '采购订单表金额', icon: '💶' },
+    ],
+  },
   { moduleId: 'history', label: '单据历史', icon: '📚', category: 'document' },
   { moduleId: 'customer', label: '客户管理', icon: '👥', category: 'management' },
   { moduleId: 'ai-email', label: 'AI 邮件', icon: '🤖', category: 'tool' },

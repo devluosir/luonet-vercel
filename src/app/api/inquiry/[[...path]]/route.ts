@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
 const WORKER_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net';
-const FINANCIAL_FIELDS = ['orderAmount', 'orderPaymentDate', 'orderReceivedAmount', 'purchaseOrderAmount'] as const;
+const ORDER_FINANCIAL_FIELDS = ['orderAmount', 'orderPaymentDate', 'orderReceivedAmount'] as const;
+const PURCHASE_ORDER_FINANCIAL_FIELDS = ['purchaseOrderAmount'] as const;
 
 // 采购部登记（purchaseRegistration 权限，无 inquiry 权限时）可读写的字段
 // 注意：supplierStatuses 本是询报价登记的字段，这里放行仅用于"已报价自动同步飞罗"
@@ -126,8 +127,13 @@ async function proxyInquiryRequest(
     return NextResponse.json({ error: '无新增或删除询报价记录权限' }, { status: 403 });
   }
 
-  const financialsPermission = permissions.find((permission) => permission.moduleId === 'order.financials');
-  const hasFinancialsPermission = financialsPermission?.canAccess === true;
+  const orderFinancialsPermission = permissions.find((permission) => permission.moduleId === 'order.financials');
+  const hasOrderFinancialsPermission = orderFinancialsPermission?.canAccess === true;
+  const purchaseOrderFinancialsPermission = permissions.find(
+    (permission) => permission.moduleId === 'purchaseRegistration.financials'
+  );
+  const hasPurchaseOrderFinancialsPermission =
+    hasPurchaseRegistrationPermission && purchaseOrderFinancialsPermission?.canAccess === true;
 
   const url = new URL(request.url);
   const workerPath = pathSegments.length > 0
@@ -154,8 +160,13 @@ async function proxyInquiryRequest(
       parsed = {};
     }
 
-    if (parsed && (request.method === 'PUT' || request.method === 'POST') && !hasFinancialsPermission) {
-      FINANCIAL_FIELDS.forEach((field) => {
+    if (parsed && (request.method === 'PUT' || request.method === 'POST') && !hasOrderFinancialsPermission) {
+      ORDER_FINANCIAL_FIELDS.forEach((field) => {
+        delete parsed![field];
+      });
+    }
+    if (parsed && (request.method === 'PUT' || request.method === 'POST') && !hasPurchaseOrderFinancialsPermission) {
+      PURCHASE_ORDER_FINANCIAL_FIELDS.forEach((field) => {
         delete parsed![field];
       });
     }
@@ -184,12 +195,19 @@ async function proxyInquiryRequest(
       })
     );
   }
-  if (request.method === 'GET' && !hasFinancialsPermission && Array.isArray(data?.records)) {
+  if (request.method === 'GET' && Array.isArray(data?.records)) {
     data.records = data.records.map((record: Record<string, unknown>) => {
       const clean = { ...record };
-      FINANCIAL_FIELDS.forEach((field) => {
-        delete clean[field];
-      });
+      if (!hasOrderFinancialsPermission) {
+        ORDER_FINANCIAL_FIELDS.forEach((field) => {
+          delete clean[field];
+        });
+      }
+      if (!hasPurchaseOrderFinancialsPermission) {
+        PURCHASE_ORDER_FINANCIAL_FIELDS.forEach((field) => {
+          delete clean[field];
+        });
+      }
       return clean;
     });
   }

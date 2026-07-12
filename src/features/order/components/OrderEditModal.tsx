@@ -96,33 +96,87 @@ function DateField({ label, value, onChange }: DateFieldProps) {
   );
 }
 
+function MonthField({ label, value, onChange }: DateFieldProps) {
+  const monthRef = useRef<HTMLInputElement>(null);
+
+  const toMonthISO = (month: string): string => {
+    const parsedMonth = parseInt(month);
+    if (!parsedMonth) return '';
+    return `${new Date().getFullYear()}-${String(parsedMonth).padStart(2, '0')}`;
+  };
+
+  const fromMonthISO = (iso: string): string => {
+    const [, mm] = iso.split('-');
+    const month = parseInt(mm ?? '0');
+    return month ? String(month) : '';
+  };
+
+  return (
+    <div className="space-y-1">
+      <label className={LABEL_CLS}>{label}</label>
+      <div className="flex items-center gap-1.5">
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="m"
+          className={FIELD_CLS}
+        />
+        <span className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700">
+          <input
+            ref={monthRef}
+            type="month"
+            className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+            aria-label={`选择${label}`}
+            onClick={(e) => {
+              e.currentTarget.value = value ? toMonthISO(value) : '';
+            }}
+            onChange={(e) => {
+              const next = fromMonthISO(e.target.value);
+              if (next) onChange(next);
+            }}
+          />
+          <CalendarDays className="pointer-events-none h-4 w-4 text-gray-300 dark:text-gray-600" />
+        </span>
+      </div>
+    </div>
+  );
+}
+
 interface AmountFieldProps {
   label: string;
   currency: Currency;
   numStr: string;
-  onCurrencyChange: (c: Currency) => void;
+  onCurrencyChange?: (c: Currency) => void;
   onNumChange: (v: string) => void;
+  locked?: boolean;
 }
 
-function AmountField({ label, currency, numStr, onCurrencyChange, onNumChange }: AmountFieldProps) {
+function AmountField({ label, currency, numStr, onCurrencyChange, onNumChange, locked = false }: AmountFieldProps) {
   return (
     <div className="space-y-1">
       <label className={LABEL_CLS}>{label}</label>
       <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => onCurrencyChange(currency === '¥' ? '$' : '¥')}
-          className="h-9 w-8 shrink-0 rounded-lg border border-gray-200 text-sm font-bold text-blue-500 hover:text-blue-700 dark:border-gray-700 dark:text-blue-400"
-        >
-          {currency}
-        </button>
+        {locked ? (
+          <span className="inline-flex h-9 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-sm font-bold text-gray-500 dark:border-gray-700 dark:text-gray-400">
+            {currency}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onCurrencyChange?.(currency === '¥' ? '$' : '¥')}
+            className="h-9 w-8 shrink-0 rounded-lg border border-gray-200 text-sm font-bold text-blue-500 hover:text-blue-700 dark:border-gray-700 dark:text-blue-400"
+            aria-label="切换订单币种"
+          >
+            {currency}
+          </button>
+        )}
         <input
           type="number"
           step="0.01"
           min="0"
           value={numStr}
           onChange={(e) => onNumChange(e.target.value)}
-          className={`${FIELD_CLS} text-right`}
+          className={`${FIELD_CLS} text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
         />
       </div>
     </div>
@@ -146,10 +200,9 @@ export function OrderEditModal({
   const [customerNo, setCustomerNo] = useState('');
   const [deliveryStatus, setDeliveryStatus] = useState('');
   const [deliveryConsignee, setDeliveryConsignee] = useState('');
-  const [amountCurrency, setAmountCurrency] = useState<Currency>('¥');
+  const [currency, setCurrency] = useState<Currency>('¥');
   const [amountNumStr, setAmountNumStr] = useState('');
   const [paymentDate, setPaymentDate] = useState('');
-  const [receivedCurrency, setReceivedCurrency] = useState<Currency>('¥');
   const [receivedNumStr, setReceivedNumStr] = useState('');
   const [subStatus, setSubStatus] = useState<OrderSubStatus | undefined>(undefined);
   const [subStatusRemark, setSubStatusRemark] = useState('');
@@ -163,11 +216,12 @@ export function OrderEditModal({
     setDeliveryStatus(record.orderDeliveryStatus ?? '');
     setDeliveryConsignee(record.orderDeliveryConsignee ?? '');
     const amount = parseAmount(record.orderAmount);
-    setAmountCurrency(amount.currency);
+    const received = parseAmount(record.orderReceivedAmount);
+    setCurrency(record.orderAmount !== undefined ? amount.currency
+      : record.orderReceivedAmount !== undefined ? received.currency
+      : '¥');
     setAmountNumStr(amount.numStr);
     setPaymentDate(record.orderPaymentDate ?? '');
-    const received = parseAmount(record.orderReceivedAmount);
-    setReceivedCurrency(received.currency);
     setReceivedNumStr(received.numStr);
     setSubStatus(record.orderSubStatus);
     setSubStatusRemark(record.orderSubStatusRemark ?? '');
@@ -191,9 +245,9 @@ export function OrderEditModal({
       orderDeliveryConsignee: deliveryConsignee.trim() || undefined,
       ...(canViewFinancials
         ? {
-            orderAmount: !isNaN(amountN) && trimmedAmount ? `${amountCurrency}${amountN.toFixed(2)}` : undefined,
+            orderAmount: !isNaN(amountN) && trimmedAmount ? `${currency}${amountN.toFixed(2)}` : undefined,
             orderPaymentDate: paymentDate.trim() || undefined,
-            orderReceivedAmount: !isNaN(receivedN) && trimmedReceived ? `${receivedCurrency}${receivedN.toFixed(2)}` : undefined,
+            orderReceivedAmount: !isNaN(receivedN) && trimmedReceived ? `${currency}${receivedN.toFixed(2)}` : undefined,
           }
         : {}),
       orderSubStatus: subStatus,
@@ -328,26 +382,18 @@ export function OrderEditModal({
               <div className="grid gap-3 sm:grid-cols-3">
                 <AmountField
                   label="金额"
-                  currency={amountCurrency}
+                  currency={currency}
                   numStr={amountNumStr}
-                  onCurrencyChange={setAmountCurrency}
+                  onCurrencyChange={setCurrency}
                   onNumChange={setAmountNumStr}
                 />
-                <div className="space-y-1">
-                  <label className={LABEL_CLS}>回款月份</label>
-                  <input
-                    value={paymentDate}
-                    onChange={(e) => setPaymentDate(e.target.value)}
-                    className={FIELD_CLS}
-                    placeholder="m"
-                  />
-                </div>
+                <MonthField label="回款月份" value={paymentDate} onChange={setPaymentDate} />
                 <AmountField
                   label="到账金额"
-                  currency={receivedCurrency}
+                  currency={currency}
                   numStr={receivedNumStr}
-                  onCurrencyChange={setReceivedCurrency}
                   onNumChange={setReceivedNumStr}
+                  locked
                 />
               </div>
             )}

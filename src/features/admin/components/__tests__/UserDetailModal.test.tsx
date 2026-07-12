@@ -36,6 +36,7 @@ describe('UserDetailModal history permission', () => {
 
     const historyOff = await screen.findByRole('button', { name: '开启单据历史权限' });
     expect(historyOff).toBeDisabled();
+    expect(screen.getByRole('button', { name: '开启采购订单表金额权限' })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: '开启外贸报价合同权限' }));
 

@@ -85,7 +85,7 @@ export function PurchaseOrderRegistrationPage() {
   const { user, handleLogout } = useAppUser();
   const permissionUser = usePermissionStore((s) => s.user);
   const hasAccess = usePermissionStore((s) => s.hasPermission('purchaseRegistration'));
-  const canViewFinancials = usePermissionStore((s) => s.hasPermission('order.financials'));
+  const canViewFinancials = usePermissionStore((s) => s.hasPermission('purchaseRegistration.financials'));
   const records = useInquiryStore((s) => s.records);
   const patchRecordForView = useInquiryStore((s) => s.patchRecordForView);
   const { lastSyncedAt, syncStatus } = useInquirySync({
