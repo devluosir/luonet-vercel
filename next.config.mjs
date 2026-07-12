@@ -20,10 +20,9 @@ const nextConfig = {
     // 启用更快的构建
     // swcMinify: true,
   },
-  env: {
-    WORKER_URL: process.env.WORKER_URL,
-    API_TOKEN: process.env.API_TOKEN
-  },
+  // 不要把 API_TOKEN 等密钥放进 env：Next 会在构建时把值写进 .next，
+  // 触发 Netlify secrets scanner，并可能泄漏到客户端包。
+  // 服务端代码直接读 process.env.API_TOKEN（运行时注入即可）。
   compress: true,
   poweredByHeader: false,
   swcMinify: true,
