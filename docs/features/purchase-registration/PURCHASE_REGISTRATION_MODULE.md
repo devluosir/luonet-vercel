@@ -57,6 +57,10 @@ purchaseQuotedStatuses?: CustomerQuoteStatus[];
 
 两者同样放在 `flex flex-wrap` 容器里同行显示，不提供编辑入口。这是 `src/features/inquiry` 首次反向 import `src/features/purchase-registration/utils`（这两个字段的读取逻辑已经沉淀在 `purchaseInquiryStatus.ts`，不重复实现）。
 
+### 表格列宽（TASK-157 起）
+
+`PurchaseRegistrationTable` 本身没有响应式断点逻辑（任何屏宽都渲染同样 4 列），已全量接入通用可拖拽列宽 hook（`src/components/table/useResizableColumns.ts`），列宽按 id 存 `localStorage`（key `purchaseRegistration.tableColWidths`），双击列头拖拽手柄可重置为默认宽度。"询报价状态"列默认宽度从原先约 26%（约 234px）加宽到 340px，解决状态提示装不下的问题。这套 hook 同时也接入了询报价登记（`InquiryTable`，`lg` 断点）、订单状态表（`OrderTable`，`xl` 断点）、采购订单表（`PurchaseOrderTable`，`lg`/`xl` 断点）——这三张表各自只在"全列展示"的断点启用拖拽，更窄断点保持原有百分比响应式布局不受影响。
+
 ### 采购部登记表状态列（TASK-156 起）
 
 `PurchaseRegistrationTable` 的"状态"列（原"成单状态"）只显示一个优先级最高的主 badge，取第一条满足的：

@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **追加修复 2**：销售从客户那边拿到补充信息后登记在**询报价登记原始** `record.quotedStatuses.type === 'supplemented'`（与采购部自己标记的 `purchaseQuotedStatuses.supplemented` 是两个独立来源），此前采购部完全看不到。新增 `findSalesSupplemented` / `isSalesSupplemented`，状态列"已补充信息" badge 和编辑弹窗新增的蓝色只读提示都会识别这一来源。
 - **追加调整 3**：采购部弹窗的"飞罗需补充信息"和"已补充信息"两条提示改为同一行并列显示（`flex flex-wrap`），"飞罗需补充信息"补上日期；询报价登记编辑/新增弹窗新增对称的只读提示"采购侧提示：需补充信息（日期）" / "采购侧提示：已补充信息（日期）"，读取采购部的 `purchaseSupplierStatuses` / `purchaseQuotedStatuses`，不提供编辑入口。新增 `findSelfSupplierNeedInfo` / `findLatestPurchaseNeedInfo` / `findPurchaseSupplemented`。状态列"已补充信息"优先级高于"需补充信息"的判断此前已实现，本次确认无需改动。
 
+#### 四张登记表支持手动拖拽调整列宽（TASK-157）
+- 新增通用 `useResizableColumns` hook（`src/components/table/`）：按列 id 把像素宽度存 `localStorage`，列集合变化（权限/断点导致列增删）时只给新列补默认宽度，不打乱已有列宽；配套 `ResizeHandle` 拖拽手柄组件（双击重置默认宽度）。
+- 询报价登记（`InquiryTable`，`lg` 断点）、订单状态表（`OrderTable`，`xl` 断点）、采购订单表（`PurchaseOrderTable`，`lg`/`xl` 断点）分别只在各自"全列展示"的断点接入拖拽调宽，更窄断点继续用原有百分比响应式布局，不受影响；采购部登记表（`PurchaseRegistrationTable`，本身无断点逻辑）全断点接入。
+- 采购部登记表"询报价状态"列默认宽度从约 26%（约 234px）加宽到 340px，解决状态提示装不下的问题。
+- checkbox/操作等固定功能列不参与拖拽，避免被意外拖没。
+
 ### Added
 
 #### 权限变更自动生效（TASK-141）

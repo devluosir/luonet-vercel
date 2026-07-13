@@ -3795,6 +3795,57 @@ onChange={(e) => {
 - 新增测试：`purchaseInquiryStatus.test.ts` 12 例（`findSelfSupplierNeedInfo`/`findLatestPurchaseNeedInfo`/`findPurchaseSupplemented` 三组），`PurchaseInquiryEditModal.test.tsx` 4 例（日期展示、缺日期兜底、同行结构断言），新建 `InquiryFormModal.test.tsx` 5 例（两条提示各自展示、同行结构、无数据/新增模式不显示）
 - 验证：定向 Jest（9 个文件）111 例全部通过；`npx tsc --noEmit`、`npx eslint`（6 个改动/新增文件）、`git diff --check` 均通过；`npm run build` 仍未在沙箱里跑完（同上已知限制）
 
+## TASK-157：采购部登记表状态列加宽 + 四张登记表（询报价登记/采购部登记/订单状态表/采购订单表）支持手动拖拽调整列宽
+
+**状态：** 已完成（2026-07-13，本次会话由 Claude 直接实现，未经 Codex）
+
+**背景：**
+
+用户反馈采购部登记表"询报价状态"列太窄（TASK-156 新增的状态提示装不下），并希望采购侧和销售侧全部 4 张登记表——询报价登记（`/inquiry`）、采购部登记（`/purchase-registration`）、订单状态表（`/order`）、采购订单表（`/purchase-order-table`）——每列列宽都能手动拖拽调整（不只是加宽一列）。
+
+这 4 张表此前都是纯百分比 `<colgroup>`/`<th style>` 布局，其中 3 张（`InquiryTable`/`OrderTable`/`PurchaseOrderTable`）还各自有一套响应式断点逻辑（根据屏宽显示/隐藏部分列），只有 `PurchaseRegistrationTable` 没有断点逻辑。
+
+**设计决策（未与用户逐条确认，属合理默认，此处说明）：**
+
+拖拽调宽只在每张表"全列展示"的断点下启用，更窄的响应式断点完全不受影响、继续用原有百分比布局——零回归风险，不触碰已经调优过的移动端/平板列隐藏逻辑：
+- `InquiryTable`：`lg` 断点（客户编号列可见即代表全列展示）
+- `PurchaseRegistrationTable`：本身没有断点逻辑，全断点都启用
+- `OrderTable`：`xl` 断点（含"客户订单号"，"金额/回款/到账金额"三列仍另受 `canViewFinancials` 权限控制，权限不够时该断点下也是当前用户能看到的最全列集）
+- `PurchaseOrderTable`：`lg` 或 `xl`（两个断点视觉列集相同，都含"客户订单号"）
+
+拖拽调宽断点下，表格从 `w-full`（撑满容器）改为显式像素总宽（`style={{width: 总和}}`），外层包一层 `overflow-x-auto`（`PurchaseRegistrationTable`/`OrderTable`/`PurchaseOrderTable` 原本没有这层包裹，本次统一补上；`InquiryTable` 已有）。可能的视觉副作用：默认总宽比容器窄时，表格右侧会有一小段空白（不会撑满到边框），比撑不下时出现横向滚动条更常见；用户拖宽列后可自行消除。全选框/操作列固定宽度，不参与拖拽（避免被拖没）。
+
+**改动模块（新增）：**
+- `src/components/table/useResizableColumns.ts`：通用 hook，按列 id（不用数组下标，避免权限/断点导致的列增删错位）把像素宽度存 `localStorage`；导出纯函数 `computeResizedWidth(startWidth, deltaX, minWidth)` 便于单测；列集合变化时自动给新列补默认宽度，已有列宽不受影响。
+- `src/components/table/ResizeHandle.tsx`：`<th>` 右边缘的拖拽手柄（`role="separator"`），`onPointerDown` 触发拖拽，`onDoubleClick` 重置该列为默认宽度。
+
+**改动模块（接入 4 张表）：**
+- `PurchaseRegistrationTable.tsx`："询报价状态"列默认宽度从原先约 26%（对应约 234px）加宽到 340px，`localStorage` key `purchaseRegistration.tableColWidths`。
+- `InquiryTable.tsx`：5 个内容列（询价编号/询价人/客户编号/内容简述/询报价状态）在 `lg` 断点接入拖拽，key `inquiry.tableColWidths`；checkbox/操作列固定不参与。
+- `OrderTable.tsx`：订单编号/交货/客户/内容简述/确认日/客户订单号/执行情况 + 权限允许时的金额/回款/到账金额，在 `xl` 断点接入拖拽，key `order.tableColWidths`。
+- `PurchaseOrderTable.tsx`：订单编号/内容描述/采购单号/供应商/(金额，权限允许时)/交货日期/确认日期/客户订单号/执行情况，在 `lg`/`xl` 断点接入拖拽，key `purchaseOrderTable.tableColWidths`。
+
+**测试：**
+新增 3 个测试文件、共 24 个用例（均通过）：
+- `useResizableColumns.test.ts`（14 例）：`computeResizedWidth` 边界/取整/最小宽度钳制；hook 默认宽度、读取/丢弃非法 `localStorage` 脏数据、拖拽全流程（pointerdown→pointermove→pointerup）落盘、`resetColumn`、列集合新增列时旧列宽不受影响。
+- `PurchaseRegistrationTable.test.tsx`（4 例）：4 个拖拽手柄渲染、"询报价状态"列默认宽度 ≥300px、拖拽后列宽变化并持久化、空记录态不渲染手柄。
+- `InquiryTable.test.tsx`（3 例）：`lg` 断点渲染 5 个拖拽手柄（checkbox/操作列没有）、`md`/`sm` 断点完全不渲染手柄（验证不影响现有响应式布局）、拖拽后持久化。
+
+jsdom 26 不支持 `PointerEvent` 构造函数，组件级集成测试改用 `new MouseEvent('pointerdown', {clientX, ...})` 冒充（只匹配 `event.type` 做 DOM 派发，不影响真实场景，因为浏览器里 `onPointerDown` 收到的就是真正的 `PointerEvent`）；`pointermove`/`pointerup` 走 `window.addEventListener` 原生监听，用带 `clientX` 属性的普通 `Event` 即可。
+
+**验证结果：**
+- 定向 Jest（3 个新文件）：24 用例全部通过
+- `npx tsc --noEmit`：通过
+- `npx eslint`（全部改动/新增文件）：无输出
+- 全量 `npx jest`（不含 `e2e/`）：3 个测试套件、15 个用例失败，均在 `src/features/quotation/state/__tests__/useQuotationStore.test.ts`，`git status` 确认未改动 `quotation` 相关任何文件，属改动前已存在的既有问题，与本次改动无关
+- `e2e/*.spec.ts`：因沙箱环境问题（Playwright 相关依赖加载失败）全部失败，属既有环境限制，与本次改动无关
+- `npm run build`：未在本次会话执行（沙箱单次命令有时长限制，历史已知问题），建议用户本地或 CI 补跑一次完整验证
+
+**尚存风险：**
+- 未做真实浏览器手动验证（沙箱无可视浏览器），建议用户本地打开这 4 个页面，在桌面宽度下实际拖拽几列、刷新页面确认宽度记忆生效、双击手柄确认能重置默认宽度。
+- 默认像素宽度是按常见桌面容器宽度估算的，不同用户实际窗口宽度下初次打开可能不是"刚好撑满"，属预期内的可接受体验（用户可自行拖宽/拖窄），非 bug。
+- 未做跨设备/跨浏览器 `localStorage` 同步（本来就是纯本地端偏好设置，同一账号换设备/浏览器不会带着走，符合"UI 偏好"惯例）。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

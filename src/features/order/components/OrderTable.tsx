@@ -8,6 +8,8 @@ import {
   headerCellOverflowRightClass,
   headerRowClass,
 } from '@/components/table/tableHeaderStyles';
+import { ResizeHandle } from '@/components/table/ResizeHandle';
+import { type ResizableColumnDef, useResizableColumns } from '@/components/table/useResizableColumns';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import {
   type OrderTableBreakpoint,
@@ -26,6 +28,24 @@ export type { OrderTableBreakpoint };
 
 const headerCellClass = headerCellOverflowClass;
 const headerCellRightClass = headerCellOverflowRightClass;
+
+// 全选列宽度固定、不参与拖拽调宽
+const CHECK_COL_PX = 40;
+
+// 订单状态表（销售侧）：只在 xl 断点（全列展示，含"客户订单号"）启用拖拽调宽，
+// 其余断点继续用原有百分比响应式布局，不受影响。列 id 与下方 <th> 一一对应。
+const RESIZABLE_COLUMN_DEFS: Record<string, ResizableColumnDef> = {
+  orderNo: { id: 'orderNo', defaultWidth: 120, minWidth: 90 },
+  deliveryDate: { id: 'deliveryDate', defaultWidth: 64, minWidth: 56 },
+  customer: { id: 'customer', defaultWidth: 96, minWidth: 70 },
+  desc: { id: 'desc', defaultWidth: 192, minWidth: 120 },
+  confirmDate: { id: 'confirmDate', defaultWidth: 64, minWidth: 56 },
+  customerOrderNo: { id: 'customerOrderNo', defaultWidth: 200, minWidth: 100 },
+  deliveryStatus: { id: 'deliveryStatus', defaultWidth: 144, minWidth: 100 },
+  amount: { id: 'amount', defaultWidth: 110, minWidth: 80 },
+  paymentDate: { id: 'paymentDate', defaultWidth: 70, minWidth: 60 },
+  receivedAmount: { id: 'receivedAmount', defaultWidth: 120, minWidth: 90 },
+};
 
 function useBreakpoint(): OrderTableBreakpoint {
   const [bp, setBp] = useState<OrderTableBreakpoint>('lg');
@@ -83,6 +103,25 @@ export function OrderTable({
   const confirmDateCol = showConfirmDateCol(bp);
   const lgCols = showLgCols(bp);
   const adminCols = showAdminCols(bp, canViewFinancials);
+  const resizable = bp === 'xl';
+
+  // 当前实际渲染的可拖拽列 id（与下方 <th> 渲染条件一一对应），只在 resizable 断点计算/使用
+  const visibleResizableIds = [
+    'orderNo',
+    'deliveryDate',
+    ...(customerCol ? ['customer'] : []),
+    'desc',
+    ...(confirmDateCol ? ['confirmDate'] : []),
+    ...(lgCols ? ['customerOrderNo'] : []),
+    'deliveryStatus',
+    ...(adminCols ? ['amount', 'paymentDate', 'receivedAmount'] : []),
+  ];
+  const resizableColumns = visibleResizableIds.map((id) => RESIZABLE_COLUMN_DEFS[id]);
+  const { widths, startResize, resetColumn } = useResizableColumns('order.tableColWidths', resizableColumns);
+  const totalWidth =
+    (canBatchEdit ? CHECK_COL_PX : 0) +
+    resizableColumns.reduce((sum, c) => sum + (widths[c.id] ?? c.defaultWidth), 0);
+
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const editingRecord = editingRecordId
     ? records.find((record) => record.id === editingRecordId) ?? null
@@ -120,14 +159,29 @@ export function OrderTable({
     );
   }
 
+  const th = (_id: string) => `${headerCellClass} ${resizable ? 'relative' : ''}`;
+  const handle = (id: string, label: string) =>
+    resizable && <ResizeHandle onPointerDown={startResize(id)} onDoubleClick={() => resetColumn(id)} label={label} />;
+
   return (
     <>
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-      <table className="w-full table-fixed">
+      <div className="overflow-x-auto">
+      <table
+        className={`table-fixed ${resizable ? '' : 'w-full'}`}
+        style={resizable ? { width: totalWidth } : undefined}
+      >
         <colgroup>
-          {colWidths.map((w, i) => (
-            <col key={i} style={{ width: w }} />
-          ))}
+          {resizable ? (
+            <>
+              {canBatchEdit && <col style={{ width: CHECK_COL_PX }} />}
+              {resizableColumns.map((c) => (
+                <col key={c.id} style={{ width: widths[c.id] ?? c.defaultWidth }} />
+              ))}
+            </>
+          ) : (
+            colWidths.map((w, i) => <col key={i} style={{ width: w }} />)
+          )}
         </colgroup>
         <thead>
           <tr className={headerRowClass}>
@@ -144,47 +198,57 @@ export function OrderTable({
                 />
               </th>
             )}
-            <th className={`${headerCellClass} sm:px-3`}>
+            <th className={`${th('orderNo')} sm:px-3`}>
               {thSort('orderNo', '订单编号', '编号')}
+              {handle('orderNo', '订单编号')}
             </th>
-            <th className={`${headerCellClass} px-1.5 sm:px-2`}>
+            <th className={`${th('deliveryDate')} px-1.5 sm:px-2`}>
               {thSort('deliveryDate', '交货')}
+              {handle('deliveryDate', '交货')}
             </th>
             {customerCol && (
-              <th className={headerCellClass}>
+              <th className={th('customer')}>
                 <span className="block truncate">客户</span>
+                {handle('customer', '客户')}
               </th>
             )}
-            <th className={headerCellClass}>
+            <th className={th('desc')}>
               <span className="block truncate">内容简述</span>
+              {handle('desc', '内容简述')}
             </th>
             {confirmDateCol && (
-              <th className={`${headerCellClass} px-1.5 sm:px-2`}>
+              <th className={`${th('confirmDate')} px-1.5 sm:px-2`}>
                 <span className="block truncate">
                   {bp === 'sm' ? '确认' : '确认日'}
                 </span>
+                {handle('confirmDate', '确认日')}
               </th>
             )}
             {lgCols && (
-              <th className={headerCellClass}>
+              <th className={th('customerOrderNo')}>
                 <span className="block truncate">客户订单号</span>
+                {handle('customerOrderNo', '客户订单号')}
               </th>
             )}
-            <th className={`${headerCellClass} px-1.5 sm:px-2`}>
+            <th className={`${th('deliveryStatus')} px-1.5 sm:px-2`}>
               <span className="block truncate">
                 {bp === 'sm' ? '执行' : '执行情况'}
               </span>
+              {handle('deliveryStatus', '执行情况')}
             </th>
             {adminCols && (
               <>
-                <th className={headerCellRightClass}>
+                <th className={`${headerCellRightClass} ${resizable ? 'relative' : ''}`}>
                   <span className="block truncate">金额</span>
+                  {handle('amount', '金额')}
                 </th>
-                <th className={headerCellClass}>
+                <th className={th('paymentDate')}>
                   <span className="block truncate">回款</span>
+                  {handle('paymentDate', '回款')}
                 </th>
-                <th className={headerCellRightClass}>
+                <th className={`${headerCellRightClass} ${resizable ? 'relative' : ''}`}>
                   <span className="block truncate">到账金额</span>
+                  {handle('receivedAmount', '到账金额')}
                 </th>
               </>
             )}
@@ -207,6 +271,7 @@ export function OrderTable({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
     <OrderEditModal
       isOpen={editingRecordId !== null}

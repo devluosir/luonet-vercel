@@ -8,8 +8,24 @@ import {
   headerCellRightClass,
   headerRowClass,
 } from '@/components/table/tableHeaderStyles';
+import { ResizeHandle } from '@/components/table/ResizeHandle';
+import { type ResizableColumnDef, useResizableColumns } from '@/components/table/useResizableColumns';
 import type { InquiryRecord } from '../types';
 import { InquiryRow } from './InquiryRow';
+
+// 全选/操作两列宽度固定、不参与拖拽调宽（避免用户把勾选框/操作按钮拖没了）
+const CHECK_COL_PX = 40;
+const DEL_COL_PX = 56;
+
+// 询报价登记表（销售侧）：只在 lg 断点（客户编号列可见，即全列展示）启用拖拽调宽，
+// 其余断点（md/sm）继续用原有百分比响应式布局，不受影响。
+const RESIZABLE_COLUMNS: ResizableColumnDef[] = [
+  { id: 'no', defaultWidth: 110, minWidth: 80 },
+  { id: 'inquirer', defaultWidth: 120, minWidth: 80 },
+  { id: 'custno', defaultWidth: 230, minWidth: 140 },
+  { id: 'desc', defaultWidth: 230, minWidth: 140 },
+  { id: 'status', defaultWidth: 290, minWidth: 160 },
+];
 
 function useBreakpoint() {
   const [bp, setBp] = useState<'sm' | 'md' | 'lg'>('lg');
@@ -56,12 +72,14 @@ export function InquiryTable({
   onToggleSelectAll,
 }: InquiryTableProps) {
   const bp = useBreakpoint();
+  const resizable = bp === 'lg';
+  const { widths, startResize, resetColumn } = useResizableColumns('inquiry.tableColWidths', RESIZABLE_COLUMNS);
 
   const allIds = records.map((r) => r.id);
   const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
   const someSelected = allIds.some((id) => selectedIds.has(id)) && !allSelected;
 
-  // 列宽：有 checkbox 列时从询价编号列各借 3%
+  // 列宽：有 checkbox 列时从询价编号列各借 3%（仅非拖拽调宽断点适用）
   const W = canBatchEdit
     ? {
         check:    '3%',
@@ -91,15 +109,26 @@ export function InquiryTable({
     );
   }
 
+  // 拖拽调宽断点（lg）下，各列宽度改为拖拽 hook 提供的像素值；其余断点保持原有百分比不变
+  const colWidth = (id: 'no' | 'inquirer' | 'custno' | 'desc' | 'status'): string | number =>
+    resizable ? widths[id] ?? RESIZABLE_COLUMNS.find((c) => c.id === id)!.defaultWidth : W[id];
+  const totalWidth =
+    (canBatchEdit ? CHECK_COL_PX : 0) +
+    RESIZABLE_COLUMNS.reduce((sum, c) => sum + (widths[c.id] ?? c.defaultWidth), 0) +
+    DEL_COL_PX;
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed divide-y divide-gray-100 dark:divide-gray-800">
+        <table
+          className={`table-fixed divide-y divide-gray-100 dark:divide-gray-800 ${resizable ? '' : 'w-full'}`}
+          style={resizable ? { width: totalWidth } : undefined}
+        >
           <thead>
             <tr className={headerRowClass}>
               {/* 全选 checkbox */}
               {canBatchEdit && (
-                <th style={{ width: W.check }} className={headerCellCenterClass}>
+                <th style={{ width: resizable ? CHECK_COL_PX : W.check }} className={headerCellCenterClass}>
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -112,7 +141,7 @@ export function InquiryTable({
                 </th>
               )}
 
-              <th style={{ width: W.no }} className={headerCellClass}>
+              <th style={{ width: colWidth('no') }} className={`${headerCellClass} ${resizable ? 'relative' : ''}`}>
                 <button
                   type="button"
                   onClick={onSortToggle}
@@ -126,20 +155,25 @@ export function InquiryTable({
                     <ChevronUp className="h-3 w-3 shrink-0" />
                   )}
                 </button>
+                {resizable && <ResizeHandle onPointerDown={startResize('no')} onDoubleClick={() => resetColumn('no')} label="询价编号" />}
               </th>
-              <th style={{ width: W.inquirer }} className={`${headerCellClass} hidden md:table-cell`}>
+              <th style={{ width: colWidth('inquirer') }} className={`${headerCellClass} hidden md:table-cell ${resizable ? 'relative' : ''}`}>
                 <span className="block truncate">询价人</span>
+                {resizable && <ResizeHandle onPointerDown={startResize('inquirer')} onDoubleClick={() => resetColumn('inquirer')} label="询价人" />}
               </th>
-              <th style={{ width: W.custno }} className={`${headerCellClass} hidden lg:table-cell`}>
+              <th style={{ width: colWidth('custno') }} className={`${headerCellClass} hidden lg:table-cell ${resizable ? 'relative' : ''}`}>
                 <span className="block truncate">客户编号</span>
+                {resizable && <ResizeHandle onPointerDown={startResize('custno')} onDoubleClick={() => resetColumn('custno')} label="客户编号" />}
               </th>
-              <th style={{ width: W.desc }} className={headerCellClass}>
+              <th style={{ width: colWidth('desc') }} className={`${headerCellClass} ${resizable ? 'relative' : ''}`}>
                 <span className="block truncate">内容简述</span>
+                {resizable && <ResizeHandle onPointerDown={startResize('desc')} onDoubleClick={() => resetColumn('desc')} label="内容简述" />}
               </th>
-              <th style={{ width: W.status }} className={headerCellClass}>
+              <th style={{ width: colWidth('status') }} className={`${headerCellClass} ${resizable ? 'relative' : ''}`}>
                 <span className="block truncate">询报价状态</span>
+                {resizable && <ResizeHandle onPointerDown={startResize('status')} onDoubleClick={() => resetColumn('status')} label="询报价状态" />}
               </th>
-              <th style={{ width: W.del }} className={headerCellRightClass}>
+              <th style={{ width: resizable ? DEL_COL_PX : W.del }} className={headerCellRightClass}>
                 <span className="hidden md:inline">操作</span>
               </th>
             </tr>

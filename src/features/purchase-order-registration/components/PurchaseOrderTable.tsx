@@ -6,6 +6,8 @@ import {
   headerCellOverflowRightClass,
   headerRowClass,
 } from '@/components/table/tableHeaderStyles';
+import { ResizeHandle } from '@/components/table/ResizeHandle';
+import { type ResizableColumnDef, useResizableColumns } from '@/components/table/useResizableColumns';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import {
   type PurchaseOrderTableBreakpoint,
@@ -18,6 +20,20 @@ import { PurchaseOrderEditModal } from './PurchaseOrderEditModal';
 import { PurchaseOrderRow } from './PurchaseOrderRow';
 
 export type { PurchaseOrderTableBreakpoint };
+
+// 采购订单表（采购侧）：只在 lg/xl 断点（全列展示，含"客户订单号"）启用拖拽调宽，
+// sm/md 断点继续用原有百分比响应式布局，不受影响。列 id 与下方 <th> 一一对应。
+const RESIZABLE_COLUMN_DEFS: Record<string, ResizableColumnDef> = {
+  orderNo: { id: 'orderNo', defaultWidth: 110, minWidth: 90 },
+  desc: { id: 'desc', defaultWidth: 200, minWidth: 130 },
+  purchaseOrderNo: { id: 'purchaseOrderNo', defaultWidth: 110, minWidth: 80 },
+  supplier: { id: 'supplier', defaultWidth: 130, minWidth: 90 },
+  amount: { id: 'amount', defaultWidth: 100, minWidth: 80 },
+  deliveryDate: { id: 'deliveryDate', defaultWidth: 90, minWidth: 70 },
+  confirmDate: { id: 'confirmDate', defaultWidth: 90, minWidth: 70 },
+  customerNo: { id: 'customerNo', defaultWidth: 130, minWidth: 90 },
+  deliveryStatus: { id: 'deliveryStatus', defaultWidth: 140, minWidth: 100 },
+};
 
 interface PurchaseOrderTableProps {
   records: InquiryRecord[];
@@ -47,6 +63,24 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
   const purchaseOrderNoCol = showPurchaseOrderNoCol(bp);
   const confirmDateCol = showConfirmDateCol(bp);
   const customerNoCol = showCustomerNoCol(bp);
+  const resizable = bp === 'lg' || bp === 'xl';
+
+  // 当前实际渲染的可拖拽列 id（与下方 <th> 渲染条件一一对应），只在 resizable 断点计算/使用
+  const visibleResizableIds = [
+    'orderNo',
+    'desc',
+    ...(purchaseOrderNoCol ? ['purchaseOrderNo'] : []),
+    'supplier',
+    ...(canViewFinancials ? ['amount'] : []),
+    'deliveryDate',
+    ...(confirmDateCol ? ['confirmDate'] : []),
+    ...(customerNoCol ? ['customerNo'] : []),
+    'deliveryStatus',
+  ];
+  const resizableColumns = visibleResizableIds.map((id) => RESIZABLE_COLUMN_DEFS[id]);
+  const { widths, startResize, resetColumn } = useResizableColumns('purchaseOrderTable.tableColWidths', resizableColumns);
+  const totalWidth = resizableColumns.reduce((sum, c) => sum + (widths[c.id] ?? c.defaultWidth), 0);
+
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
 
   if (records.length === 0) {
@@ -61,29 +95,69 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
   }
 
   const colWidths = getVisibleColWidths(bp, canViewFinancials);
+  const th = (_id: string) => `${headerCellOverflowClass} ${resizable ? 'relative' : ''}`;
+  const handle = (id: string, label: string) =>
+    resizable && <ResizeHandle onPointerDown={startResize(id)} onDoubleClick={() => resetColumn(id)} label={label} />;
 
   return (
     <>
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-      <table className="w-full table-fixed">
+      <div className="overflow-x-auto">
+      <table
+        className={`table-fixed ${resizable ? '' : 'w-full'}`}
+        style={resizable ? { width: totalWidth } : undefined}
+      >
         <colgroup>
-          {colWidths.map((w, i) => (
-            <col key={i} style={{ width: w }} />
-          ))}
+          {resizable
+            ? resizableColumns.map((c) => <col key={c.id} style={{ width: widths[c.id] ?? c.defaultWidth }} />)
+            : colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}
         </colgroup>
         <thead>
           <tr className={headerRowClass}>
-            <th className={`${headerCellOverflowClass} sm:px-3`}>订单编号</th>
-            <th className={headerCellOverflowClass}>内容描述</th>
+            <th className={`${th('orderNo')} sm:px-3`}>
+              订单编号
+              {handle('orderNo', '订单编号')}
+            </th>
+            <th className={th('desc')}>
+              内容描述
+              {handle('desc', '内容描述')}
+            </th>
             {purchaseOrderNoCol && (
-              <th className={`${headerCellOverflowClass} px-1.5 sm:px-2`}>采购单号</th>
+              <th className={`${th('purchaseOrderNo')} px-1.5 sm:px-2`}>
+                采购单号
+                {handle('purchaseOrderNo', '采购单号')}
+              </th>
             )}
-            <th className={`${headerCellOverflowClass} px-1.5 sm:px-2`}>供应商</th>
-            {canViewFinancials && <th className={headerCellOverflowRightClass}>金额</th>}
-            <th className={`${headerCellOverflowClass} px-1.5 sm:px-2`}>交货日期</th>
-            {confirmDateCol && <th className={headerCellOverflowClass}>确认日期</th>}
-            {customerNoCol && <th className={headerCellOverflowClass}>客户订单号</th>}
-            <th className={`${headerCellOverflowClass} px-1.5 sm:px-2`}>执行情况</th>
+            <th className={`${th('supplier')} px-1.5 sm:px-2`}>
+              供应商
+              {handle('supplier', '供应商')}
+            </th>
+            {canViewFinancials && (
+              <th className={`${headerCellOverflowRightClass} ${resizable ? 'relative' : ''}`}>
+                金额
+                {handle('amount', '金额')}
+              </th>
+            )}
+            <th className={`${th('deliveryDate')} px-1.5 sm:px-2`}>
+              交货日期
+              {handle('deliveryDate', '交货日期')}
+            </th>
+            {confirmDateCol && (
+              <th className={th('confirmDate')}>
+                确认日期
+                {handle('confirmDate', '确认日期')}
+              </th>
+            )}
+            {customerNoCol && (
+              <th className={th('customerNo')}>
+                客户订单号
+                {handle('customerNo', '客户订单号')}
+              </th>
+            )}
+            <th className={`${th('deliveryStatus')} px-1.5 sm:px-2`}>
+              执行情况
+              {handle('deliveryStatus', '执行情况')}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -100,6 +174,7 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
           ))}
         </tbody>
       </table>
+      </div>
     </div>
     <PurchaseOrderEditModal
       isOpen={editingRecord !== null}
