@@ -191,7 +191,8 @@ function DatePickerCell({ field, activeField, value, textClassName, onActivate, 
           }}
           onChange={(e) => {
             const v = fromISO(e.target.value);
-            if (v) onSave(v);
+            if (!e.target.value) onSave(undefined);
+            else if (v) onSave(v);
           }}
         />
         <CalendarDays className="pointer-events-none h-3 w-3 text-gray-300 dark:text-gray-600" />
@@ -270,7 +271,8 @@ function MonthPickerCell({ field, activeField, value, textClassName, onActivate,
           }}
           onChange={(e) => {
             const v = fromMonthISO(e.target.value);
-            if (v) onSave(v);
+            if (!e.target.value) onSave(undefined);
+            else if (v) onSave(v);
           }}
         />
         <CalendarDays className="pointer-events-none h-3 w-3 text-gray-300 dark:text-gray-600" />

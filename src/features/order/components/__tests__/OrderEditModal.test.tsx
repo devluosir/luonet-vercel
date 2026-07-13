@@ -24,11 +24,11 @@ function createRecord(overrides: Partial<InquiryRecord> = {}): InquiryRecord {
   };
 }
 
-function renderModal(record: InquiryRecord, onSave = jest.fn()) {
+function renderModal(record: InquiryRecord, onSave = jest.fn(), canViewFinancials = false) {
   const props = {
     isOpen: true,
     record,
-    canViewFinancials: false,
+    canViewFinancials,
     consigneeOptions: [],
     onClose: jest.fn(),
     onSave,
@@ -80,5 +80,50 @@ describe('OrderEditModal concurrent record refresh', () => {
     const patch = onSave.mock.calls[0][1] as Partial<InquiryRecord>;
     expect(patch.orderSubStatus).toBe('cancelled');
     expect(patch.orderSubStatusRemark).toBe('客户取消');
+  });
+});
+
+describe('OrderEditModal native date pickers', () => {
+  it('clears date and month fields when the native picker emits an empty value', () => {
+    const onSave = jest.fn();
+    renderModal(
+      createRecord({
+        orderDeliveryDate: '[7.20]',
+        orderConfirmDate: '[7.18]',
+        orderPaymentDate: '8',
+      }),
+      onSave,
+      true
+    );
+
+    screen.getAllByLabelText(/^选择.*日期$/).forEach((input) => {
+      fireEvent.click(input);
+      fireEvent.change(input, { target: { value: '' } });
+    });
+    const monthInput = screen.getByLabelText('选择回款月份');
+    fireEvent.click(monthInput);
+    fireEvent.change(monthInput, { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+
+    const patch = onSave.mock.calls[0][1] as Partial<InquiryRecord>;
+    expect(patch.orderDeliveryDate).toBeUndefined();
+    expect(patch.orderConfirmDate).toBeUndefined();
+    expect(patch.orderPaymentDate).toBeUndefined();
+  });
+
+  it('keeps converting non-empty native date and month values', () => {
+    const onSave = jest.fn();
+    renderModal(createRecord(), onSave, true);
+
+    const [deliveryDateInput, confirmDateInput] = screen.getAllByLabelText(/^选择.*日期$/);
+    fireEvent.change(deliveryDateInput, { target: { value: '2026-07-20' } });
+    fireEvent.change(confirmDateInput, { target: { value: '2026-07-18' } });
+    fireEvent.change(screen.getByLabelText('选择回款月份'), { target: { value: '2026-08' } });
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+
+    const patch = onSave.mock.calls[0][1] as Partial<InquiryRecord>;
+    expect(patch.orderDeliveryDate).toBe('[7.20]');
+    expect(patch.orderConfirmDate).toBe('[7.18]');
+    expect(patch.orderPaymentDate).toBe('8');
   });
 });

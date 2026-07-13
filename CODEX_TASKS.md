@@ -3643,6 +3643,54 @@ FL2627、FL2629、FL2630、FL2632、FL2633、FL2637、FL2640、FL2641、FL2644�
 - Worker 已部署至 `udb.luocompany.net`，版本 `98e92379-def9-4b5c-b3a9-340a8cf20118`。
 - 定向 Jest：3 个测试文件、13 个用例全部通过；相关 ESLint、`npx tsc --noEmit`、`npm run build`、`git diff --check` 均通过。
 
+## TASK-155：修复订单状态表回款月份等原生日期/月份选择器"清除"按钮不生效
+
+**状态：** 已完成（2026-07-13）
+
+**背景：**
+
+用户反馈：订单状态表回款月份列，点开原生月份选择器后点里面的"清除"按钮没有反应，字段值没有被清空。
+
+根因定位在 `src/features/order/components/OrderRow.tsx` 的 `MonthPickerCell`（约 271–274 行）：
+```
+onChange={(e) => {
+  const v = fromMonthISO(e.target.value);
+  if (v) onSave(v);
+}}
+```
+浏览器原生 `<input type="month">` 点"清除"后触发的 `change` 事件里 `e.target.value` 是空字符串，`fromMonthISO('')` 按现有实现返回 `''`（falsy），于是 `if (v)` 判断为假，`onSave` 根本不会被调用——不是"清除逻辑写错了"，是"清除这个动作被守卫语句拦在了外面，从未到达保存逻辑"。
+
+排查同一文件/同一交互模式（原生 `<input type="date">` + 隐藏 overlay + 图标）后发现，这个"`if (v)` 挡住清空"的写法被复制了 4 处，全部同一根因、同一修法：
+1. `OrderRow.tsx` 里紧邻 `MonthPickerCell` 之上的日期单元格组件（约 192–195 行，`m.D` 格式的确认/交货日期一类字段）
+2. `OrderRow.tsx` 的 `MonthPickerCell`（约 271–274 行，即本次用户报告的回款月份列）
+3. `OrderEditModal.tsx` 的 `DateField`（约 87–90 行，「编辑订单」弹窗里日期类字段，TASK-125 引入）
+4. `OrderEditModal.tsx` 的 `MonthField`（约 133–136 行，「编辑订单」弹窗回款月份，TASK-149 新增）
+
+用户本次只报了回款月份列，但另外 3 处是完全相同的代码模式、完全相同的 bug，顺手一起修，避免用户下个月对日期列或弹窗里同一交互再报一次同样的问题。
+
+**文件范围：**
+- `src/features/order/components/OrderRow.tsx` — 上述第 1、2 处的 `onChange` 回调
+- `src/features/order/components/OrderEditModal.tsx` — 上述第 3、4 处的 `onChange` 回调
+
+**验收标准：**
+- 4 处原生选择器（表格行内日期单元格、表格行内回款月份、弹窗日期字段、弹窗回款月份）点击浏览器原生"清除"按钮后，对应字段值都被清空：
+  - `OrderRow.tsx` 两处：`onSave` 需要在清除时被调用并传入 `undefined`（而不是被 `if (v)` 拦截、完全不调用）
+  - `OrderEditModal.tsx` 两处：`onChange` 需要在清除时被调用并传入空字符串 `''`（modal 内 `handleSave` 已有 `xxx.trim() || undefined` 逻辑，空字符串会在保存时正确转成 `undefined`，不需要额外改 `handleSave`）
+- 正常选择某个日期/月份（非清除路径）的行为不变，不能引入新的解析错误
+- 表格行内编辑态、弹窗编辑态分别手动验证一次清除操作
+
+**非目标 / 红线：**
+- 不改 `toISO`/`fromISO`/`toMonthISO`/`fromMonthISO` 的日期格式转换规则本身，只改"空值要不要传下去"这一个判断
+- 不改动数据存储格式（`orderPaymentDate` 仍是纯数字 `m`，日期字段仍是 `m.D`）
+- 不涉及采购部登记/采购订单表（`PurchaseOrderRow.tsx` 等），那边如有同样模式不在本任务范围内
+- 不改动这 4 处以外的其它字段编辑逻辑（金额、执行情况、订单状态标记等，TASK-149 已处理过的金额/币种逻辑不动）
+
+**验证步骤：**
+- `npx tsc --noEmit`
+- `npx eslint src/features/order/components/OrderRow.tsx src/features/order/components/OrderEditModal.tsx`
+- `npm run build`（沙箱历史上多次 45 秒超时被打断，属已知限制，建议用户本地或 CI 补跑一次）
+- 手动验证（建议用户在浏览器里过一遍）：订单状态表行内点开日期单元格和回款月份单元格的原生选择器，选中后点"清除"，确认单元格变回占位符（`m.D` / `m`）；打开"编辑订单"弹窗对日期字段和回款月份字段重复同样验证。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

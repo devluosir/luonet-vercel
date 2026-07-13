@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+#### 原生日期/月份选择器清除（TASK-155）
+- 订单状态表行内日期、回款月份选择器在浏览器返回空值时，现会分别提交 `undefined`，不再被非空解析守卫拦截。
+- “编辑订单”弹窗的日期与回款月份选择器同步接受原生清除事件；保存时继续由既有逻辑把空字符串转换为 `undefined`，正常日期/月格式保持不变。
+- 新增行内与弹窗组件回归测试，覆盖清除和正常选择两条路径。
+
 #### 订单“正常”筛选兼容空状态（TASK-154）
 - 订单状态表与采购订单表的「正常」列表和角标改为共用 `isNormalOrder`，同时接受未设置、历史 `null` 和悬挂P；撤销C、善后S仍保持独立状态。
 - Worker PUT 收到 `orderNo`、`orderSubStatus`、`orderSubStatusRemark`、`customerId`、`contactId` 的显式 `null` 时删除对应 `Document.data` JSON 属性，避免清空操作再次持久化 `orderSubStatus: null`。
@@ -63,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 将供应商与待关联供应商匹配逻辑提升为模块级纯函数，使三个 `useMemo` 只依赖实际筛选值和数据数组，消除 `react-hooks/exhaustive-deps` warning，筛选行为保持不变。
 
 ### Tests
+- TASK-155：`OrderRow` / `OrderEditModal` 组件测试 2 个文件、6 项通过（含原生日期/月选择器清除与正常转换）；`npx tsc --noEmit`、相关 ESLint、`npm run build` 通过。
 - `npx jest src/components/layout/__tests__/DesktopSidebarHost.test.tsx --runInBand`（4 项）
 - `npx jest src/hooks/__tests__/usePermissionChangeWatcher.test.ts --runInBand`（5 项）
 - `npx tsc --noEmit`

@@ -86,7 +86,7 @@ function DateField({ label, value, onChange }: DateFieldProps) {
             }}
             onChange={(e) => {
               const v = isoToShort(e.target.value);
-              if (v) onChange(v);
+              if (!e.target.value || v) onChange(v);
             }}
           />
           <CalendarDays className="pointer-events-none h-4 w-4 text-gray-300 dark:text-gray-600" />
@@ -132,7 +132,7 @@ function MonthField({ label, value, onChange }: DateFieldProps) {
             }}
             onChange={(e) => {
               const next = fromMonthISO(e.target.value);
-              if (next) onChange(next);
+              if (!e.target.value || next) onChange(next);
             }}
           />
           <CalendarDays className="pointer-events-none h-4 w-4 text-gray-300 dark:text-gray-600" />
