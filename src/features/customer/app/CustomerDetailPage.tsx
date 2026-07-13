@@ -90,7 +90,9 @@ async function findCustomerFromUrl(customerId: string, type: DetailType, custome
   }) ?? null;
 }
 
-function toFormData(customer: Customer, changes: Partial<Pick<CustomerFormData, 'name' | 'address'>>): CustomerFormData {
+type ProfileFieldChanges = Partial<Pick<CustomerFormData, 'name' | 'address' | 'contacts' | 'category' | 'categoryNote'>>;
+
+function toFormData(customer: Customer, changes: ProfileFieldChanges): CustomerFormData {
   return {
     name: customer.name,
     shortName: customer.shortName ?? '',
@@ -188,20 +190,17 @@ export default function CustomerDetailPage() {
     };
   }, [customer?.id, isCustomerDetail]);
 
-  const handleSaveProfileField = async (field: 'name' | 'address', value: string) => {
+  const handleSaveProfileFields = async (changes: ProfileFieldChanges) => {
     if (!customer) return false;
 
-    const currentValue = field === 'name' ? customer.name : customer.address;
-    if (value === currentValue) return true;
-
-    const nextFormData = toFormData(customer, { [field]: value });
+    const nextFormData = toFormData(customer, changes);
     let success = false;
     if (detailType === 'supplier') success = await saveSupplier(nextFormData, customer);
     else if (detailType === 'consignee') success = await saveConsignee(nextFormData, customer);
     else success = await saveCustomer(nextFormData, customer);
     if (!success) return false;
 
-    setCustomer((prev) => prev ? { ...prev, [field]: value, updatedAt: new Date().toISOString() } : prev);
+    setCustomer((prev) => (prev ? { ...prev, ...changes, updatedAt: new Date().toISOString() } : prev));
     reloadCustomer();
     return true;
   };
@@ -281,7 +280,7 @@ export default function CustomerDetailPage() {
           <>
             <CustomerInfoCard
               customer={customer}
-              onSaveField={handleSaveProfileField}
+              onSaveField={handleSaveProfileFields}
               hideContacts={detailType === 'consignee'}
               isCustomerDetail={isCustomerDetail}
               stats={stats}

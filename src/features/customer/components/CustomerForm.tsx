@@ -3,14 +3,8 @@
 import { type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Contact, CustomerCategory, CustomerFormData } from '../types';
-
-const CATEGORY_OPTIONS: Array<{ value: CustomerCategory; label: string }> = [
-  { value: 'A', label: 'A类' },
-  { value: 'B', label: 'B类' },
-  { value: 'C', label: 'C类' },
-  { value: 'New', label: 'New（未成单新客户）' },
-  { value: 'Blacklist', label: '黑名单' },
-];
+import { CATEGORY_OPTIONS } from './ProfileListParts';
+import { ContactsEditor } from './ContactsEditor';
 
 type TextFieldId = Exclude<keyof CustomerFormData, 'contacts'>;
 
@@ -48,13 +42,6 @@ const TEXTAREA_CLASS =
   'dark:border-gray-600 dark:bg-gray-700 dark:text-white';
 
 const SECTION_CLASS = 'rounded-lg border border-gray-200 p-4 dark:border-gray-700';
-
-function createContactId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `contact_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-}
 
 function FormField({
   id,
@@ -96,48 +83,8 @@ export function CustomerForm({
 }: CustomerFormProps) {
   const contacts = formData.contacts ?? [];
 
-  const updateContacts = (nextContacts: Contact[]) => {
-    if (nextContacts.length === 0) {
-      onInputChange('contacts', [{ id: createContactId(), name: '', isPrimary: true }]);
-      return;
-    }
-    const primaryIndex = nextContacts.findIndex((contact) => contact.isPrimary);
-    const resolvedPrimaryIndex = primaryIndex >= 0 ? primaryIndex : 0;
-    onInputChange(
-      'contacts',
-      nextContacts.map((contact, index) => ({
-        ...contact,
-        isPrimary: index === resolvedPrimaryIndex,
-      }))
-    );
-  };
-
-  const addContact = () => {
-    updateContacts([
-      ...contacts,
-      { id: createContactId(), name: '', isPrimary: contacts.length === 0 },
-    ]);
-  };
-
-  const removeContact = (contactId: string) => {
-    updateContacts(contacts.filter((contact) => contact.id !== contactId));
-  };
-
-  const updateContact = (contactId: string, field: keyof Omit<Contact, 'id' | 'isPrimary'>, value: string) => {
-    updateContacts(
-      contacts.map((contact) =>
-        contact.id === contactId ? { ...contact, [field]: value } : contact
-      )
-    );
-  };
-
-  const setPrimaryContact = (contactId: string) => {
-    updateContacts(
-      contacts.map((contact) => ({
-        ...contact,
-        isPrimary: contact.id === contactId,
-      }))
-    );
+  const handleContactsChange = (nextContacts: Contact[]) => {
+    onInputChange('contacts', nextContacts);
   };
 
   const companyFields = entityType === 'consignees' ? (
@@ -253,115 +200,12 @@ export function CustomerForm({
           <legend className="px-1 text-sm font-semibold text-gray-800 dark:text-gray-100">
             联络人
           </legend>
-          <div className="mt-3 space-y-3">
-            {contacts.map((contact, index) => (
-              <div
-                key={contact.id}
-                className="space-y-3 rounded-md border border-gray-200 p-3 dark:border-gray-600"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
-                    <input
-                      type="radio"
-                      name="primary-contact"
-                      checked={Boolean(contact.isPrimary)}
-                      onChange={() => setPrimaryContact(contact.id)}
-                      className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    联络人{index + 1}
-                    {contact.isPrimary && (
-                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
-                        主联络人
-                      </span>
-                    )}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => removeContact(contact.id)}
-                    disabled={contacts.length <= 1}
-                    className="text-xs text-red-400 transition-colors hover:text-red-600 disabled:cursor-not-allowed disabled:text-gray-300"
-                  >
-                    删除
-                  </button>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor={`contact-name-${contact.id}`}
-                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
-                      姓名
-                    </label>
-                    <input
-                      type="text"
-                      id={`contact-name-${contact.id}`}
-                      value={contact.name}
-                      onChange={(e) => updateContact(contact.id, 'name', e.target.value)}
-                      className={FIELD_CLASS}
-                      required={entityType === 'customers'}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor={`contact-short-${contact.id}`}
-                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
-                      简称
-                    </label>
-                    <input
-                      type="text"
-                      id={`contact-short-${contact.id}`}
-                      value={contact.shortName ?? ''}
-                      onChange={(e) => updateContact(contact.id, 'shortName', e.target.value)}
-                      className={FIELD_CLASS}
-                      placeholder="如：Roger"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor={`contact-email-${contact.id}`}
-                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
-                      邮箱
-                    </label>
-                    <input
-                      type="email"
-                      id={`contact-email-${contact.id}`}
-                      value={contact.email ?? ''}
-                      onChange={(e) => updateContact(contact.id, 'email', e.target.value)}
-                      className={FIELD_CLASS}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor={`contact-phone-${contact.id}`}
-                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
-                      电话
-                    </label>
-                    <input
-                      type="tel"
-                      id={`contact-phone-${contact.id}`}
-                      value={contact.phone ?? ''}
-                      onChange={(e) => updateContact(contact.id, 'phone', e.target.value)}
-                      className={FIELD_CLASS}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            <button
-              type="button"
-              onClick={addContact}
-              className="w-full rounded-md border border-dashed border-blue-300 py-2 text-sm text-blue-600 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/20"
-            >
-              + 添加联络人
-            </button>
+          <div className="mt-3">
+            <ContactsEditor
+              contacts={contacts}
+              onChange={handleContactsChange}
+              requireName={entityType === 'customers'}
+            />
           </div>
         </fieldset>
       )}

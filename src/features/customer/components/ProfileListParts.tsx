@@ -31,6 +31,14 @@ const CATEGORY_LABELS: Record<CustomerCategory, string> = {
   Blacklist: '黑名单',
 };
 
+export const CATEGORY_OPTIONS: Array<{ value: CustomerCategory; label: string }> = [
+  { value: 'A', label: 'A类' },
+  { value: 'B', label: 'B类' },
+  { value: 'C', label: 'C类' },
+  { value: 'New', label: 'New（未成单新客户）' },
+  { value: 'Blacklist', label: '黑名单' },
+];
+
 export function CategoryBadge({ category, note }: { category?: CustomerCategory; note?: string }) {
   if (!category) return null;
 

@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { Check, Edit, Mail, MapPin, Phone, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import type { Customer } from '../types';
+import type { Contact, Customer, CustomerCategory, CustomerFormData } from '../types';
 import type { CustomerStats } from '../services/customerService';
-import { CategoryBadge } from './ProfileListParts';
+import { CATEGORY_OPTIONS, CategoryBadge } from './ProfileListParts';
+import { ContactsEditor } from './ContactsEditor';
+import { createContactId } from '../utils/contacts';
 
 interface ContactHrefInput {
   contactId: string;
@@ -14,9 +16,11 @@ interface ContactHrefInput {
   shortName?: string | null;
 }
 
+type SaveableFields = Partial<Pick<CustomerFormData, 'name' | 'address' | 'contacts' | 'category' | 'categoryNote'>>;
+
 interface CustomerInfoCardProps {
   customer: Customer;
-  onSaveField?: (field: 'name' | 'address', value: string) => Promise<boolean>;
+  onSaveField?: (changes: SaveableFields) => Promise<boolean>;
   hideContacts?: boolean;
   isCustomerDetail?: boolean;
   stats?: CustomerStats | null;
@@ -63,6 +67,18 @@ export function CustomerInfoCard({
   const [draftValue, setDraftValue] = useState('');
   const [inlineError, setInlineError] = useState('');
   const [savingField, setSavingField] = useState<EditableField | null>(null);
+
+  const [isEditingContacts, setIsEditingContacts] = useState(false);
+  const [contactsDraft, setContactsDraft] = useState<Contact[]>([]);
+  const [contactsError, setContactsError] = useState('');
+  const [savingContacts, setSavingContacts] = useState(false);
+
+  const [isEditingCategory, setIsEditingCategory] = useState(false);
+  const [categoryDraft, setCategoryDraft] = useState<CustomerCategory>('New');
+  const [categoryNoteDraft, setCategoryNoteDraft] = useState('');
+  const [categoryError, setCategoryError] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
+
   const showEmptyStatsHint =
     isCustomerDetail && !isLoadingStats && Boolean(stats) && stats!.totals.inquiries === 0 && stats!.totals.orders === 0;
 
@@ -89,13 +105,75 @@ export function CustomerInfoCard({
 
     setSavingField(editingField);
     setInlineError('');
-    const success = await onSaveField(editingField, editingField === 'name' ? nextValue : draftValue);
+    const success = await onSaveField({ [editingField]: editingField === 'name' ? nextValue : draftValue });
     setSavingField(null);
     if (success) {
       cancelEditing();
       return;
     }
     setInlineError('保存失败，请重试');
+  };
+
+  const startEditingContacts = () => {
+    setContactsDraft(
+      contacts.length > 0
+        ? contacts.map((contact) => ({ ...contact }))
+        : [{ id: createContactId(), name: '', isPrimary: true }]
+    );
+    setContactsError('');
+    setIsEditingContacts(true);
+  };
+
+  const cancelEditingContacts = () => {
+    setIsEditingContacts(false);
+    setContactsDraft([]);
+    setContactsError('');
+  };
+
+  const saveEditingContacts = async () => {
+    if (!onSaveField) return;
+
+    const hasName = contactsDraft.some((contact) => contact.name.trim());
+    if (isCustomerDetail && !hasName) {
+      setContactsError('至少填写一位联络人姓名');
+      return;
+    }
+
+    setSavingContacts(true);
+    setContactsError('');
+    const success = await onSaveField({ contacts: contactsDraft });
+    setSavingContacts(false);
+    if (success) {
+      cancelEditingContacts();
+      return;
+    }
+    setContactsError('保存失败，请重试');
+  };
+
+  const startEditingCategory = () => {
+    setCategoryDraft(customer.category ?? 'New');
+    setCategoryNoteDraft(customer.categoryNote ?? '');
+    setCategoryError('');
+    setIsEditingCategory(true);
+  };
+
+  const cancelEditingCategory = () => {
+    setIsEditingCategory(false);
+    setCategoryError('');
+  };
+
+  const saveEditingCategory = async () => {
+    if (!onSaveField) return;
+
+    setSavingCategory(true);
+    setCategoryError('');
+    const success = await onSaveField({ category: categoryDraft, categoryNote: categoryNoteDraft.trim() || undefined });
+    setSavingCategory(false);
+    if (success) {
+      cancelEditingCategory();
+      return;
+    }
+    setCategoryError('保存失败，请重试');
   };
 
   return (
@@ -158,17 +236,81 @@ export function CustomerInfoCard({
                   )}
                 </>
               )}
-              <CategoryBadge category={customer.category} note={customer.categoryNote} />
+              {isCustomerDetail && onSaveField ? (
+                !isEditingCategory && (
+                  <>
+                    <CategoryBadge category={customer.category} note={customer.categoryNote} />
+                    <button
+                      type="button"
+                      onClick={startEditingCategory}
+                      title="修改客户分类"
+                      aria-label="修改客户分类"
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                )
+              ) : (
+                <CategoryBadge category={customer.category} note={customer.categoryNote} />
+              )}
             </div>
             {customer.shortName && (
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 简称：{customer.shortName}
               </p>
             )}
-            {customer.categoryNote && (
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                分类备注：{customer.categoryNote}
-              </p>
+            {isEditingCategory ? (
+              <div className="mt-2 max-w-md rounded-md border border-blue-200 bg-blue-50/40 p-2.5 dark:border-blue-800 dark:bg-blue-950/20">
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={categoryDraft}
+                    onChange={(event) => setCategoryDraft(event.target.value as CustomerCategory)}
+                    className="h-8 rounded-md border border-gray-300 px-2 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    autoFocus
+                  >
+                    {CATEGORY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    value={categoryNoteDraft}
+                    onChange={(event) => setCategoryNoteDraft(event.target.value)}
+                    placeholder="分类备注，如：月均3单，回款及时"
+                    className="h-8 min-w-0 flex-1 rounded-md border border-gray-300 px-2 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
+                  <Button
+                    type="button"
+                    onClick={saveEditingCategory}
+                    disabled={savingCategory}
+                    title="保存分类"
+                    aria-label="保存分类"
+                    size="xs"
+                    className="h-8 w-8 shrink-0 rounded-md p-0"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={cancelEditingCategory}
+                    disabled={savingCategory}
+                    title="取消修改分类"
+                    aria-label="取消修改分类"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {categoryError && <p className="mt-1 text-xs text-red-500">{categoryError}</p>}
+              </div>
+            ) : (
+              customer.categoryNote && (
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  分类备注：{customer.categoryNote}
+                </p>
+              )
             )}
             <div className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
@@ -260,11 +402,51 @@ export function CustomerInfoCard({
 
       {!hideContacts && (
         <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-            <UserRound className="h-4 w-4 shrink-0 text-gray-400" />
-            联络人
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+              <UserRound className="h-4 w-4 shrink-0 text-gray-400" />
+              联络人
+            </div>
+            {onSaveField && !isEditingContacts && (
+              <button
+                type="button"
+                onClick={startEditingContacts}
+                title="编辑联络人"
+                aria-label="编辑联络人"
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+            )}
           </div>
-          {contacts.length > 0 ? (
+          {isEditingContacts ? (
+            <div className="space-y-3">
+              <ContactsEditor
+                contacts={contactsDraft}
+                onChange={setContactsDraft}
+                requireName={isCustomerDetail}
+              />
+              {contactsError && <p className="text-xs text-red-500">{contactsError}</p>}
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={cancelEditingContacts}
+                  disabled={savingContacts}
+                  className="rounded-md px-3 py-1.5 text-sm text-gray-600 transition-colors hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-gray-300 dark:hover:text-white"
+                >
+                  取消
+                </button>
+                <Button
+                  type="button"
+                  onClick={saveEditingContacts}
+                  disabled={savingContacts}
+                  size="sm"
+                >
+                  {savingContacts ? '保存中…' : '保存'}
+                </Button>
+              </div>
+            </div>
+          ) : contacts.length > 0 ? (
             <div className="grid gap-2 md:grid-cols-2">
               {contacts.map((contact) => {
                 const contactStat = stats?.contacts.find((stat) => stat.contactId === contact.id);
