@@ -92,3 +92,33 @@ describe('采购部登记场景（传入窄配置 props）', () => {
     expect(screen.getByText('其他 3 家已报价')).toBeInTheDocument();
   });
 });
+
+describe('"已补充信息" checkbox 的显示条件（extraNeedInfo）', () => {
+  it('默认（无本地 need_info 供应商、extraNeedInfo 未传）不显示"已补充信息"', () => {
+    renderStatus();
+    expect(screen.queryByText('已补充信息')).not.toBeInTheDocument();
+  });
+
+  it('本地 supplierStatuses 里有 need_info 供应商时按原逻辑显示', () => {
+    renderStatus({
+      record: baseRecord({
+        supplierStatuses: [{ id: 's1', supplierShortName: 'A供应商', status: 'need_info' }],
+      }),
+    });
+    expect(screen.getByText('已补充信息')).toBeInTheDocument();
+  });
+
+  it('extraNeedInfo=true 时即使本地没有 need_info 供应商也显示（采购部：飞罗 need_info 来自销售侧只读信号）', () => {
+    renderStatus({ extraNeedInfo: true });
+    expect(screen.getByText('已补充信息')).toBeInTheDocument();
+  });
+
+  it('勾选 extraNeedInfo 触发出的"已补充信息"依然能正常触发 onQuotedChange', () => {
+    const { onQuotedChange } = renderStatus({ extraNeedInfo: true });
+    fireEvent.click(screen.getByRole('checkbox', { name: '已补充信息' }));
+    expect(onQuotedChange).toHaveBeenCalledTimes(1);
+    const [nextQuoted] = onQuotedChange.mock.calls[0];
+    expect(nextQuoted).toHaveLength(1);
+    expect(nextQuoted[0]).toMatchObject({ type: 'supplemented' });
+  });
+});

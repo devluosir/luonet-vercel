@@ -3761,6 +3761,17 @@ onChange={(e) => {
 - 未做真实登录态下的手动双向验证（销售↔采购两端互相看到对方状态变化），建议按文档步骤人工过一遍。
 - `purchaseSupplierStatuses` 里 `need_info` 供应商若全部缺失 `quoteDate`（理论上 UI 会强制填日期，但历史脏数据不能完全排除），`computeSelfSupplierTarget` 会同步出 `quoteDate: ''` 到飞罗，未做专门兜底，属已知边界情况，未见于当前数据但值得关注。
 
+**追加修复（同日）：** 用户反馈"采购侧没有显示已补充信息的提示"。
+
+根因：`InquiryQuoteStatus.tsx` 里"已补充信息" checkbox 的显示条件 `hasNeedInfoSupplier` 只看组件自己收到的 `supplierStatuses`（采购部弹窗场景下这是本地 `purchaseSupplierStatuses` 的影子记录）。销售侧飞罗的 `need_info` 是通过独立的只读信号（`isSelfSupplierNeedInfo(record.supplierStatuses)`）在弹窗里单独渲染一条黄色提示，并不写回 `purchaseSupplierStatuses`——于是"飞罗需补资料"这条提示能看到，但触发"已补充信息"勾选的条件判断不到它，采购部没有入口能标记"已处理"。
+
+修复：`InquiryQuoteStatus` 新增第 4 个窄配置 prop `extraNeedInfo?: boolean`（默认 `false`，询报价登记场景行为不变），`hasNeedInfoSupplier` 改为 `本地 supplierStatuses 是否有 need_info || extraNeedInfo`。`PurchaseInquiryEditModal.tsx` 传入 `extraNeedInfo={selfSupplierNeedInfo}`（复用已有的销售侧飞罗读取结果，未新增计算）。
+
+- 文件：`src/features/inquiry/components/InquiryQuoteStatus.tsx`、`src/features/purchase-registration/components/PurchaseInquiryEditModal.tsx`
+- 新增测试：`InquiryQuoteStatus.test.tsx` 4 例（默认不显示、本地 need_info 显示、`extraNeedInfo` 显示、勾选后正确触发 `onQuotedChange`），`PurchaseInquiryEditModal.test.tsx` 2 例（复现原 bug 场景 + 保存后 `purchaseQuotedStatuses` 含 `supplemented`）
+- 验证：定向 Jest（8 个文件）87 例全部通过；`npx tsc --noEmit`、`npx eslint`（4 个改动文件）、`git diff --check` 均通过
+- `npm run build` 仍未在沙箱里跑完（同上已知限制）
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

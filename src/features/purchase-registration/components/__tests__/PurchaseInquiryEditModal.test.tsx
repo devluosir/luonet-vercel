@@ -104,6 +104,30 @@ describe('9. 销售侧飞罗 need_info 能在采购部弹窗显示', () => {
     renderModal(record);
     expect(screen.queryByText(/飞罗需补充资料/)).not.toBeInTheDocument();
   });
+
+  it('回归：飞罗 need_info 且本地 purchaseSupplierStatuses 都没有 need_info 时，仍要显示"已补充信息" checkbox', () => {
+    // 此前 bug：hasNeedInfoSupplier 只看本地 purchaseSupplierStatuses，飞罗的 need_info 是
+    // 销售侧只读信号（不体现在 purchaseSupplierStatuses 里），导致采购部看得到提示却没有勾选入口。
+    const record = baseRecord({
+      supplierStatuses: [{ id: 'fl', supplierShortName: '飞罗', status: 'need_info', quoteDate: '[6.1]' }],
+      purchaseSupplierStatuses: [{ id: 'p1', supplierShortName: 'X供应商', status: 'quoted', quoteDate: '[6.1]' }],
+    });
+    renderModal(record);
+    expect(screen.getByText('已补充信息')).toBeInTheDocument();
+  });
+
+  it('勾选"已补充信息"并保存后，patch.purchaseQuotedStatuses 里出现 type: supplemented', () => {
+    const record = baseRecord({
+      supplierStatuses: [{ id: 'fl', supplierShortName: '飞罗', status: 'need_info', quoteDate: '[6.1]' }],
+    });
+    const { onSave } = renderModal(record);
+    fireEvent.click(screen.getByRole('checkbox', { name: '已补充信息' }));
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+    const patch = onSave.mock.calls[0][1] as Partial<InquiryRecord>;
+    expect(patch.purchaseQuotedStatuses).toEqual([
+      expect.objectContaining({ type: 'supplemented' }),
+    ]);
+  });
 });
 
 describe('"其他 n 家已报价"只读提示', () => {

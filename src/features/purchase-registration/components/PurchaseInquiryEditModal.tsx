@@ -134,6 +134,7 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
               supplierOptions={supplierOptions ?? []}
               unavailableLabel="我司无法报价"
               showClosedControl={false}
+              extraNeedInfo={selfSupplierNeedInfo}
               quotedTrailingContent={
                 othersQuotedCount > 0 ? (
                   <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600 dark:bg-blue-950/30 dark:text-blue-400">

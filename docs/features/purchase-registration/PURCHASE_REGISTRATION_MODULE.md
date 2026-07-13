@@ -45,6 +45,8 @@ purchaseQuotedStatuses?: CustomerQuoteStatus[];
 
 反向地，销售侧把飞罗手动设为 `need_info` 时，采购部弹窗和表格状态列都能读到并提示"需补充资料"（见下），但不会代替用户创建/修改某一条具体的 `purchaseSupplierStatuses`——销售侧信息无法确定具体是哪一家采购供应商需要资料。
 
+这种情况下，采购部要能标记"已补充信息"（`purchaseQuotedStatuses.type === 'supplemented'`）：`InquiryQuoteStatus` 的"已补充信息" checkbox 默认只在组件收到的 `supplierStatuses` 本身有 `need_info` 才显示，但采购部弹窗里这个 prop 传的是本地 `purchaseSupplierStatuses` 影子记录，读不到销售侧飞罗的只读信号。为此新增第 4 个窄配置 prop `extraNeedInfo?: boolean`（默认 `false`），`PurchaseInquiryEditModal.tsx` 传入 `extraNeedInfo={selfSupplierNeedInfo}`，让"飞罗 need_info 只读提示"和"已补充信息"勾选入口保持一致可见。
+
 ### 采购部登记表状态列（TASK-156 起）
 
 `PurchaseRegistrationTable` 的"状态"列（原"成单状态"）只显示一个优先级最高的主 badge，取第一条满足的：

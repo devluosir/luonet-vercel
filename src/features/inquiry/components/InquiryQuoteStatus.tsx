@@ -49,6 +49,13 @@ interface InquiryQuoteStatusProps {
    * 不提供编辑入口——由调用方（PurchaseInquiryEditModal）在组件外单独渲染只读提示。
    */
   showClosedControl?: boolean;
+  /**
+   * 是否有一个不体现在本组件 supplierStatuses 里的外部"需补资料"信号，需要一并触发"已补充信息"
+   * checkbox 显示。默认 false（询报价登记场景行为不变，"需补资料"只看自己的 supplierStatuses）。
+   * 采购部登记场景传入"销售侧飞罗是否为 need_info"——飞罗需补资料是销售侧的真实状态，不体现在
+   * 采购部自己的 purchaseSupplierStatuses 里，但采购部同样需要能勾选"已补充信息"确认已处理。
+   */
+  extraNeedInfo?: boolean;
 }
 
 type ActiveForm =
@@ -91,6 +98,7 @@ export function InquiryQuoteStatus({
   unavailableLabel = '已回复客户无法报价',
   quotedTrailingContent,
   showClosedControl = true,
+  extraNeedInfo = false,
 }: InquiryQuoteStatusProps) {
   const confirm = useConfirm();
   const [activeForm, setActiveForm] = useState<ActiveForm>(null);
@@ -141,7 +149,7 @@ export function InquiryQuoteStatus({
   const regularStatuses = quotedStatuses.filter(
     (s) => s.type !== 'unavailable' && s.type !== 'supplemented' && s.type !== 'closed'
   );
-  const hasNeedInfoSupplier = supplierStatuses.some((s) => s.status === 'need_info');
+  const hasNeedInfoSupplier = supplierStatuses.some((s) => s.status === 'need_info') || extraNeedInfo;
   const quotedSupplierNames = supplierStatuses
     .filter((s) => s.status === 'quoted' && !!s.quoteDate)
     .map((s) => s.supplierShortName);

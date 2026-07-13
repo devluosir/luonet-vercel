@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **受限视图只读开放 `quotedStatuses`**：仅有 `purchaseRegistration` 权限的用户 GET 响应新增完整只读 `quotedStatuses`（用于读取销售侧关闭/需补资料状态），但该字段仍不在受限 PUT 的允许写入字段列表里，写入会被丢弃。
 - `InquiryQuoteStatus` 新增 `unavailableLabel` / `quotedTrailingContent` / `showClosedControl` 三个窄配置 props（默认值保持询报价登记页面行为不变），采购部场景据此定制文案与隐藏关闭编辑入口，避免复制整个组件。
 - 弹窗按 `record.id` 从 store 最新状态解析记录，后台同步不再用旧快照覆盖飞罗判断，也不会清空用户尚未保存的输入。
+- **追加修复**：销售侧飞罗 `need_info` 只读提示能显示，但采购部之前没有勾选"已补充信息"的入口（该 checkbox 只看本地 `purchaseSupplierStatuses`，读不到销售侧只读信号）。`InquiryQuoteStatus` 新增 `extraNeedInfo` prop，采购部弹窗传入销售侧飞罗需补资料状态，让提示和勾选入口保持一致可见。
 
 ### Added
 
