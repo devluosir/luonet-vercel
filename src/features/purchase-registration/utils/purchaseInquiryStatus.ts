@@ -1,4 +1,5 @@
-import { createId, stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
+import { createId, getRecordColorState, stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
+import type { InquiryColorClass } from '@/features/inquiry/utils/inquiryUtils';
 import type { CustomerQuoteStatus, InquiryRecord, SupplierQuoteStatus, SupplierStatus } from '@/features/inquiry/types';
 
 /** 飞罗（上海飞罗贸易有限公司）在供应商列表中的短名，代表"我方自己"这一自供应商身份 */
@@ -339,4 +340,17 @@ export function formatPurchaseMainStatus(status: PurchaseInquiryMainStatus): Pur
     default:
       return null;
   }
+}
+
+/**
+ * 采购部登记表整行（询价编号 + 内容描述）的主文案颜色。销售侧已关闭或已回复客户无法报价时，
+ * 整行都要跟销售侧一样变灰——这两档正好是 computePurchaseMainStatus 里优先级最高的两档，直接
+ * 复用它的判断结果，不再另开一套"是否关闭/无法报价"的检测逻辑，避免和状态列口径漂移。
+ * 不满足这两档时，回退到原有规则：按采购部自己的 purchaseQuotedStatuses 判断（已报价→蓝，
+ * 其余含未报价→粉），与询报价登记表 getRecordColorState 的规则一致，只是数据来源换成采购部专属字段。
+ */
+export function getPurchaseRowColorClass(record: InquiryRecord): InquiryColorClass {
+  const mainKind = computePurchaseMainStatus(record).kind;
+  if (mainKind === 'closed' || mainKind === 'unavailable') return 'text-gray-400';
+  return getRecordColorState({ ...record, quotedStatuses: record.purchaseQuotedStatuses ?? [] });
 }

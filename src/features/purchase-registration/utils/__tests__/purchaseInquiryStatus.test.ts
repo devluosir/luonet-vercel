@@ -17,6 +17,7 @@ import {
   findSalesUnavailable,
   findSelfSupplierNeedInfo,
   formatPurchaseMainStatus,
+  getPurchaseRowColorClass,
   isSalesSupplemented,
   isSelfSupplierNeedInfo,
   restoreOriginalRecords,
@@ -298,6 +299,42 @@ describe('computePurchaseMainStatus 优先级（状态列五种状态）', () =>
       purchaseQuotedStatuses: [quoted({ type: 'supplemented', supplierShortName: '', version: '' })],
     });
     expect(computePurchaseMainStatus(record).kind).toBe('ordered');
+  });
+});
+
+describe('getPurchaseRowColorClass（采购部登记表整行文案颜色）', () => {
+  it('销售侧已关闭 → 整行灰色，即使采购部自己标记了已报价', () => {
+    const record = baseRecord({
+      quotedStatuses: [quoted({ type: 'closed', quoteDate: '[6.1]', supplierShortName: '', version: '' })],
+      purchaseQuotedStatuses: [quoted({ type: 'quoted', supplierShortName: '', version: '' })],
+    });
+    expect(getPurchaseRowColorClass(record)).toBe('text-gray-400');
+  });
+
+  it('销售侧已回复客户无法报价 → 整行灰色，即使采购部自己标记了已报价', () => {
+    const record = baseRecord({
+      quotedStatuses: [quoted({ type: 'unavailable', quoteDate: '[7.13]', supplierShortName: '', version: '' })],
+      purchaseQuotedStatuses: [quoted({ type: 'quoted', supplierShortName: '', version: '' })],
+    });
+    expect(getPurchaseRowColorClass(record)).toBe('text-gray-400');
+  });
+
+  it('销售侧无关闭/无法报价、采购部已报价 → 蓝色', () => {
+    const record = baseRecord({
+      purchaseQuotedStatuses: [quoted({ type: 'quoted', supplierShortName: '', version: '' })],
+    });
+    expect(getPurchaseRowColorClass(record)).toBe('text-blue-600');
+  });
+
+  it('均不满足（未报价）→ 粉色', () => {
+    expect(getPurchaseRowColorClass(baseRecord())).toBe('text-pink-500');
+  });
+
+  it('采购部自己标记"我司无法报价"（purchaseQuotedStatuses），但销售侧没有关闭/无法报价 → 仍按采购部数据判灰色（既有规则，未受本次改动影响）', () => {
+    const record = baseRecord({
+      purchaseQuotedStatuses: [quoted({ type: 'unavailable', supplierShortName: '', version: '' })],
+    });
+    expect(getPurchaseRowColorClass(record)).toBe('text-gray-400');
   });
 });
 

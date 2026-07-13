@@ -3951,6 +3951,17 @@ jsdom 26 不支持 `PointerEvent` 构造函数，组件级集成测试改用 `ne
 - 验证：`purchase-registration` 目录定向 Jest 92 例全部通过；`src/features/inquiry`/`order`/`purchase-order-registration`/`purchase-registration`/`components/table`/`app/api/inquiry` 共 14 个测试套件 188 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
 - `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）；未做真实浏览器验证，建议用户本地在询报价登记勾选"已回复客户无法报价"后，到采购部登记确认状态列显示"无法报价（日期）"、编辑弹窗显示对应只读提示
 
+**追加修复（同日）：** 用户反馈截图确认弹窗提示已正确显示后，进一步要求："当销售部已标记已回复客户无法报价和询价已关闭时，采购部的该记录，整条记录状态也要与销售侧相同，灰色无法报价状态"——即整行（询价编号+内容描述文字颜色）也要跟着变灰，不只是状态列的 badge。
+
+排查发现 `PurchaseRegistrationRow.tsx` 的整行文案颜色 `mainColorClass` 此前只依据采购部自己的 `purchaseQuotedStatuses`（通过 `previewRecord` 影子记录传给 `getRecordColorState`），完全不看销售侧真实的 `quotedStatuses`——销售标记关闭/无法报价后，只要采购部自己没有独立标记，整行颜色不受影响（还是蓝/粉），只有状态列的 badge 文字会变。
+
+修复：新增 `getPurchaseRowColorClass(record)`（`purchaseInquiryStatus.ts`），直接复用 `computePurchaseMainStatus(record).kind` 的判断结果——`closed`/`unavailable` 正好是最高两档优先级，命中即整行灰色；不满足时回退到原有规则（按 `purchaseQuotedStatuses` 判断已报价→蓝、其余→粉，与 `getRecordColorState` 逻辑一致）。这样"整行是否变灰"和"状态列 badge 显示什么"共用同一份优先级判断，不会出现口径不一致。`PurchaseRegistrationRow.tsx` 的 `mainColorClass` 计算改为直接调用这个函数（不再经过 `previewRecord` 影子记录）。
+
+- 文件：`purchaseInquiryStatus.ts`、`PurchaseRegistrationRow.tsx`
+- 新增测试：`purchaseInquiryStatus.test.ts` 新增 `getPurchaseRowColorClass` 5 例（销售侧已关闭/已无法报价强制灰色、正常按采购部数据判蓝/粉、采购部自己标记无法报价的既有规则不受影响）
+- 验证：`purchase-registration` 目录定向 Jest 97 例全部通过；`src/features/inquiry`/`order`/`purchase-order-registration`/`purchase-registration`/`components/table`/`app/api/inquiry` 共 14 个测试套件 193 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
+- `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）；未做真实浏览器验证，建议用户本地确认销售侧标记关闭/无法报价后，采购部登记表对应行的询价编号和内容描述文字都变灰
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

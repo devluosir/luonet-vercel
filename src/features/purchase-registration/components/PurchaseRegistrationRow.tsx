@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { InquiryQuoteStatusDisplay } from '@/features/inquiry/components/InquiryQuoteStatusDisplay';
-import { getRecordColorState, stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
+import { stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
 import { getOrderSubStatusLetter, isFollowupCompleted } from '@/features/inquiry/utils/orderStatus';
 import type { InquiryRecord } from '@/features/inquiry/types';
-import { computePurchaseMainStatus, formatPurchaseMainStatus } from '../utils/purchaseInquiryStatus';
+import { computePurchaseMainStatus, formatPurchaseMainStatus, getPurchaseRowColorClass } from '../utils/purchaseInquiryStatus';
 
 type EditField = 'content' | null;
 
@@ -78,9 +78,9 @@ export function PurchaseRegistrationRow({ record, onUpdate, onEditRecord }: Purc
     quotedStatuses: record.purchaseQuotedStatuses ?? [],
   };
 
-  // 行颜色规则与询报价登记表一致（getRecordColorState），但依据采购部专属的 purchaseQuotedStatuses 判断：
-  // 无法报价/已关闭→灰，已报价→蓝，其余（含未报价）→粉
-  const mainColorClass = getRecordColorState(previewRecord);
+  // 行颜色：销售侧已关闭/已回复客户无法报价时优先整行变灰（与状态列共用 computePurchaseMainStatus
+  // 的最高两档判断）；否则回退到采购部自己的 purchaseQuotedStatuses 判断（已报价→蓝，其余→粉）
+  const mainColorClass = getPurchaseRowColorClass(record);
 
   return (
     <tr
