@@ -19,6 +19,23 @@ export function isSelfSupplierNeedInfo(supplierStatuses: SupplierQuoteStatus[] |
 }
 
 /**
+ * 销售侧 quotedStatuses 里的"已补充信息"记录：销售从客户那边拿到补充信息后，在询报价登记
+ * 页面登记的 type === 'supplemented' 状态。与采购部自己的 purchaseQuotedStatuses.supplemented
+ * 是两个独立存储、独立勾选的标记，互不覆盖——但采购部需要能只读看到销售侧这一条，用于状态列
+ * 和编辑弹窗里的只读展示，避免"客户已经把资料给销售了，采购部却完全不知道"。
+ */
+export function findSalesSupplemented(
+  quotedStatuses: CustomerQuoteStatus[] | undefined
+): CustomerQuoteStatus | undefined {
+  return (quotedStatuses ?? []).find((s) => s.type === 'supplemented');
+}
+
+/** 销售侧是否已登记"已补充信息"（用于采购部状态列/只读展示） */
+export function isSalesSupplemented(quotedStatuses: CustomerQuoteStatus[] | undefined): boolean {
+  return !!findSalesSupplemented(quotedStatuses);
+}
+
+/**
  * 解析 [m.D] / m.D 形式的短日期为可比较的数字，越大越新。
  * 缺失或无法解析时返回 -1，保证有值的日期总是排在前面。
  */
@@ -151,7 +168,8 @@ export type PurchaseInquiryMainStatus =
  * 采购部登记表状态列的主状态，按优先级（从高到低）：
  * 1. 销售侧询价已关闭（record.quotedStatuses 中 type === 'closed'）→ closed
  * 2. orderNo 非空 → ordered
- * 3. purchaseQuotedStatuses 存在 type === 'supplemented' → supplemented
+ * 3. purchaseQuotedStatuses 存在 type === 'supplemented'，或销售侧 quotedStatuses 存在
+ *    type === 'supplemented' → supplemented（两边任一登记了"已补充信息"都算，互不覆盖）
  * 4. 任一采购供应商为 need_info，或销售侧飞罗为 need_info → need_info
  * 5. 其他供应商已报价数量（countOtherQuotedSuppliers）大于 0 → others_quoted
  * 6. 均不满足 → none
@@ -163,7 +181,9 @@ export function computePurchaseMainStatus(record: InquiryRecord): PurchaseInquir
   if (record.orderNo?.trim()) return { kind: 'ordered' };
 
   const purchaseQuoted = record.purchaseQuotedStatuses ?? [];
-  if (purchaseQuoted.some((s) => s.type === 'supplemented')) return { kind: 'supplemented' };
+  if (purchaseQuoted.some((s) => s.type === 'supplemented') || isSalesSupplemented(record.quotedStatuses)) {
+    return { kind: 'supplemented' };
+  }
 
   const anyPurchaseSupplierNeedInfo = (record.purchaseSupplierStatuses ?? []).some(
     (s) => s.status === 'need_info'
@@ -191,9 +211,9 @@ export function formatPurchaseMainStatus(status: PurchaseInquiryMainStatus): Pur
     case 'ordered':
       return { label: '已成单', className: 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300' };
     case 'supplemented':
-      return { label: '已补充资料', className: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' };
+      return { label: '已补充信息', className: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' };
     case 'need_info':
-      return { label: '需补充资料', className: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300' };
+      return { label: '需补充信息', className: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300' };
     case 'others_quoted':
       return {
         label: `其他 ${status.count} 家已报价`,

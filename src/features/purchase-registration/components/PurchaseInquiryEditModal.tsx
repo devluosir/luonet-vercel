@@ -10,6 +10,7 @@ import type { CustomerQuoteStatus, InquiryRecord, SupplierQuoteStatus } from '@/
 import {
   computeSelfSupplierPatch,
   countOtherQuotedSuppliers,
+  findSalesSupplemented,
   isSelfSupplierNeedInfo,
 } from '../utils/purchaseInquiryStatus';
 
@@ -60,6 +61,9 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
   // 销售侧飞罗为需补资料时，采购部要能读到提示；但不能凭空创建/修改某一家 purchaseSupplierStatuses，
   // 因为销售侧信息无法确定具体是哪一家采购供应商需要资料。
   const selfSupplierNeedInfo = isSelfSupplierNeedInfo(record.supplierStatuses);
+  // 销售侧登记的"已补充信息"（从客户那边拿到资料）：与采购部自己的 purchaseQuotedStatuses.supplemented
+  // 是两个独立标记，互不覆盖，这里只读展示，让采购部知道客户那边的资料已经补上了。
+  const salesSupplementedStatus = findSalesSupplemented(record.quotedStatuses);
   // "其他 n 家已报价"：数据来源、去重、排除飞罗的规则与采购部登记表状态列完全共用同一个工具函数。
   const othersQuotedCount = countOtherQuotedSuppliers(record.supplierStatuses);
 
@@ -119,7 +123,13 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
 
           {selfSupplierNeedInfo && (
             <div className="mb-4 rounded-lg bg-yellow-50 px-3 py-2 text-xs font-medium text-yellow-700 ring-1 ring-yellow-100 dark:bg-yellow-950/30 dark:text-yellow-400 dark:ring-yellow-900">
-              销售侧提示：飞罗需补充资料
+              销售侧提示：飞罗需补充信息
+            </div>
+          )}
+
+          {salesSupplementedStatus && (
+            <div className="mb-4 rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:ring-blue-900">
+              销售侧提示：已补充信息（{stripDateBrackets(salesSupplementedStatus.quoteDate)}）
             </div>
           )}
 

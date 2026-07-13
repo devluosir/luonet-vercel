@@ -43,9 +43,11 @@ purchaseQuotedStatuses?: CustomerQuoteStatus[];
 
 实现位置：`src/features/purchase-registration/utils/purchaseInquiryStatus.ts` 的 `computeSelfSupplierTarget` / `applySelfSupplierSync` / `computeSelfSupplierPatch`，`PurchaseInquiryEditModal.tsx` 的 `handleSave` 只负责调用组合函数并写入补丁，不再堆叠零散判断。这是单向同步：撤销采购部登记的状态不会反向清空询报价登记里飞罗已经同步过去的状态。
 
-反向地，销售侧把飞罗手动设为 `need_info` 时，采购部弹窗和表格状态列都能读到并提示"需补充资料"（见下），但不会代替用户创建/修改某一条具体的 `purchaseSupplierStatuses`——销售侧信息无法确定具体是哪一家采购供应商需要资料。
+反向地，销售侧把飞罗手动设为 `need_info` 时，采购部弹窗和表格状态列都能读到并提示"需补充信息"（见下），但不会代替用户创建/修改某一条具体的 `purchaseSupplierStatuses`——销售侧信息无法确定具体是哪一家采购供应商需要资料。
 
 这种情况下，采购部要能标记"已补充信息"（`purchaseQuotedStatuses.type === 'supplemented'`）：`InquiryQuoteStatus` 的"已补充信息" checkbox 默认只在组件收到的 `supplierStatuses` 本身有 `need_info` 才显示，但采购部弹窗里这个 prop 传的是本地 `purchaseSupplierStatuses` 影子记录，读不到销售侧飞罗的只读信号。为此新增第 4 个窄配置 prop `extraNeedInfo?: boolean`（默认 `false`），`PurchaseInquiryEditModal.tsx` 传入 `extraNeedInfo={selfSupplierNeedInfo}`，让"飞罗 need_info 只读提示"和"已补充信息"勾选入口保持一致可见。
+
+**"已补充信息"存在两个独立来源，互不覆盖**：采购部自己标记的 `purchaseQuotedStatuses.type === 'supplemented'`（采购部已经把资料转给了具体的采购供应商），与销售从客户那边拿到资料后登记在**询报价登记原始** `record.quotedStatuses.type === 'supplemented'`（销售侧沿用默认 `InquiryQuoteStatus` 的"已补充信息" checkbox，在 `hasNeedInfoSupplier` 为真——含飞罗被标记 `need_info` 的情况——时可见并勾选）。两者存储位置不同，互不写入对方；采购部（状态列的"已补充信息" badge、编辑弹窗）需要能只读看到销售侧这一条，通过 `findSalesSupplemented` / `isSalesSupplemented`（`purchaseInquiryStatus.ts`）读取，`PurchaseInquiryEditModal.tsx` 据此展示独立的蓝色只读提示"销售侧提示：已补充信息（日期）"。
 
 ### 采购部登记表状态列（TASK-156 起）
 
@@ -53,8 +55,8 @@ purchaseQuotedStatuses?: CustomerQuoteStatus[];
 
 1. 销售侧 `record.quotedStatuses` 含 `type === 'closed'` → "已关闭"（灰）
 2. `orderNo` 非空 → "已成单"（绿）
-3. `purchaseQuotedStatuses` 含 `type === 'supplemented'` → "已补充资料"（蓝）
-4. 任一 `purchaseSupplierStatuses` 为 `need_info`，或销售侧飞罗为 `need_info` → "需补充资料"（黄）
+3. `purchaseQuotedStatuses` 含 `type === 'supplemented'`，**或**销售侧 `record.quotedStatuses` 含 `type === 'supplemented'` → "已补充信息"（蓝）
+4. 任一 `purchaseSupplierStatuses` 为 `need_info`，或销售侧飞罗为 `need_info` → "需补充信息"（黄）
 5. 销售侧 `supplierStatuses` 里排除飞罗、按 `supplierShortName.trim()` 去重后 `status === 'quoted'` 的数量 > 0 → "其他 n 家已报价"（蓝）
 6. 均不满足 → 空态"—"（灰）
 

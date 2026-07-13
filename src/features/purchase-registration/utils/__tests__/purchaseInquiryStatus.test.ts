@@ -10,7 +10,9 @@ import {
   computeSelfSupplierPatch,
   computeSelfSupplierTarget,
   countOtherQuotedSuppliers,
+  findSalesSupplemented,
   formatPurchaseMainStatus,
+  isSalesSupplemented,
   isSelfSupplierNeedInfo,
   SELF_SUPPLIER_NAME,
 } from '../purchaseInquiryStatus';
@@ -167,6 +169,13 @@ describe('computePurchaseMainStatus 优先级（状态列五种状态）', () =>
     expect(computePurchaseMainStatus(record)).toEqual({ kind: 'supplemented' });
   });
 
+  it('8-3b. 销售侧 quotedStatuses 存在 supplemented（采购部自己没标记）→ 同样是 supplemented', () => {
+    const record = baseRecord({
+      quotedStatuses: [quoted({ type: 'supplemented', supplierShortName: '', version: '' })],
+    });
+    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'supplemented' });
+  });
+
   it('8-4a. 任一采购供应商 need_info → need_info', () => {
     const record = baseRecord({
       purchaseSupplierStatuses: [supplier({ status: 'need_info' })],
@@ -245,5 +254,24 @@ describe('isSelfSupplierNeedInfo（9. 销售侧飞罗 need_info 能被采购部�
 
   it('undefined 输入返回 false', () => {
     expect(isSelfSupplierNeedInfo(undefined)).toBe(false);
+  });
+});
+
+describe('findSalesSupplemented / isSalesSupplemented（销售侧登记的"已补充信息"能被采购部读取）', () => {
+  it('销售侧 quotedStatuses 有 supplemented 记录时能找到并返回该条', () => {
+    const supplemented = quoted({ id: 'sp1', type: 'supplemented', quoteDate: '[7.1]', supplierShortName: '', version: '' });
+    expect(findSalesSupplemented([supplemented])).toEqual(supplemented);
+    expect(isSalesSupplemented([supplemented])).toBe(true);
+  });
+
+  it('没有 supplemented 记录时返回 undefined / false', () => {
+    expect(findSalesSupplemented([quoted({ type: 'quoted' })])).toBeUndefined();
+    expect(isSalesSupplemented([quoted({ type: 'quoted' })])).toBe(false);
+  });
+
+  it('空数组/undefined 输入安全返回', () => {
+    expect(findSalesSupplemented([])).toBeUndefined();
+    expect(findSalesSupplemented(undefined)).toBeUndefined();
+    expect(isSalesSupplemented(undefined)).toBe(false);
   });
 });

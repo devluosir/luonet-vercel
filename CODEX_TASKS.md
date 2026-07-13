@@ -3724,8 +3724,8 @@ onChange={(e) => {
 采购部状态列主 badge（取第一条满足的）：
 1. 销售侧 `quotedStatuses` 含 `closed` → "已关闭"（灰）
 2. `orderNo` 非空 → "已成单"（绿）
-3. `purchaseQuotedStatuses` 含 `supplemented` → "已补充资料"（蓝）
-4. 任一采购供应商 `need_info`，或销售侧飞罗 `need_info` → "需补充资料"（黄）
+3. `purchaseQuotedStatuses` 含 `supplemented` → "已补充信息"（蓝）
+4. 任一采购供应商 `need_info`，或销售侧飞罗 `need_info` → "需补充信息"（黄）
 5. 销售侧 `supplierStatuses` 里排除飞罗、按简称去重后 `quoted` 数量 > 0 → "其他 n 家已报价"（蓝）
 6. 均不满足 → 空态"—"（灰）
 
@@ -3771,6 +3771,17 @@ onChange={(e) => {
 - 新增测试：`InquiryQuoteStatus.test.tsx` 4 例（默认不显示、本地 need_info 显示、`extraNeedInfo` 显示、勾选后正确触发 `onQuotedChange`），`PurchaseInquiryEditModal.test.tsx` 2 例（复现原 bug 场景 + 保存后 `purchaseQuotedStatuses` 含 `supplemented`）
 - 验证：定向 Jest（8 个文件）87 例全部通过；`npx tsc --noEmit`、`npx eslint`（4 个改动文件）、`git diff --check` 均通过
 - `npm run build` 仍未在沙箱里跑完（同上已知限制）
+
+**追加修复 2（同日）：** 用户进一步说明"已补充信息"还有另一种来源——销售侧从客户那边拿到补充信息后，登记在**询报价登记原始** `record.quotedStatuses.type === 'supplemented'`（销售页面沿用默认 `InquiryQuoteStatus` 的"已补充信息" checkbox），这跟采购部自己标记的 `purchaseQuotedStatuses.type === 'supplemented'` 是两个完全独立的存储，此前采购部（状态列 + 编辑弹窗）只看自己那一份，看不到销售侧已经拿到资料。
+
+修复：
+- `purchaseInquiryStatus.ts` 新增 `findSalesSupplemented` / `isSalesSupplemented`（读 `record.quotedStatuses`，与已有的 `isSelfSupplierNeedInfo` 同一模式）。
+- `computePurchaseMainStatus` 的"已补充信息"优先级（第 3 档）改为 `purchaseQuotedStatuses` 或销售侧 `quotedStatuses` 任一存在 `supplemented` 都命中，两个来源互不覆盖、只做"是否命中"的 OR 判断。
+- `PurchaseInquiryEditModal.tsx` 新增独立的蓝色只读提示"销售侧提示：已补充信息（日期）"，与已有的"飞罗需补充信息"黄色提示、"询价已关闭"灰色提示并列，互不影响。
+
+- 文件：`purchaseInquiryStatus.ts`、`PurchaseInquiryEditModal.tsx`
+- 新增测试：`purchaseInquiryStatus.test.ts` 5 例（状态列优先级识别销售侧来源 + `findSalesSupplemented`/`isSalesSupplemented` 3 例），`PurchaseInquiryEditModal.test.tsx` 3 例（显示/隐藏/历史 `purchaseQuotedStatuses` 里的 legacy supplemented 不误触发）
+- 验证：定向 Jest（8 个文件）94 例全部通过；`npx tsc --noEmit`、`npx eslint`（4 个改动文件）、`git diff --check` 均通过；`npm run build` 仍未在沙箱里跑完（同上已知限制）
 
 ## 已关闭 / 不做
 

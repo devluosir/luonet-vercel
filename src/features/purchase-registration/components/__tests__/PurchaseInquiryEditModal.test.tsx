@@ -94,7 +94,7 @@ describe('9. 销售侧飞罗 need_info 能在采购部弹窗显示', () => {
       supplierStatuses: [{ id: 'fl', supplierShortName: '飞罗', status: 'need_info', quoteDate: '[6.1]' }],
     });
     renderModal(record);
-    expect(screen.getByText(/飞罗需补充资料/)).toBeInTheDocument();
+    expect(screen.getByText(/飞罗需补充信息/)).toBeInTheDocument();
   });
 
   it('飞罗不是 need_info 时不显示提示', () => {
@@ -102,7 +102,7 @@ describe('9. 销售侧飞罗 need_info 能在采购部弹窗显示', () => {
       supplierStatuses: [{ id: 'fl', supplierShortName: '飞罗', status: 'quoted', quoteDate: '[6.1]' }],
     });
     renderModal(record);
-    expect(screen.queryByText(/飞罗需补充资料/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/飞罗需补充信息/)).not.toBeInTheDocument();
   });
 
   it('回归：飞罗 need_info 且本地 purchaseSupplierStatuses 都没有 need_info 时，仍要显示"已补充信息" checkbox', () => {
@@ -127,6 +127,34 @@ describe('9. 销售侧飞罗 need_info 能在采购部弹窗显示', () => {
     expect(patch.purchaseQuotedStatuses).toEqual([
       expect.objectContaining({ type: 'supplemented' }),
     ]);
+  });
+});
+
+describe('销售侧登记的"已补充信息"在采购部只读展示（销售从客户那边拿到资料后登记在 quotedStatuses）', () => {
+  it('record.quotedStatuses 有 supplemented 时显示蓝色只读提示，带日期', () => {
+    const record = baseRecord({
+      quotedStatuses: [
+        { id: 'sp1', type: 'supplemented', quoteDate: '[7.1]', supplierShortName: '', version: '' },
+      ],
+    });
+    renderModal(record);
+    expect(screen.getByText('销售侧提示：已补充信息（7.1）')).toBeInTheDocument();
+  });
+
+  it('quotedStatuses 没有 supplemented 时不显示', () => {
+    renderModal(baseRecord());
+    expect(screen.queryByText(/销售侧提示：已补充信息/)).not.toBeInTheDocument();
+  });
+
+  it('历史 purchaseQuotedStatuses 里的 supplemented 不应触发这条销售侧提示（那是采购部自己的标记，来源不同）', () => {
+    const record = baseRecord({
+      quotedStatuses: [],
+      purchaseQuotedStatuses: [
+        { id: 'legacy', type: 'supplemented', quoteDate: '[5.1]', supplierShortName: '', version: '' },
+      ],
+    });
+    renderModal(record);
+    expect(screen.queryByText(/销售侧提示：已补充信息/)).not.toBeInTheDocument();
   });
 });
 
