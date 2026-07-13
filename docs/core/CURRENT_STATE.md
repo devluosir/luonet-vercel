@@ -104,6 +104,7 @@ rmb
 - 同浏览器同用户同组优先通过 Web Locks 选出一个前台 leader，BroadcastChannel 广播同步完成；不支持时使用带 owner id、5 秒 heartbeat、15 秒 TTL 的 localStorage lease，leader 离开前台后 follower 可接管。
 - 周期检查只在 `visibilityState === 'visible' && document.hasFocus()` 时运行：最近 5 分钟有离散操作时每 2 分钟检查 meta，空闲后每 10 分钟；恢复聚焦或空闲后的首次操作立即补检，并受 30 秒跨标签最小节流约束。
 - 强制整表兜底为 6 小时；meta/增量/整表请求失败保留本地数据并按 1、2、5、10 分钟退避，不会因 meta 失败退化为整表请求。`mergeFromD1`、`mergeFieldsOnly`、pending 队列及完整/受限水位语义保持不变。
+- 完整视图 `mergeFromD1` 会在时间戳相同的情况下补齐本地残缺记录缺少、但完整 D1 响应实际带回的字段，修复受限视图先落空缓存后询价人/客户编号持续为空的问题；自愈只填缺失键，不覆盖已有本地字段。
 - 协调器可用 `NEXT_PUBLIC_INQUIRY_SYNC_COORDINATOR_ENABLED=false` 全局关闭，或在单浏览器设置 `inquiry_sync_coordinator_disabled=1` 诊断关闭；关闭后退回逐标签独立同步，但仍保留自适应频率和前后台保护。
 - NextAuth `SessionProvider` 周期重读为 24 小时，`refetchWhenOffline=false`；首次 session、登录/退出广播及权限变化后的 silent-refresh 不受影响。
 

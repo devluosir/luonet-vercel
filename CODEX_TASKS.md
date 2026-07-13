@@ -4094,7 +4094,9 @@ jsdom 26 不支持 `PointerEvent` 构造函数，组件级集成测试改用 `ne
 - 新增通用跨标签协调器与询报价同步协调层：Web Locks 优先，BroadcastChannel 通知，localStorage lease/heartbeat/TTL 降级；按用户名和 `full`/`restricted` 视图组隔离，并提供环境变量与单浏览器双 kill switch。
 - `useInquirySync` 已改为前台且聚焦才调度，活跃 2 分钟、空闲 10 分钟、强制整表 6 小时；只监听节流后的离散活跃事件。meta/数据请求失败按 `1 → 2 → 5 → 10` 分钟退避，失败不再触发整表，现有合并水位和 pending 队列语义保持不变。
 - 权限检查改为每 3 分钟、按用户跨标签 single-flight；`SessionProvider` 定时重读改为 24 小时并关闭离线 refetch。四张登记表均传入稳定用户标识。
-- 验证：TASK-162 相关 5 个 Jest 套件 35 例通过；四张登记表相关回归 17 个套件 218 例通过；`npx tsc --noEmit`、改动文件 ESLint、`npm run build`、`git diff --check` 通过。浏览器登录态下四张登记表均正常加载、交互，未出现 warning/error。
+- `pullFromD1()` 改为失败抛错后，已同步补齐共享调用方 `CustomerActivityFeed` 的 catch：网络失败保留现有活动数据、结束刷新状态，不再产生未处理 Promise rejection；新增拒绝路径回归测试。
+- 修复受限视图先写入空缓存时产生的残缺记录：完整视图在 `updatedAt` 相同的情况下，也会补齐 D1 实际带回而本地缺失的 `inquirer`、`customerNo`、`customerId`、`contactId` 等字段；只补缺失键，不覆盖本地已有值，pending 保护保持不变。
+- 验证：TASK-162 相关 6 个 Jest 套件 38 例通过；四张登记表此前相关回归 17 个套件 218 例通过；`npx tsc --noEmit`、改动文件 ESLint、`npm run build`、`git diff --check` 通过。浏览器登录态下四张登记表均正常加载、交互；本次自愈修复后 dex 的询价人和客户编号列已正常显示。
 - 全量 Jest 当前仍有与本任务无关的既有失败：客户时间轴缺少 ToastProvider、报价 store 日志断言、增强解析映射断言，以及 Jest 误收集 Playwright E2E；TASK-162 改动覆盖的套件全部通过。Vercel Function Invocations / Fluid Active CPU 的 2–3 个工作日观察留作部署后运维验收。
 
 ## 已关闭 / 不做

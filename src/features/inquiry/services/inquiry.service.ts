@@ -387,14 +387,21 @@ export const inquiryService = {
         // 若直接整条替换会用"残缺记录"冲掉本地已缓存的完整记录，污染询报价登记等
         // 依赖完整字段的页面。这里用 spread 只覆盖 d1Record 真正带回来的字段。
         localMap.set(d1Record.id, localRecord ? { ...localRecord, ...d1Record } : d1Record);
-      } else if (
-        !Object.prototype.hasOwnProperty.call(localRecord, 'quotedStatuses') &&
-        Object.prototype.hasOwnProperty.call(d1Record, 'quotedStatuses')
-      ) {
-        // 自愈：本地记录此前被受限视图（字段被裁剪）的一次同步污染过，缺失
-        // quotedStatuses 等字段。若这次是完整视图的拉取（带回了该字段），即便
-        // updatedAt 没有变化（没有发生新编辑）也要补全，否则残缺记录会一直卡在本地。
-        localMap.set(d1Record.id, { ...localRecord, ...d1Record });
+      } else {
+        // 自愈：受限视图可能先在空缓存中落下一条“残缺记录”。完整视图随后拉到
+        // 同一 updatedAt 时，isRemoteNewer 为 false，不能只检查 quotedStatuses——
+        // 当前受限响应本身也包含 quotedStatuses，但仍会裁掉 inquirer/customerNo/
+        // customerId/contactId 等销售字段。这里只补齐本地缺失、且完整响应实际带回的
+        // key，不覆盖任何本地已有值，继续保护同时间戳下的本地数据。
+        const missingEntries = Object.entries(d1Record).filter(
+          ([key]) => !Object.prototype.hasOwnProperty.call(localRecord, key)
+        );
+        if (missingEntries.length > 0) {
+          localMap.set(d1Record.id, {
+            ...localRecord,
+            ...Object.fromEntries(missingEntries),
+          } as InquiryRecord);
+        }
       }
     }
 

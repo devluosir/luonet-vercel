@@ -182,6 +182,64 @@ describe('inquiryService persisted sync baselines (TASK-139)', () => {
   });
 });
 
+describe('inquiryService.mergeFromD1 full-view self-healing', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('补齐受限视图先落缓存后缺失的销售字段，即使 updatedAt 相同且已有 quotedStatuses', () => {
+    const fullRecord = mockRecord({
+      id: 'restricted-first',
+      inquirer: 'Nord-Kamila',
+      customerNo: 'RFQ-2026-001',
+      customerId: 'customer-1',
+      contactId: 'contact-1',
+      quotedStatuses: [],
+      updatedAt: '2026-07-13T08:00:00.000Z',
+    });
+    const restrictedRecord: Partial<InquiryRecord> = { ...fullRecord };
+    delete restrictedRecord.inquirer;
+    delete restrictedRecord.customerNo;
+    delete restrictedRecord.customerId;
+    delete restrictedRecord.contactId;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([restrictedRecord]));
+
+    const result = inquiryService.mergeFromD1([fullRecord]);
+    const healed = result.find((record) => record.id === fullRecord.id);
+
+    expect(healed).toMatchObject({
+      inquirer: 'Nord-Kamila',
+      customerNo: 'RFQ-2026-001',
+      customerId: 'customer-1',
+      contactId: 'contact-1',
+      quotedStatuses: [],
+    });
+  });
+
+  test('同时间戳自愈只补缺失字段，不覆盖本地已有值', () => {
+    const local = mockRecord({
+      id: 'preserve-local',
+      description: '本地已有描述',
+      updatedAt: '2026-07-13T08:00:00.000Z',
+    });
+    const localWithoutInquirer: Partial<InquiryRecord> = { ...local };
+    delete localWithoutInquirer.inquirer;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([localWithoutInquirer]));
+
+    const fullRecord = mockRecord({
+      id: 'preserve-local',
+      inquirer: '完整视图询价人',
+      description: '服务端同时间戳描述',
+      updatedAt: local.updatedAt,
+    });
+    const result = inquiryService.mergeFromD1([fullRecord]);
+    const healed = result.find((record) => record.id === fullRecord.id);
+
+    expect(healed?.inquirer).toBe('完整视图询价人');
+    expect(healed?.description).toBe('本地已有描述');
+  });
+});
+
 /**
  * TASK-128：mergeFieldsOnly 从"以 d1Records 为源的 filter/map 管道"改成 Map-based upsert，
  * 是为了配合询报价同步从"整表轮询"改成"增量拉取"（见 useInquirySync.ts 的 incrementalSync）。

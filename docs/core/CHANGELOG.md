@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `useInquirySync` 只在页面可见且窗口聚焦时运行，活跃期每 2 分钟、空闲 5 分钟后每 10 分钟检查，强制整表兜底从 1 小时延长到 6 小时；meta/增量/整表失败按 `1 → 2 → 5 → 10` 分钟退避，失败不再退化为整表拉取。
 - 活跃检测仅使用 `pointerdown`、`keydown`、`touchstart` 离散事件并做 1 秒 leading throttle；`pointermove`、滚动等高频事件不会续期或触发渲染。
 - 权限 meta 检查从 90 秒改为 3 分钟并按用户跨标签 single-flight；`SessionProvider` 周期重读从 5 分钟改为 24 小时并关闭离线 refetch，权限变化仍通过既有 silent-refresh 生效。
-- `pullFromD1` 在网络或非 2xx 响应时显式失败，避免分页中途失败仍被当作完整同步并推进水位。
+- `pullFromD1` 在网络或非 2xx 响应时显式失败，避免分页中途失败仍被当作完整同步并推进水位；客户详情活动流同步补齐 catch，失败时保留当前数据并正常结束刷新状态，不产生未处理 Promise rejection。
+- 完整视图合并新增通用缺字段自愈：受限视图先落缓存后，即使记录时间戳相同且已带 `quotedStatuses`，也会补回询价人、客户编号和客户关联字段；仅填充本地不存在的键，不覆盖本地已有编辑。
 
 ### Added
 
