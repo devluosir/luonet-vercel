@@ -3885,6 +3885,19 @@ jsdom 26 不支持 `PointerEvent` 构造函数，组件级集成测试改用 `ne
 - 未在沙箱里做真实浏览器拖拽验证（无可视浏览器），建议用户本地打开这 4 个页面实际拖拽确认：①拖拽方向恢复正常（列本身右边缘跟着鼠标走，不再是左边的列被动改变）；②"内容描述/内容简述"与其右侧列之间的手柄现在能正常选中拖拽
 - `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）
 
+**追加修复（同日）：** 用户反馈两点：①编辑询价弹窗里"询价编号"不够醒目；②某条记录编辑弹窗里已经能看到销售侧提示"已补充信息（7.10）"，但同一条记录在表格"状态描述"列里仍显示"需补充信息"。
+
+①是纯样式问题，`PurchaseInquiryEditModal.tsx` 头部询价编号从 `text-xs text-gray-400` 改为 `text-sm font-bold text-blue-700`。
+
+②排查后发现是一个真实的数据展示 bug，比表面看到的"已补充信息 vs 需补充信息"优先级问题更底层：`PurchaseRegistrationPage.tsx` 的 `filterableRecords`（专门为了让筛选栏"报价状态"维度按采购部自己的 `purchaseQuotedStatuses` 而不是销售侧 `quotedStatuses` 筛选，把每条记录的 `quotedStatuses` 字段整体替换成 `purchaseQuotedStatuses`）经过 `useInquiryFilter` 筛选排序后得到的 `filteredAndSorted`，未经换回就直接被 `finalRecords` 传给了 `PurchaseRegistrationTable` 渲染。也就是说表格实际渲染、状态列实际计算用的"记录"，`quotedStatuses` 字段被悄悄换成了 `purchaseQuotedStatuses`——销售侧真实登记在 `quotedStatuses` 里的 `supplemented`（已补充信息）记录，在这份"影子记录"里完全看不到，`computePurchaseMainStatus` 的第 3 档（已补充信息）判断不到内容，就跳到了第 4 档"需补充信息"。编辑弹窗之所以显示正确，是因为它按 `record.id` 直接从 `useInquiryStore` 原始 `records` 数组里重新查找，完全不经过这层影子记录，侧面印证了问题只出在 `finalRecords` 这条链路上。
+
+修复：新增纯函数 `restoreOriginalRecords(shadowRecords, originalById)`（`purchaseInquiryStatus.ts`），在筛选/排序完成后按 id 把每条影子记录换回原始记录（找不到时原样返回，不阻塞渲染）。`PurchaseRegistrationPage.tsx` 新增 `activeRecordsById`（`activeRecords` 按 id 建的 Map），`finalRecords` 计算末尾套一层 `restoreOriginalRecords(...)`。筛选/排序判断依据仍然是影子记录（按 `purchaseQuotedStatuses` 语义，符合原设计意图），但最终渲染进表格/传给编辑弹窗的对象换回真实数据。
+
+- 文件：`purchaseInquiryStatus.ts`、`PurchaseRegistrationPage.tsx`、`PurchaseInquiryEditModal.tsx`
+- 新增测试：`purchaseInquiryStatus.test.ts` 新增 `restoreOriginalRecords` describe 块 3 例，含专门复现"影子记录覆盖导致已补充信息误判成需补充信息"的回归用例（换回前后分别断言 `formatPurchaseMainStatus` 的 label）
+- 验证：`purchase-registration` 目录定向 Jest 81 例全部通过；`src/components/table` + 四张表所在 5 个 feature 目录（共 13 个文件）145 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
+- `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）；未做真实浏览器验证，建议用户本地确认这条记录及类似记录的状态描述列现在显示正确
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

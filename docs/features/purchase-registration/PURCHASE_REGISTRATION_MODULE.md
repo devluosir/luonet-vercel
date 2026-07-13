@@ -63,6 +63,14 @@ purchaseQuotedStatuses?: CustomerQuoteStatus[];
 
 **踩过的坑**：撑满列最初被放在每张表偏靠前的位置（第 2 列），导致拖动其后任意可拖拽列的手柄时，宽度变化要靠撑满列反向补偿——撑满列在左边，视觉上就变成"往左扩展"而不是正常的"往右扩展"，且撑满列本身没有手柄，用户会感知成"手柄选不中"。撑满列必须放在渲染顺序里实际最后一列才不会有这个问题（已修复）。
 
+### 筛选栏"影子记录"与状态列渲染必须换回真实数据
+
+`PurchaseRegistrationPage.tsx` 的筛选栏"报价状态"维度是按 `record.quotedStatuses` 设计的通用逻辑（`useInquiryFilter`），但采购部登记要按自己的 `purchaseQuotedStatuses` 筛选。为了复用同一个筛选 hook，页面构造了一份 `filterableRecords`：把每条记录的 `quotedStatuses` 字段整体替换成 `purchaseQuotedStatuses` 再喂给 `useInquiryFilter`。
+
+**这份替换只应该影响筛选/排序判断依据，不能影响最终渲染的记录对象**——`quotedStatuses` 是销售侧字段，`computePurchaseMainStatus` 依赖它判断"已关闭"（第 1 档）和"已补充信息"（第 3 档，取两个来源里较新的一个）。如果被筛选用的影子记录直接传给表格渲染，销售侧真实的 `quotedStatuses` 数据就会被 `purchaseQuotedStatuses` 覆盖看不到，状态列会误判成更低优先级的状态（真实回归：某条记录销售侧已登记"已补充信息"，编辑弹窗按 id 直接从 store 查最新记录显示正确，但表格状态列因为读到的是影子记录，误显示"需补充信息"）。
+
+修复：新增纯函数 `restoreOriginalRecords(shadowRecords, originalById)`，在 `filteredAndSorted` 筛选排序完成、`finalRecords` 计算的最后一步，按 id 把每条记录换回 `activeRecords` 里的原始对象（找不到时原样返回，不阻塞渲染），确保表格实际渲染和状态计算用的永远是真实数据，筛选/排序判断依据不受影响。
+
 ### 采购部登记表状态描述列（TASK-156 起，TASK-157 改名+带日期）
 
 `PurchaseRegistrationTable` 的"状态描述"列（原"成单状态"，TASK-157 起由"状态"改名）只显示一个优先级最高的主 badge，取第一条满足的：

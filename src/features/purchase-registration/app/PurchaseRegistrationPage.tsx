@@ -15,6 +15,7 @@ import { InquiryFilterBar } from '@/features/inquiry/components/InquiryFilterBar
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { PurchaseRegistrationTable } from '../components/PurchaseRegistrationTable';
 import { PurchaseInquiryEditModal } from '../components/PurchaseInquiryEditModal';
+import { restoreOriginalRecords } from '../utils/purchaseInquiryStatus';
 
 function recordMatchesSupplier(record: InquiryRecord, supplier: string) {
   return !supplier
@@ -60,6 +61,13 @@ export function PurchaseRegistrationPage() {
   const activeRecords = useMemo(
     () => records.filter((record) => record.status !== 'deleted'),
     [records]
+  );
+
+  // 按 id 索引的原始记录，用于筛选/排序结束后把"影子记录"（见下方 filterableRecords 注释）
+  // 换回真实数据，避免渲染层读到被覆盖的 quotedStatuses
+  const activeRecordsById = useMemo(
+    () => new Map(activeRecords.map((record) => [record.id, record])),
+    [activeRecords]
   );
 
   // 筛选栏的"报价状态"等维度基于询报价登记的 record.quotedStatuses 设计，但采购部登记
@@ -112,10 +120,14 @@ export function PurchaseRegistrationPage() {
   );
 
   const finalRecords = useMemo(
-    () => filteredAndSorted
-      .filter((record) => recordMatchesSupplier(record, supplier))
-      .filter((record) => recordMatchesSupplierLink(record, supplierLinkFilter)),
-    [filteredAndSorted, supplier, supplierLinkFilter]
+    () =>
+      restoreOriginalRecords(
+        filteredAndSorted
+          .filter((record) => recordMatchesSupplier(record, supplier))
+          .filter((record) => recordMatchesSupplierLink(record, supplierLinkFilter)),
+        activeRecordsById
+      ),
+    [filteredAndSorted, supplier, supplierLinkFilter, activeRecordsById]
   );
 
   const totalActiveCount = activeCount + (supplier ? 1 : 0) + (supplierLinkFilter === 'unlinked' ? 1 : 0);

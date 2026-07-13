@@ -18,6 +18,7 @@ import {
   formatPurchaseMainStatus,
   isSalesSupplemented,
   isSelfSupplierNeedInfo,
+  restoreOriginalRecords,
   SELF_SUPPLIER_NAME,
 } from '../purchaseInquiryStatus';
 
@@ -399,5 +400,40 @@ describe('findPurchaseSupplemented（销售侧只读读取采购部自己标记�
   it('空数组/undefined 输入安全返回 undefined', () => {
     expect(findPurchaseSupplemented([])).toBeUndefined();
     expect(findPurchaseSupplemented(undefined)).toBeUndefined();
+  });
+});
+
+describe('restoreOriginalRecords（把筛选用的影子记录换回真实记录）', () => {
+  it('回归：影子记录的 quotedStatuses 被替换成 purchaseQuotedStatuses 后，换回真实记录应能恢复销售侧 supplemented，使 computePurchaseMainStatus 判断为已补充信息而不是需补充信息', () => {
+    const original = baseRecord({
+      id: 'r1',
+      quotedStatuses: [quoted({ id: 'q1', type: 'supplemented', quoteDate: '[7.10]' })],
+      purchaseSupplierStatuses: [supplier({ id: 'ps1', status: 'need_info' })],
+      supplierStatuses: [supplier({ id: 's-self', supplierShortName: SELF_SUPPLIER_NAME, status: 'need_info', quoteDate: '[7.9]' })],
+    });
+    // 模拟筛选栏用的影子记录：quotedStatuses 被替换成（空的）purchaseQuotedStatuses
+    const shadow = { ...original, quotedStatuses: original.purchaseQuotedStatuses ?? [] };
+
+    // 换回之前：用影子记录算，看不到销售侧 supplemented，被 need_info 顶替
+    expect(formatPurchaseMainStatus(computePurchaseMainStatus(shadow))?.label).toBe('需补充信息（7.9）');
+
+    const restored = restoreOriginalRecords([shadow], new Map([[original.id, original]]));
+    // 换回之后：用真实记录算，能看到销售侧 supplemented，优先级高于 need_info
+    expect(formatPurchaseMainStatus(computePurchaseMainStatus(restored[0]))?.label).toBe('已补充信息（7.10）');
+  });
+
+  it('按 id 在映射表里找不到对应原始记录时，原样返回该条影子记录（不阻塞渲染）', () => {
+    const shadow = baseRecord({ id: 'missing' });
+    const restored = restoreOriginalRecords([shadow], new Map());
+    expect(restored[0]).toBe(shadow);
+  });
+
+  it('保持输入数组的顺序和长度不变，只替换每一项的内容', () => {
+    const r1 = baseRecord({ id: 'r1', inquiryNo: 'A' });
+    const r2 = baseRecord({ id: 'r2', inquiryNo: 'B' });
+    const shadowR1 = { ...r1, description: 'shadow' };
+    const shadowR2 = { ...r2, description: 'shadow' };
+    const restored = restoreOriginalRecords([shadowR1, shadowR2], new Map([['r1', r1], ['r2', r2]]));
+    expect(restored).toEqual([r1, r2]);
   });
 });

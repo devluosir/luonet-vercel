@@ -252,6 +252,25 @@ export function computePurchaseMainStatus(record: InquiryRecord): PurchaseInquir
   return { kind: 'none' };
 }
 
+/**
+ * 采购部登记页面的筛选栏"报价状态"维度是按 record.quotedStatuses 设计的，但采购部要按自己的
+ * purchaseQuotedStatuses 筛选，调用方（PurchaseRegistrationPage）为此构造了一份把 quotedStatuses
+ * 字段替换成 purchaseQuotedStatuses 的"影子记录"数组喂给筛选/排序 hook。这个函数在筛选/排序完成
+ * 之后，把最终要渲染到表格/编辑弹窗的记录换回原始对象（按 id 从原始记录表里找回），避免这些只为
+ * 筛选而生的影子记录被直接渲染，导致 quotedStatuses 被误认成 purchaseQuotedStatuses。
+ *
+ * 真实回归：曾经没做这一步换回，销售侧 quotedStatuses 里真实存在的 supplemented（已补充信息）记录
+ * 被筛选用的影子 purchaseQuotedStatuses 覆盖后完全看不到，导致 computePurchaseMainStatus 判断不到
+ * 第 3 档"已补充信息"、错误跳到第 4 档"需补充信息"——即使编辑弹窗（按 id 直接从 store 读取原始记录，
+ * 不经过这层影子记录）已经正确显示"已补充信息"，表格状态列仍然显示"需补充信息"。
+ */
+export function restoreOriginalRecords(
+  shadowRecords: InquiryRecord[],
+  originalById: Map<string, InquiryRecord>
+): InquiryRecord[] {
+  return shadowRecords.map((record) => originalById.get(record.id) ?? record);
+}
+
 export interface PurchaseMainStatusBadge {
   label: string;
   className: string;

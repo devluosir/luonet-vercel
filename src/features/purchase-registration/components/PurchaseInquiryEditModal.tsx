@@ -92,7 +92,7 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
         <div className="flex items-center justify-between px-6 pb-4 pt-5">
           <div>
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">编辑询价</h2>
-            <p className="mt-0.5 font-mono text-xs text-gray-400 dark:text-gray-500">{record.inquiryNo}</p>
+            <p className="mt-0.5 font-mono text-sm font-bold text-blue-700 dark:text-blue-300">{record.inquiryNo}</p>
           </div>
           <button
             type="button"
