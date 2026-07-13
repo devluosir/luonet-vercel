@@ -3783,6 +3783,18 @@ onChange={(e) => {
 - 新增测试：`purchaseInquiryStatus.test.ts` 5 例（状态列优先级识别销售侧来源 + `findSalesSupplemented`/`isSalesSupplemented` 3 例），`PurchaseInquiryEditModal.test.tsx` 3 例（显示/隐藏/历史 `purchaseQuotedStatuses` 里的 legacy supplemented 不误触发）
 - 验证：定向 Jest（8 个文件）94 例全部通过；`npx tsc --noEmit`、`npx eslint`（4 个改动文件）、`git diff --check` 均通过；`npm run build` 仍未在沙箱里跑完（同上已知限制）
 
+**追加调整 3（同日）：** 用户提出三点：①采购部编辑弹窗里"飞罗需补充信息"和"已补充信息"两条提示要同一行显示，且"需补充信息"也要带日期；②销售侧（询报价登记编辑弹窗）也要有对称的"采购侧提示"，覆盖需补充/已补充两种情况；③确认状态列"已补充"优先级高于"需补充"。
+
+处理：
+- ①③ 逐条核实：③ 在 `computePurchaseMainStatus` 里"已补充信息"判断本来就在"需补充信息"判断之前 return，已有回归测试覆盖，代码层面无需改动，用户看到的旧行为是本次改动尚未部署所致。① 需要代码改动。
+- `purchaseInquiryStatus.ts` 新增：`findSelfSupplierNeedInfo`（返回飞罗 need_info 完整记录，含日期，`isSelfSupplierNeedInfo` 改为基于它派生）；`findLatestPurchaseNeedInfo`（销售侧读取采购部 `purchaseSupplierStatuses` 里最新一条 need_info，供②使用）；`findPurchaseSupplemented`（销售侧读取采购部自己标记的 `purchaseQuotedStatuses.supplemented`，供②使用）。
+- `PurchaseInquiryEditModal.tsx`：两条"销售侧提示"改成同一个 `flex flex-wrap gap-2` 容器内的 `<span>`，天然同行显示、窄屏自动换行；"飞罗需补充信息"追加日期（`selfSupplierNeedInfoEntry.quoteDate` 为空时不带括号，兜底历史脏数据）。
+- `InquiryFormModal.tsx`（询报价登记编辑/新增弹窗）新增对称的只读提示区："采购侧提示：需补充信息（日期）"（黄）+"采购侧提示：已补充信息（日期）"（蓝），同样是 `flex flex-wrap` 同行布局；数据直接读 `record.purchaseSupplierStatuses` / `record.purchaseQuotedStatuses`（未经本地编辑、透传自 props，与销售侧本地编辑状态无关，不提供编辑入口）。这是本次改动首次让 `src/features/inquiry` 反向 import `src/features/purchase-registration/utils`，因为这两个字段的读取逻辑已经沉淀在 `purchaseInquiryStatus.ts` 里，不重复实现一套。
+
+- 文件：`purchaseInquiryStatus.ts`、`PurchaseInquiryEditModal.tsx`、`InquiryFormModal.tsx`
+- 新增测试：`purchaseInquiryStatus.test.ts` 12 例（`findSelfSupplierNeedInfo`/`findLatestPurchaseNeedInfo`/`findPurchaseSupplemented` 三组），`PurchaseInquiryEditModal.test.tsx` 4 例（日期展示、缺日期兜底、同行结构断言），新建 `InquiryFormModal.test.tsx` 5 例（两条提示各自展示、同行结构、无数据/新增模式不显示）
+- 验证：定向 Jest（9 个文件）111 例全部通过；`npx tsc --noEmit`、`npx eslint`（6 个改动/新增文件）、`git diff --check` 均通过；`npm run build` 仍未在沙箱里跑完（同上已知限制）
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

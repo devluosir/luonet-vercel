@@ -45,9 +45,17 @@ purchaseQuotedStatuses?: CustomerQuoteStatus[];
 
 反向地，销售侧把飞罗手动设为 `need_info` 时，采购部弹窗和表格状态列都能读到并提示"需补充信息"（见下），但不会代替用户创建/修改某一条具体的 `purchaseSupplierStatuses`——销售侧信息无法确定具体是哪一家采购供应商需要资料。
 
-这种情况下，采购部要能标记"已补充信息"（`purchaseQuotedStatuses.type === 'supplemented'`）：`InquiryQuoteStatus` 的"已补充信息" checkbox 默认只在组件收到的 `supplierStatuses` 本身有 `need_info` 才显示，但采购部弹窗里这个 prop 传的是本地 `purchaseSupplierStatuses` 影子记录，读不到销售侧飞罗的只读信号。为此新增第 4 个窄配置 prop `extraNeedInfo?: boolean`（默认 `false`），`PurchaseInquiryEditModal.tsx` 传入 `extraNeedInfo={selfSupplierNeedInfo}`，让"飞罗 need_info 只读提示"和"已补充信息"勾选入口保持一致可见。
+这种情况下，采购部要能标记"已补充信息"（`purchaseQuotedStatuses.type === 'supplemented'`）：`InquiryQuoteStatus` 的"已补充信息" checkbox 默认只在组件收到的 `supplierStatuses` 本身有 `need_info` 才显示，但采购部弹窗里这个 prop 传的是本地 `purchaseSupplierStatuses` 影子记录，读不到销售侧飞罗的只读信号。为此新增第 4 个窄配置 prop `extraNeedInfo?: boolean`（默认 `false`），`PurchaseInquiryEditModal.tsx` 传入 `extraNeedInfo={!!selfSupplierNeedInfoEntry}`，让"飞罗 need_info 只读提示"和"已补充信息"勾选入口保持一致可见。
 
 **"已补充信息"存在两个独立来源，互不覆盖**：采购部自己标记的 `purchaseQuotedStatuses.type === 'supplemented'`（采购部已经把资料转给了具体的采购供应商），与销售从客户那边拿到资料后登记在**询报价登记原始** `record.quotedStatuses.type === 'supplemented'`（销售侧沿用默认 `InquiryQuoteStatus` 的"已补充信息" checkbox，在 `hasNeedInfoSupplier` 为真——含飞罗被标记 `need_info` 的情况——时可见并勾选）。两者存储位置不同，互不写入对方；采购部（状态列的"已补充信息" badge、编辑弹窗）需要能只读看到销售侧这一条，通过 `findSalesSupplemented` / `isSalesSupplemented`（`purchaseInquiryStatus.ts`）读取，`PurchaseInquiryEditModal.tsx` 据此展示独立的蓝色只读提示"销售侧提示：已补充信息（日期）"。
+
+**采购部弹窗两条只读提示同行显示，"需补充信息"带日期**：`selfSupplierNeedInfoEntry`（`findSelfSupplierNeedInfo`，返回飞罗 need_info 完整记录而非布尔值，便于取 `quoteDate`）和 `salesSupplementedStatus` 两个 `<span>` 放在同一个 `flex flex-wrap gap-2` 容器里，同时存在时天然同一行、窄屏自动换行；"飞罗需补充信息"提示追加 `（{quoteDate}）`，`quoteDate` 为空时（历史脏数据）不带括号，不报错。
+
+**询报价登记弹窗对称展示"采购侧提示"**：`InquiryFormModal.tsx`（询报价登记的新增/编辑弹窗）新增只读提示区，读取**未经本地编辑、直接来自 props 的** `record.purchaseSupplierStatuses` / `record.purchaseQuotedStatuses`：
+- "采购侧提示：需补充信息（日期）"（黄）：`findLatestPurchaseNeedInfo` 取 `purchaseSupplierStatuses` 里最新一条 `need_info` 供应商的日期
+- "采购侧提示：已补充信息（日期）"（蓝）：`findPurchaseSupplemented` 取 `purchaseQuotedStatuses.type === 'supplemented'` 的日期
+
+两者同样放在 `flex flex-wrap` 容器里同行显示，不提供编辑入口。这是 `src/features/inquiry` 首次反向 import `src/features/purchase-registration/utils`（这两个字段的读取逻辑已经沉淀在 `purchaseInquiryStatus.ts`，不重复实现）。
 
 ### 采购部登记表状态列（TASK-156 起）
 

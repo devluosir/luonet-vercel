@@ -11,7 +11,7 @@ import {
   computeSelfSupplierPatch,
   countOtherQuotedSuppliers,
   findSalesSupplemented,
-  isSelfSupplierNeedInfo,
+  findSelfSupplierNeedInfo,
 } from '../utils/purchaseInquiryStatus';
 
 interface PurchaseInquiryEditModalProps {
@@ -58,9 +58,9 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
   // 销售侧真实的"询价已关闭"状态：只读展示，采购部不能创建/取消/修改，也不能被历史遗留的
   // purchaseQuotedStatuses.type === 'closed' 覆盖——那是旧数据，不再作为采购部关闭状态的依据。
   const salesClosedStatus = record.quotedStatuses?.find((s) => s.type === 'closed');
-  // 销售侧飞罗为需补资料时，采购部要能读到提示；但不能凭空创建/修改某一家 purchaseSupplierStatuses，
-  // 因为销售侧信息无法确定具体是哪一家采购供应商需要资料。
-  const selfSupplierNeedInfo = isSelfSupplierNeedInfo(record.supplierStatuses);
+  // 销售侧飞罗为需补资料时，采购部要能读到提示（含日期）；但不能凭空创建/修改某一家
+  // purchaseSupplierStatuses，因为销售侧信息无法确定具体是哪一家采购供应商需要资料。
+  const selfSupplierNeedInfoEntry = findSelfSupplierNeedInfo(record.supplierStatuses);
   // 销售侧登记的"已补充信息"（从客户那边拿到资料）：与采购部自己的 purchaseQuotedStatuses.supplemented
   // 是两个独立标记，互不覆盖，这里只读展示，让采购部知道客户那边的资料已经补上了。
   const salesSupplementedStatus = findSalesSupplemented(record.quotedStatuses);
@@ -121,15 +121,19 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
             />
           </div>
 
-          {selfSupplierNeedInfo && (
-            <div className="mb-4 rounded-lg bg-yellow-50 px-3 py-2 text-xs font-medium text-yellow-700 ring-1 ring-yellow-100 dark:bg-yellow-950/30 dark:text-yellow-400 dark:ring-yellow-900">
-              销售侧提示：飞罗需补充信息
-            </div>
-          )}
-
-          {salesSupplementedStatus && (
-            <div className="mb-4 rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:ring-blue-900">
-              销售侧提示：已补充信息（{stripDateBrackets(salesSupplementedStatus.quoteDate)}）
+          {(selfSupplierNeedInfoEntry || salesSupplementedStatus) && (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              {selfSupplierNeedInfoEntry && (
+                <span className="inline-flex items-center rounded-lg bg-yellow-50 px-3 py-2 text-xs font-medium text-yellow-700 ring-1 ring-yellow-100 dark:bg-yellow-950/30 dark:text-yellow-400 dark:ring-yellow-900">
+                  销售侧提示：飞罗需补充信息
+                  {selfSupplierNeedInfoEntry.quoteDate ? `（${stripDateBrackets(selfSupplierNeedInfoEntry.quoteDate)}）` : ''}
+                </span>
+              )}
+              {salesSupplementedStatus && (
+                <span className="inline-flex items-center rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:ring-blue-900">
+                  销售侧提示：已补充信息（{stripDateBrackets(salesSupplementedStatus.quoteDate)}）
+                </span>
+              )}
             </div>
           )}
 
@@ -144,7 +148,7 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
               supplierOptions={supplierOptions ?? []}
               unavailableLabel="我司无法报价"
               showClosedControl={false}
-              extraNeedInfo={selfSupplierNeedInfo}
+              extraNeedInfo={!!selfSupplierNeedInfoEntry}
               quotedTrailingContent={
                 othersQuotedCount > 0 ? (
                   <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600 dark:bg-blue-950/30 dark:text-blue-400">

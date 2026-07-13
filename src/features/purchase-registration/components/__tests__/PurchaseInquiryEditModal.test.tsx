@@ -89,12 +89,20 @@ describe('11. 销售侧没有 closed 时采购弹窗不显示关闭提示', () =
 });
 
 describe('9. 销售侧飞罗 need_info 能在采购部弹窗显示', () => {
-  it('supplierStatuses 里飞罗为 need_info 时显示提示', () => {
+  it('supplierStatuses 里飞罗为 need_info 时显示提示，且带上日期', () => {
     const record = baseRecord({
       supplierStatuses: [{ id: 'fl', supplierShortName: '飞罗', status: 'need_info', quoteDate: '[6.1]' }],
     });
     renderModal(record);
-    expect(screen.getByText(/飞罗需补充信息/)).toBeInTheDocument();
+    expect(screen.getByText('销售侧提示：飞罗需补充信息（6.1）')).toBeInTheDocument();
+  });
+
+  it('飞罗为 need_info 但缺失日期时，提示仍显示，只是不带括号日期', () => {
+    const record = baseRecord({
+      supplierStatuses: [{ id: 'fl', supplierShortName: '飞罗', status: 'need_info' }],
+    });
+    renderModal(record);
+    expect(screen.getByText('销售侧提示：飞罗需补充信息')).toBeInTheDocument();
   });
 
   it('飞罗不是 need_info 时不显示提示', () => {
@@ -127,6 +135,30 @@ describe('9. 销售侧飞罗 need_info 能在采购部弹窗显示', () => {
     expect(patch.purchaseQuotedStatuses).toEqual([
       expect.objectContaining({ type: 'supplemented' }),
     ]);
+  });
+});
+
+describe('两条销售侧提示同一行显示', () => {
+  it('飞罗需补充信息 + 已补充信息同时存在时，两个提示是同一个容器下的兄弟节点（同一行）', () => {
+    const record = baseRecord({
+      supplierStatuses: [{ id: 'fl', supplierShortName: '飞罗', status: 'need_info', quoteDate: '[6.1]' }],
+      quotedStatuses: [
+        { id: 'sp1', type: 'supplemented', quoteDate: '[7.1]', supplierShortName: '', version: '' },
+      ],
+    });
+    renderModal(record);
+    const needInfoBanner = screen.getByText('销售侧提示：飞罗需补充信息（6.1）');
+    const supplementedBanner = screen.getByText('销售侧提示：已补充信息（7.1）');
+    expect(needInfoBanner.parentElement).toBe(supplementedBanner.parentElement);
+  });
+
+  it('只有其中一条时也能正常显示', () => {
+    const record = baseRecord({
+      supplierStatuses: [{ id: 'fl', supplierShortName: '飞罗', status: 'need_info', quoteDate: '[6.1]' }],
+    });
+    renderModal(record);
+    expect(screen.getByText('销售侧提示：飞罗需补充信息（6.1）')).toBeInTheDocument();
+    expect(screen.queryByText(/销售侧提示：已补充信息/)).not.toBeInTheDocument();
   });
 });
 

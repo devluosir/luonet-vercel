@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 弹窗按 `record.id` 从 store 最新状态解析记录，后台同步不再用旧快照覆盖飞罗判断，也不会清空用户尚未保存的输入。
 - **追加修复**：销售侧飞罗 `need_info` 只读提示能显示，但采购部之前没有勾选"已补充信息"的入口（该 checkbox 只看本地 `purchaseSupplierStatuses`，读不到销售侧只读信号）。`InquiryQuoteStatus` 新增 `extraNeedInfo` prop，采购部弹窗传入销售侧飞罗需补资料状态，让提示和勾选入口保持一致可见。
 - **追加修复 2**：销售从客户那边拿到补充信息后登记在**询报价登记原始** `record.quotedStatuses.type === 'supplemented'`（与采购部自己标记的 `purchaseQuotedStatuses.supplemented` 是两个独立来源），此前采购部完全看不到。新增 `findSalesSupplemented` / `isSalesSupplemented`，状态列"已补充信息" badge 和编辑弹窗新增的蓝色只读提示都会识别这一来源。
+- **追加调整 3**：采购部弹窗的"飞罗需补充信息"和"已补充信息"两条提示改为同一行并列显示（`flex flex-wrap`），"飞罗需补充信息"补上日期；询报价登记编辑/新增弹窗新增对称的只读提示"采购侧提示：需补充信息（日期）" / "采购侧提示：已补充信息（日期）"，读取采购部的 `purchaseSupplierStatuses` / `purchaseQuotedStatuses`，不提供编辑入口。新增 `findSelfSupplierNeedInfo` / `findLatestPurchaseNeedInfo` / `findPurchaseSupplemented`。状态列"已补充信息"优先级高于"需补充信息"的判断此前已实现，本次确认无需改动。
 
 ### Added
 

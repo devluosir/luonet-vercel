@@ -23,8 +23,13 @@ import {
   generateNextInquiryNo,
   getDateInputValueFromInquiryNo,
   getTodayDateInputValue,
+  stripDateBrackets,
 } from '../utils/inquiryUtils';
 import { InquiryQuoteStatus } from './InquiryQuoteStatus';
+import {
+  findLatestPurchaseNeedInfo,
+  findPurchaseSupplemented,
+} from '@/features/purchase-registration/utils/purchaseInquiryStatus';
 
 /** YYYY-MM-DD → m.D（如 6.21） */
 function ymdToDisplay(ymd: string): string {
@@ -202,6 +207,11 @@ export function InquiryFormModal({
     };
     return { ...base, supplierStatuses: localSuppliers, quotedStatuses: localQuoted };
   }, [record, localSuppliers, localQuoted]);
+
+  // 采购部侧的只读提示：这两个字段只在采购部登记页面维护，这里只读展示，不提供编辑入口，
+  // 让销售侧知道采购部还在等哪家供应商补资料、或者采购部那边已经处理完了。
+  const purchaseNeedInfoEntry = findLatestPurchaseNeedInfo(record?.purchaseSupplierStatuses);
+  const purchaseSupplementedEntry = findPurchaseSupplemented(record?.purchaseQuotedStatuses);
 
   const adjustDate = (delta: number) => {
     const date = dateInputToDate(dateInput);
@@ -497,6 +507,23 @@ export function InquiryFormModal({
               />
             </div>
           </div>
+
+          {/* ── 采购部侧只读提示：需补充信息 / 已补充信息，只读展示，不提供编辑入口 ── */}
+          {(purchaseNeedInfoEntry || purchaseSupplementedEntry) && (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              {purchaseNeedInfoEntry && (
+                <span className="inline-flex items-center rounded-lg bg-yellow-50 px-3 py-2 text-xs font-medium text-yellow-700 ring-1 ring-yellow-100 dark:bg-yellow-950/30 dark:text-yellow-400 dark:ring-yellow-900">
+                  采购侧提示：需补充信息
+                  {purchaseNeedInfoEntry.quoteDate ? `（${stripDateBrackets(purchaseNeedInfoEntry.quoteDate)}）` : ''}
+                </span>
+              )}
+              {purchaseSupplementedEntry && (
+                <span className="inline-flex items-center rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:ring-blue-900">
+                  采购侧提示：已补充信息（{stripDateBrackets(purchaseSupplementedEntry.quoteDate)}）
+                </span>
+              )}
+            </div>
+          )}
 
           {/* ── 询报价状态区域（新增和编辑模式均显示） ── */}
           <div className="mb-4 rounded-xl bg-gray-50 p-4 ring-1 ring-gray-100 dark:bg-gray-800/50 dark:ring-gray-700">

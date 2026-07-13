@@ -10,7 +10,10 @@ import {
   computeSelfSupplierPatch,
   computeSelfSupplierTarget,
   countOtherQuotedSuppliers,
+  findLatestPurchaseNeedInfo,
+  findPurchaseSupplemented,
   findSalesSupplemented,
+  findSelfSupplierNeedInfo,
   formatPurchaseMainStatus,
   isSalesSupplemented,
   isSelfSupplierNeedInfo,
@@ -273,5 +276,55 @@ describe('findSalesSupplemented / isSalesSupplemented（销售侧登记的"已�
     expect(findSalesSupplemented([])).toBeUndefined();
     expect(findSalesSupplemented(undefined)).toBeUndefined();
     expect(isSalesSupplemented(undefined)).toBe(false);
+  });
+});
+
+describe('findSelfSupplierNeedInfo（返回完整记录，含日期，供采购部弹窗提示带日期展示）', () => {
+  it('飞罗为 need_info 时返回该条完整记录', () => {
+    const fl = supplier({ supplierShortName: '飞罗', status: 'need_info', quoteDate: '[6.1]' });
+    expect(findSelfSupplierNeedInfo([fl])).toEqual(fl);
+  });
+
+  it('飞罗不是 need_info 时返回 undefined', () => {
+    const fl = supplier({ supplierShortName: '飞罗', status: 'quoted', quoteDate: '[6.1]' });
+    expect(findSelfSupplierNeedInfo([fl])).toBeUndefined();
+  });
+
+  it('没有飞罗/undefined 输入时返回 undefined', () => {
+    expect(findSelfSupplierNeedInfo([supplier({ supplierShortName: '其他供应商', status: 'need_info' })])).toBeUndefined();
+    expect(findSelfSupplierNeedInfo(undefined)).toBeUndefined();
+  });
+});
+
+describe('findLatestPurchaseNeedInfo（销售侧只读读取采购部 need_info 供应商，取最新日期）', () => {
+  it('多个 need_info 供应商时取日期最新的一条', () => {
+    const older = supplier({ id: 's1', status: 'need_info', quoteDate: '[6.5]' });
+    const newer = supplier({ id: 's2', status: 'need_info', quoteDate: '[6.20]' });
+    expect(findLatestPurchaseNeedInfo([older, newer])).toEqual(newer);
+  });
+
+  it('没有 need_info 供应商时返回 undefined', () => {
+    expect(findLatestPurchaseNeedInfo([supplier({ status: 'quoted' })])).toBeUndefined();
+  });
+
+  it('空数组/undefined 输入安全返回 undefined', () => {
+    expect(findLatestPurchaseNeedInfo([])).toBeUndefined();
+    expect(findLatestPurchaseNeedInfo(undefined)).toBeUndefined();
+  });
+});
+
+describe('findPurchaseSupplemented（销售侧只读读取采购部自己标记的"已补充信息"）', () => {
+  it('purchaseQuotedStatuses 有 supplemented 记录时能找到', () => {
+    const supplemented = quoted({ id: 'p1', type: 'supplemented', quoteDate: '[6.1]', supplierShortName: '', version: '' });
+    expect(findPurchaseSupplemented([supplemented])).toEqual(supplemented);
+  });
+
+  it('没有 supplemented 记录时返回 undefined', () => {
+    expect(findPurchaseSupplemented([quoted({ type: 'quoted' })])).toBeUndefined();
+  });
+
+  it('空数组/undefined 输入安全返回 undefined', () => {
+    expect(findPurchaseSupplemented([])).toBeUndefined();
+    expect(findPurchaseSupplemented(undefined)).toBeUndefined();
   });
 });

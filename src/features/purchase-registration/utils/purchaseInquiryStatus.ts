@@ -13,9 +13,19 @@ export function findSelfSupplier(
   return (supplierStatuses ?? []).find((s) => s.supplierShortName?.trim() === SELF_SUPPLIER_NAME);
 }
 
+/**
+ * 销售侧"飞罗"处于需补资料状态时的完整记录（用于采购部只读展示，含日期）；不是则返回 undefined。
+ */
+export function findSelfSupplierNeedInfo(
+  supplierStatuses: SupplierQuoteStatus[] | undefined
+): SupplierQuoteStatus | undefined {
+  const self = findSelfSupplier(supplierStatuses);
+  return self?.status === 'need_info' ? self : undefined;
+}
+
 /** 销售侧"飞罗"当前是否处于需补资料状态（用于采购部只读展示） */
 export function isSelfSupplierNeedInfo(supplierStatuses: SupplierQuoteStatus[] | undefined): boolean {
-  return findSelfSupplier(supplierStatuses)?.status === 'need_info';
+  return !!findSelfSupplierNeedInfo(supplierStatuses);
 }
 
 /**
@@ -55,6 +65,27 @@ function pickLatestByDate<T extends { quoteDate?: string }>(items: T[]): T | und
   return withDate.reduce((best, current) =>
     parseShortDate(current.quoteDate) >= parseShortDate(best.quoteDate) ? current : best
   );
+}
+
+/**
+ * 采购部 purchaseSupplierStatuses 里最新一条 need_info 记录（用于询报价登记页面只读展示，
+ * 让销售侧知道采购部还在等哪家供应商补资料，含日期）；没有则返回 undefined。
+ */
+export function findLatestPurchaseNeedInfo(
+  purchaseSupplierStatuses: SupplierQuoteStatus[] | undefined
+): SupplierQuoteStatus | undefined {
+  const needInfo = (purchaseSupplierStatuses ?? []).filter((s) => s.status === 'need_info');
+  return pickLatestByDate(needInfo);
+}
+
+/**
+ * 采购部自己在 purchaseQuotedStatuses 里标记的"已补充信息"记录（采购部已经把资料转给了具体的
+ * 采购供应商），用于询报价登记页面只读展示，让销售侧知道采购部这边已经处理完了。
+ */
+export function findPurchaseSupplemented(
+  purchaseQuotedStatuses: CustomerQuoteStatus[] | undefined
+): CustomerQuoteStatus | undefined {
+  return (purchaseQuotedStatuses ?? []).find((s) => s.type === 'supplemented');
 }
 
 export interface SelfSupplierTarget {
