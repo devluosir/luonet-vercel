@@ -94,6 +94,9 @@ export function CustomerActivityFeed({ customer }: CustomerActivityFeedProps) {
       inquiryService.pushLocalToD1(d1Records);
       const merged = inquiryService.mergeFromD1(d1Records);
       useInquiryStore.setState({ records: merged });
+    } catch (error) {
+      // pullFromD1 is all-or-nothing: keep the current activity data on failure.
+      console.warn('[CustomerActivityFeed] 询报价活动同步失败，保留现有数据', error);
     } finally {
       setIsSyncing(false);
     }
