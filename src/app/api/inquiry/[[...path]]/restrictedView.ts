@@ -68,6 +68,8 @@ export function sanitizeRestrictedRecord(
 
   if (flags.allowPurchaseOrderTable) {
     result.orderSubStatus = record.orderSubStatus;
+    // 善后完成后展示为 "S-OK" 需要这个字段；与 orderSubStatus 一样只读展示，不放行写入
+    result.orderFollowupCompleted = record.orderFollowupCompleted;
     result.purchaseOrderNo = record.purchaseOrderNo;
     result.purchaseOrderSupplier = record.purchaseOrderSupplier;
     result.purchaseOrderAmount = record.purchaseOrderAmount;

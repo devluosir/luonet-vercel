@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { stripDateBrackets, normalizeShortDateInput } from '@/features/inquiry/utils/inquiryUtils';
+import { getOrderRowBgClass } from '@/features/inquiry/utils/orderStatus';
 import {
   type OrderTableBreakpoint,
   showAdminCols,
@@ -12,21 +13,9 @@ import {
   showLgCols,
 } from '../utils/orderTableLayout';
 import { DeliveryStatusCell } from './DeliveryStatusCell';
+import { OrderNoText } from './OrderNoText';
 
 // ── 行文字颜色 ────────────────────────────────────────────────────────────────
-
-function getRowBgClass(record: InquiryRecord): string {
-  if (record.orderSubStatus === 'cancelled') {
-    return 'bg-gray-300 hover:bg-gray-400/70 dark:bg-gray-700 dark:hover:bg-gray-600/80';
-  }
-  if (record.orderSubStatus === 'suspended') {
-    return 'bg-green-100 hover:bg-green-200/75 dark:bg-green-950/45 dark:hover:bg-green-900/45';
-  }
-  if (record.orderSubStatus === 'followup') {
-    return 'bg-red-100 hover:bg-red-200/75 dark:bg-red-950/45 dark:hover:bg-red-900/45';
-  }
-  return 'hover:bg-gray-50/70 dark:hover:bg-gray-800/30';
-}
 
 // 执行情况是自由文本，不是三选一枚举：只有明确写"发票..."（已开票/基本完成）才算完成态，
 // 其余任何文字（含用户自己写的说明，比如"合同确认中"）都视同"备货"阶段，保持"进行中"的粉色，
@@ -400,24 +389,6 @@ function AmountCell({
   );
 }
 
-// ── OrderSubStatus 标记 ───────────────────────────────────────────────────────
-
-function OrderNoText({ record, textClassName }: { record: InquiryRecord; textClassName: string }) {
-  const { orderNo, orderSubStatus } = record;
-  if (!orderNo) return null;
-  const letter =
-    orderSubStatus === 'cancelled' ? 'C'
-    : orderSubStatus === 'suspended' ? 'P'
-    : orderSubStatus === 'followup' ? 'S'
-    : null;
-  return (
-    <span className={`inline-flex max-w-full min-w-0 items-baseline gap-0.5 truncate font-mono text-[13px] font-bold leading-5 ${textClassName}`}>
-      <span className="truncate">{orderNo}</span>
-      {letter && <span className="shrink-0 font-bold text-red-500">{letter}</span>}
-    </span>
-  );
-}
-
 // ── OrderRow ─────────────────────────────────────────────────────────────────
 
 interface OrderRowProps {
@@ -461,7 +432,7 @@ export function OrderRow({
   };
 
   return (
-    <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getRowBgClass(record)}`}>
+    <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getOrderRowBgClass(record)}`}>
 
       {/* 批量选择 checkbox */}
       {canBatchEdit && (

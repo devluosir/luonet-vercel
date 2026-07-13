@@ -206,6 +206,7 @@ export function OrderEditModal({
   const [receivedNumStr, setReceivedNumStr] = useState('');
   const [subStatus, setSubStatus] = useState<OrderSubStatus | undefined>(undefined);
   const [subStatusRemark, setSubStatusRemark] = useState('');
+  const [followupCompleted, setFollowupCompleted] = useState(false);
   const initializedRecordIdRef = useRef<string | null>(null);
   const subStatusDirtyRef = useRef(false);
 
@@ -222,6 +223,7 @@ export function OrderEditModal({
       if (!subStatusDirtyRef.current) {
         setSubStatus(record.orderSubStatus);
         setSubStatusRemark(record.orderSubStatusRemark ?? '');
+        setFollowupCompleted(!!record.orderFollowupCompleted);
       }
       return;
     }
@@ -244,6 +246,7 @@ export function OrderEditModal({
     setReceivedNumStr(received.numStr);
     setSubStatus(record.orderSubStatus);
     setSubStatusRemark(record.orderSubStatusRemark ?? '');
+    setFollowupCompleted(!!record.orderFollowupCompleted);
   }, [isOpen, record]);
 
   if (!isOpen || !record) return null;
@@ -259,6 +262,9 @@ export function OrderEditModal({
       ? {
           orderSubStatus: subStatus,
           orderSubStatusRemark: subStatus ? subStatusRemark.trim() || undefined : undefined,
+          // 善后完成只在当前仍是"善后S"时有意义；切到其它状态或取消标记时一并清空，
+          // 避免残留一个不再对应任何善后状态的"已完成"标记
+          orderFollowupCompleted: subStatus === 'followup' ? (followupCompleted || undefined) : undefined,
         }
       : {};
 
@@ -442,7 +448,11 @@ export function OrderEditModal({
                   type="button"
                   onClick={() => {
                     subStatusDirtyRef.current = true;
-                    setSubStatus((prev) => (prev === val ? undefined : val));
+                    setSubStatus((prev) => {
+                      const next = prev === val ? undefined : val;
+                      if (next !== 'followup') setFollowupCompleted(false);
+                      return next;
+                    });
                   }}
                   className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
                     subStatus === val
@@ -474,6 +484,23 @@ export function OrderEditModal({
                   placeholder="简要说明当前情况，例如客户暂缓、等待确认、需善后处理"
                 />
               </div>
+            )}
+            {subStatus === 'followup' && (
+              <label className="mt-2 flex w-fit cursor-pointer items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+                <input
+                  type="checkbox"
+                  checked={followupCompleted}
+                  onChange={(e) => {
+                    subStatusDirtyRef.current = true;
+                    setFollowupCompleted(e.target.checked);
+                  }}
+                  className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 accent-green-600 dark:border-gray-600"
+                />
+                善后完成
+                <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                  （完成后归入正常单，标记显示为 S-OK）
+                </span>
+              </label>
             )}
           </div>
 

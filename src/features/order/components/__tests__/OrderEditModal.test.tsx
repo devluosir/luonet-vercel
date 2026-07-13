@@ -83,6 +83,64 @@ describe('OrderEditModal concurrent record refresh', () => {
   });
 });
 
+describe('OrderEditModal 善后完成 checkbox', () => {
+  it('未选中善后S 时不显示"善后完成" checkbox', () => {
+    renderModal(createRecord());
+    expect(screen.queryByText('善后完成')).not.toBeInTheDocument();
+  });
+
+  it('选中善后S 后显示 checkbox，勾选并保存后 patch 带 orderFollowupCompleted: true', () => {
+    const onSave = jest.fn();
+    renderModal(createRecord(), onSave);
+
+    fireEvent.click(screen.getByRole('button', { name: '善后S' }));
+    expect(screen.getByText('善后完成')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox', { name: /善后完成/ }));
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+
+    const patch = onSave.mock.calls[0][1] as Partial<InquiryRecord>;
+    expect(patch.orderSubStatus).toBe('followup');
+    expect(patch.orderFollowupCompleted).toBe(true);
+  });
+
+  it('已是善后完成的记录打开时 checkbox 默认勾选，取消勾选并保存后 patch 清空该字段', () => {
+    const onSave = jest.fn();
+    renderModal(createRecord({ orderSubStatus: 'followup', orderFollowupCompleted: true }), onSave);
+
+    const checkbox = screen.getByRole('checkbox', { name: /善后完成/ }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+
+    const patch = onSave.mock.calls[0][1] as Partial<InquiryRecord>;
+    expect(patch.orderFollowupCompleted).toBeUndefined();
+  });
+
+  it('切换到其它状态（辙销C）后不再显示 checkbox，且保存时不带 orderFollowupCompleted', () => {
+    const onSave = jest.fn();
+    renderModal(createRecord({ orderSubStatus: 'followup', orderFollowupCompleted: true }), onSave);
+
+    fireEvent.click(screen.getByRole('button', { name: '辙销C' }));
+    expect(screen.queryByText('善后完成')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+
+    const patch = onSave.mock.calls[0][1] as Partial<InquiryRecord>;
+    expect(patch.orderSubStatus).toBe('cancelled');
+    expect(patch.orderFollowupCompleted).toBeUndefined();
+  });
+
+  it('用户未触碰状态区时（subStatus 未 dirty），保存 patch 不带 orderFollowupCompleted，不会用旧值覆盖后台同步的最新完成状态', () => {
+    const onSave = jest.fn();
+    renderModal(createRecord({ orderSubStatus: 'followup', orderFollowupCompleted: false }), onSave);
+
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+
+    const patch = onSave.mock.calls[0][1] as Partial<InquiryRecord>;
+    expect(patch).not.toHaveProperty('orderSubStatus');
+    expect(patch).not.toHaveProperty('orderFollowupCompleted');
+  });
+});
+
 describe('OrderEditModal native date pickers', () => {
   it('clears date and month fields when the native picker emits an empty value', () => {
     const onSave = jest.fn();

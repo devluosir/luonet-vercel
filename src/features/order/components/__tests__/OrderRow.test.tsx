@@ -41,6 +41,50 @@ function renderRow(record: InquiryRecord, onUpdate = jest.fn()) {
   return onUpdate;
 }
 
+describe('OrderRow 善后完成徽标与行背景', () => {
+  it('善后S 未完成：订单编号旁显示 "S"，行背景为红色高亮', () => {
+    const { container } = render(
+      <table>
+        <tbody>
+          <OrderRow
+            record={createRecord({ orderSubStatus: 'followup' })}
+            bp="xl"
+            canViewFinancials
+            consigneeOptions={[]}
+            onUpdate={jest.fn()}
+          />
+        </tbody>
+      </table>
+    );
+    expect(screen.getByText('S')).toBeInTheDocument();
+    expect(screen.queryByText('-OK')).not.toBeInTheDocument();
+    expect(container.querySelector('tr')).toHaveClass('bg-red-100');
+  });
+
+  it('善后S 已完成：订单编号旁显示 "S" + 绿色 "-OK"，行背景恢复正常（不再是红色）', () => {
+    const { container } = render(
+      <table>
+        <tbody>
+          <OrderRow
+            record={createRecord({ orderSubStatus: 'followup', orderFollowupCompleted: true })}
+            bp="xl"
+            canViewFinancials
+            consigneeOptions={[]}
+            onUpdate={jest.fn()}
+          />
+        </tbody>
+      </table>
+    );
+    expect(screen.getByText('S')).toBeInTheDocument();
+    const okBadge = screen.getByText('-OK');
+    expect(okBadge).toHaveClass('text-green-500');
+    const tr = container.querySelector('tr');
+    expect(tr).not.toHaveClass('bg-red-100');
+    expect(tr).not.toHaveClass('bg-gray-300');
+    expect(tr).not.toHaveClass('bg-green-100');
+  });
+});
+
 describe('OrderRow native date pickers', () => {
   it('passes undefined when row date and month pickers are cleared', () => {
     const onUpdate = renderRow(createRecord({

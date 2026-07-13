@@ -13,7 +13,7 @@ import { getCustomersForDropdown } from '@/features/customer/services/customerSe
 import { useInquirySync } from '@/features/inquiry/hooks/useInquirySync';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { getDateInputValueFromInquiryNo } from '@/features/inquiry/utils/inquiryUtils';
-import { isNormalOrder } from '@/features/inquiry/utils/orderStatus';
+import { isInProgressOrder, isNormalOrder } from '@/features/inquiry/utils/orderStatus';
 import type { InquiryRecord, OrderSubStatus } from '@/features/inquiry/types';
 import {
   PurchaseOrderFilterBar,
@@ -26,20 +26,7 @@ function hasOrder(record: InquiryRecord): boolean {
   return Boolean(record.orderNo?.trim());
 }
 
-/**
- * 与订单状态表 OrderPage 完全一致的"进行中"判定，保证两个视图对同一批记录筛选出相同结果。
- * 执行情况是自由文本，不是三选一枚举——任何用户手写的说明文字（比如"合同确认中"）
- * 只要不是明确的"发票"（代表已开票/基本完成），都应继续算"进行中"，不能反过来
- * 白名单匹配 备货/交货 前缀（那样任何不认识的文字都会被误判成已完成）。
- */
-function isInProgressOrder(record: InquiryRecord): boolean {
-  if (record.orderSubStatus === 'cancelled') return false;
-  if (record.orderSubStatus === 'suspended' || record.orderSubStatus === 'followup') return true;
-  const deliveryStatus = record.orderDeliveryStatus?.trim() ?? '';
-  return !deliveryStatus.startsWith('发票');
-}
-
-/** 与订单状态表 OrderPage 完全一致的订单状态匹配逻辑 */
+/** 与订单状态表 OrderPage 完全一致的订单状态匹配逻辑（"进行中"判定收敛到 orderStatus.ts 的 isInProgressOrder，两边共用同一份实现） */
 function matchesOrderStatus(record: InquiryRecord, filter: PurchaseOrderStatusFilter): boolean {
   if (filter === 'all') return true;
   if (filter === 'inProgress') return isInProgressOrder(record);

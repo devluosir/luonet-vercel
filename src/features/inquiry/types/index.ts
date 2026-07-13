@@ -36,6 +36,8 @@ export interface InquiryRecord {
   orderSubStatus?: OrderSubStatus;
   /** 订单附加标记的情况备注 — 仅在 orderSubStatus 存在时有意义 */
   orderSubStatusRemark?: string;
+  /** 善后S 是否已完成 — 仅在 orderSubStatus === 'followup' 时有意义，完成后该订单归入"正常单" */
+  orderFollowupCompleted?: boolean;
 
   // ── 订单状态表追踪字段（仅在有 orderNo 时使用，无需 D1 迁移）──────────
   /** 交货日期，[m.D] 格式，如 [7.15] */

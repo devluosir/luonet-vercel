@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { InquiryQuoteStatusDisplay } from '@/features/inquiry/components/InquiryQuoteStatusDisplay';
 import { getRecordColorState, stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
+import { getOrderSubStatusLetter, isFollowupCompleted } from '@/features/inquiry/utils/orderStatus';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { computePurchaseMainStatus, formatPurchaseMainStatus } from '../utils/purchaseInquiryStatus';
 
@@ -68,6 +69,7 @@ interface PurchaseRegistrationRowProps {
 export function PurchaseRegistrationRow({ record, onUpdate, onEditRecord }: PurchaseRegistrationRowProps) {
   const [activeField, setActiveField] = useState<EditField>(null);
   const mainStatus = formatPurchaseMainStatus(computePurchaseMainStatus(record));
+  const subStatusBadge = getOrderSubStatusLetter(record);
 
   // 供只读预览用的影子记录：把采购部专属供应商/报价状态接到 InquiryQuoteStatusDisplay 期望的字段名上
   const previewRecord: InquiryRecord = {
@@ -96,13 +98,14 @@ export function PurchaseRegistrationRow({ record, onUpdate, onEditRecord }: Purc
             {record.orderNo && (
               <span
                 className={`inline-flex min-w-0 items-center gap-0.5 truncate rounded-full bg-green-50 px-1.5 py-0 text-[11px] font-medium leading-4 text-green-700 ring-1 dark:bg-green-950/40 dark:text-green-400 ${
-                  record.orderSubStatus ? 'ring-red-300 dark:ring-red-700' : 'ring-green-200 dark:ring-green-800'
+                  record.orderSubStatus && !isFollowupCompleted(record) ? 'ring-red-300 dark:ring-red-700' : 'ring-green-200 dark:ring-green-800'
                 }`}
               >
                 {record.orderNo}
-                {record.orderSubStatus && (
+                {subStatusBadge && (
                   <span className="font-bold text-red-500">
-                    {record.orderSubStatus === 'cancelled' ? 'C' : record.orderSubStatus === 'suspended' ? 'P' : 'S'}
+                    {subStatusBadge.letter}
+                    {subStatusBadge.completed && <span className="text-green-500">-OK</span>}
                   </span>
                 )}
               </span>

@@ -3898,6 +3898,40 @@ jsdom 26 不支持 `PointerEvent` 构造函数，组件级集成测试改用 `ne
 - 验证：`purchase-registration` 目录定向 Jest 81 例全部通过；`src/components/table` + 四张表所在 5 个 feature 目录（共 13 个文件）145 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
 - `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）；未做真实浏览器验证，建议用户本地确认这条记录及类似记录的状态描述列现在显示正确
 
+## TASK-158：善后S 支持标记"完成"，完成后归入正常单 + 徽标显示 S-OK
+
+**状态：** 已完成（2026-07-13，本次会话由 Claude 直接实现，未经 Codex）
+
+**背景：** 用户要求（原话）："关于善后的订单，在善后完成后，应归为正常单，请在编辑订单窗中，对于订单状态标记里的，善后被选中后，在情况备注后面，有一个善后完成选择框，并将已完成善后的单子S"红色"后面-OK"绿色"，且归到正常单列表中。当然在筛选善后列表中当然也要能显示。"
+
+拆解为四点：①"编辑订单"弹窗，选中善后S 后在情况备注下方新增"善后完成" checkbox；②勾选后订单编号旁的字母标记从红色"S"变成红色"S" + 绿色"-OK"；③归入"正常单"筛选/统计；④"善后"细分筛选仍要能筛出这些已完成的记录（不能因为标完成就从"善后"列表里消失）。
+
+**设计要点：**
+
+新增字段 `orderFollowupCompleted?: boolean`（`InquiryRecord`，纯 JSON 字段，无需 D1 迁移，写法与 `orderDeliveryStatus` 等字段一致，不进 `INQUIRY_CLEARABLE_FIELDS`——未勾选时前端发 `undefined`，序列化成 `null`，读取时各处用 `!!`/`??` 处理，null 与 undefined 等价，不需要 Worker 侧特殊删除字段逻辑）。只在 `orderSubStatus === 'followup'` 时有意义，切到其它状态或取消勾选都会清空。
+
+第④点"筛选善后列表仍要显示"其实不需要改动：`matchesOrderStatus` 对 C/P/S 细分筛选一直是 `record.orderSubStatus === filter`，与是否完成无关，只要不清空 `orderSubStatus` 本身，筛选自然继续命中——已用回归测试固化这个不变量。
+
+**业务逻辑收敛到 `orderStatus.ts`（原本分散在多处的重复实现，本次一并收敛，降低"改一处漏一处"的风险——`isInProgressOrder` 原来在 `OrderPage.tsx` 与 `PurchaseOrderRegistrationPage.tsx` 各有一份、注释互相说"与另一处完全一致"，`getRowBgClass`/`OrderNoText` 在 `OrderRow.tsx`/`PurchaseOrderRow.tsx` 也是逐字节复制）：**
+- `isFollowupCompleted(record)`：`orderSubStatus === 'followup' && !!orderFollowupCompleted`，其它三个函数都基于它判断，单一事实来源
+- `isNormalOrder`：无标记/悬挂P 仍归正常，新增"善后S 且已完成"也归正常（辙销C 没有"完成"概念，不受影响）
+- `isInProgressOrder`：从 `OrderPage.tsx`/`PurchaseOrderRegistrationPage.tsx` 两处重复实现收敛成这一处导出，两个页面改为直接 import；悬挂P 仍强制算进行中，善后S 完成前也强制算进行中，完成后改为按真实执行情况文字判断（不再强制“进行中”，因为"归入正常单"就意味着不再对它特殊处理）
+- `getOrderRowBgClass`：从 `OrderRow.tsx`/`PurchaseOrderRow.tsx` 两处逐字节重复的 `getRowBgClass` 收敛成这一处导出；善后S 完成后不再是红色底，回到默认（无特殊底色）
+- `getOrderSubStatusLetter(record)`：返回 `{ letter: 'C'|'P'|'S', completed: boolean }` 或 `null`，供 4 个渲染位置统一取用
+
+**渲染层：**
+- 新增 `src/features/order/components/OrderNoText.tsx`：从 `OrderRow.tsx`/`PurchaseOrderRow.tsx` 里两份逐字节相同的 `OrderNoText` 组件抽出来的共享组件（`PurchaseOrderRow.tsx` 已有跨 feature 复用 `DeliveryStatusCell` 的先例，这里延续同样的做法），字母标记后按 `completed` 追加绿色 `-OK`
+- `InquiryRow.tsx`/`PurchaseRegistrationRow.tsx`：订单号 pill 徽标内联渲染（样式与 `OrderNoText` 不同，不抽共享组件，只共用 `getOrderSubStatusLetter`/`isFollowupCompleted` 两个逻辑函数），完成后 pill 的 `ring` 颜色也从红色恢复成绿色
+
+**"编辑订单"弹窗（`OrderEditModal.tsx`）：** 情况备注下方新增"善后完成" checkbox，仅在 `subStatus === 'followup'` 时显示；沿用既有的 `subStatusDirtyRef` 脏检查模式（未触碰状态区时保存不带这个字段，避免用旧值覆盖其它标签页刚同步的最新完成状态，与 TASK-151 的并发保护是同一套机制）；点击 C/P/S 按钮切换到非善后状态时，本地 `followupCompleted` 状态同步清空，避免残留一个不对应任何善后状态的"已完成"标记。
+
+**受限视图：** `restrictedView.ts` 的 `allowPurchaseOrderTable` 分支新增只读暴露 `orderFollowupCompleted`（与已有的 `orderSubStatus` 同等对待，只读不放行写入），否则仅有采购权限的用户在采购订单表看到的会一直是"S"而不是"S-OK"。
+
+- 文件：`types/index.ts`、`orderStatus.ts`、`OrderEditModal.tsx`、`OrderNoText.tsx`（新增）、`OrderRow.tsx`、`PurchaseOrderRow.tsx`、`InquiryRow.tsx`、`PurchaseRegistrationRow.tsx`、`OrderPage.tsx`、`PurchaseOrderRegistrationPage.tsx`、`restrictedView.ts`
+- 新增/调整测试：`orderStatus.test.ts` 新增 24 例（`isFollowupCompleted`/`isNormalOrder`/`isInProgressOrder`/`getOrderRowBgClass`/`getOrderSubStatusLetter` 各种组合）；`OrderEditModal.test.tsx` 新增 5 例（checkbox 显隐、勾选保存、取消勾选清空、切状态清空、未触碰状态区不覆盖）；`OrderRow.test.tsx` 新增 2 例（S/S-OK 渲染 + 行背景恢复正常）；`route.test.ts` 新增 1 例（受限视图只读暴露该字段）
+- 验证：`src/features/inquiry`/`order`/`purchase-order-registration`/`purchase-registration`/`components/table`/`app/api/inquiry` 共 14 个测试套件 177 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过；全量 `npx jest`（不含 `e2e/`）另有 3 个套件、15 个用例失败，均在 `useQuotationStore.test.ts`，`git status` 确认未改动 quotation 相关任何文件，是改动前已存在的既有问题
+- `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）；未做真实浏览器验证，建议用户本地在订单状态表打开一条善后S 记录的"编辑订单"弹窗，勾选"善后完成"保存后确认：①订单编号旁变成 "S" 红 + "-OK" 绿；②行背景从红色恢复正常；③"正常"筛选能筛到这条；④"善后"筛选依然能筛到这条
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

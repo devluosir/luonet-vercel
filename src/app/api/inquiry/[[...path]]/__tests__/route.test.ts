@@ -70,4 +70,13 @@ describe('sanitizeRestrictedRecord：采购部只读响应携带完整 quotedSta
     });
     expect(result).not.toHaveProperty('quotedStatuses');
   });
+
+  it('allowPurchaseOrderTable=true 时只读携带 orderFollowupCompleted，让采购订单表也能展示善后完成的 S-OK 标记', () => {
+    const result = sanitizeRestrictedRecord(
+      { ...fullRecord, orderSubStatus: 'followup', orderFollowupCompleted: true },
+      { allowPurchaseRegistration: false, allowPurchaseOrderTable: true }
+    );
+    expect(result.orderSubStatus).toBe('followup');
+    expect(result.orderFollowupCompleted).toBe(true);
+  });
 });

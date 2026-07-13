@@ -4,7 +4,9 @@ import { useRef, useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { stripDateBrackets, normalizeShortDateInput } from '@/features/inquiry/utils/inquiryUtils';
+import { getOrderRowBgClass } from '@/features/inquiry/utils/orderStatus';
 import { DeliveryStatusCell } from '@/features/order/components/DeliveryStatusCell';
+import { OrderNoText } from '@/features/order/components/OrderNoText';
 import {
   type PurchaseOrderTableBreakpoint,
   showConfirmDateCol,
@@ -12,20 +14,7 @@ import {
   showPurchaseOrderNoCol,
 } from '../utils/purchaseOrderTableLayout';
 
-// ── 行颜色（与订单状态表 OrderRow 一致，两边展示的是同一个共享字段）───────────
-
-function getRowBgClass(record: InquiryRecord): string {
-  if (record.orderSubStatus === 'cancelled') {
-    return 'bg-gray-300 hover:bg-gray-400/70 dark:bg-gray-700 dark:hover:bg-gray-600/80';
-  }
-  if (record.orderSubStatus === 'suspended') {
-    return 'bg-green-100 hover:bg-green-200/75 dark:bg-green-950/45 dark:hover:bg-green-900/45';
-  }
-  if (record.orderSubStatus === 'followup') {
-    return 'bg-red-100 hover:bg-red-200/75 dark:bg-red-950/45 dark:hover:bg-red-900/45';
-  }
-  return 'hover:bg-gray-50/70 dark:hover:bg-gray-800/30';
-}
+// ── 行颜色（与订单状态表 OrderRow 一致，两边展示的是同一个共享字段，共用 orderStatus.ts）──
 
 // 执行情况是自由文本，不是三选一枚举：只有明确写"发票..."（已开票/基本完成）才算完成态，
 // 其余任何文字（含用户自己写的说明，比如"合同确认中"）都视同"备货"阶段，保持"进行中"的粉色
@@ -43,21 +32,6 @@ function getOrderSubStatusRemarkClass(record: InquiryRecord): string {
   if (record.orderSubStatus === 'suspended') return 'text-green-600 dark:text-green-400';
   if (record.orderSubStatus === 'followup') return 'text-blue-600 dark:text-blue-400';
   return 'text-gray-500 dark:text-gray-400';
-}
-
-function OrderNoText({ record, textClassName }: { record: InquiryRecord; textClassName: string }) {
-  const { orderNo, orderSubStatus } = record;
-  const letter =
-    orderSubStatus === 'cancelled' ? 'C'
-    : orderSubStatus === 'suspended' ? 'P'
-    : orderSubStatus === 'followup' ? 'S'
-    : null;
-  return (
-    <span className={`inline-flex max-w-full min-w-0 items-baseline gap-0.5 truncate font-mono text-[13px] font-bold leading-5 ${textClassName}`}>
-      <span className="truncate">{orderNo}</span>
-      {letter && <span className="shrink-0 font-bold text-red-500">{letter}</span>}
-    </span>
-  );
 }
 
 // ── 可编辑字段类型 ────────────────────────────────────────────────────────────
@@ -325,7 +299,7 @@ export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptio
   const orderSubStatusRemark = record.orderSubStatusRemark?.trim();
 
   return (
-    <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getRowBgClass(record)}`}>
+    <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getOrderRowBgClass(record)}`}>
       {/* 订单编号 + 询价编号：点击打开"编辑采购订单"弹窗 */}
       <td className="max-w-0 overflow-hidden px-2 py-2 sm:px-3">
         <div
