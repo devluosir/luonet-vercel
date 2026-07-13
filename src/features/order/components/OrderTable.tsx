@@ -34,13 +34,19 @@ const CHECK_COL_PX = 40;
 
 // 订单状态表（销售侧）：只在 xl 断点（全列展示，含"客户订单号"）启用拖拽调宽，
 // 其余断点继续用原有百分比响应式布局，不受影响。列 id 与下方 <th> 一一对应。
-// "内容简述"（desc）故意不在这里、不给拖拽手柄：它是唯一没有显式像素宽度的列，
-// table-layout:fixed 会把 table 宽度（w-full）减去其它列显式宽度后的剩余空间全分给它，
-// 表格才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白。
+//
+// 渲染顺序里实际的最后一列（有金额权限时是"到账金额"，没有时是"执行情况"）故意不设显式像素宽度、
+// 不给拖拽手柄：它是唯一没有显式宽度的列，table-layout:fixed 会把 table 宽度（w-full）减去其它列
+// 显式宽度后的剩余空间全分给它，表格才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白。
+// 这个"吸收剩余空间"的列必须是渲染顺序里最后一列——之前误放在中间的"内容简述"上，导致拖动它后面
+// 任意一列的手柄时，宽度变化要靠"内容简述"收缩/膨胀补偿，而"内容简述"在左边，视觉上就变成"往左
+// 扩展"而不是正常的"往右扩展"，用户反馈过这个问题。放在最后一列就不会有这个问题，"内容简述"改为
+// 正常可拖拽列。哪一列是"最后一列"随 adminCols（金额权限 + xl 断点）变化，见下方 flexColumnId。
 const RESIZABLE_COLUMN_DEFS: Record<string, ResizableColumnDef> = {
   orderNo: { id: 'orderNo', defaultWidth: 120, minWidth: 90 },
   deliveryDate: { id: 'deliveryDate', defaultWidth: 64, minWidth: 56 },
   customer: { id: 'customer', defaultWidth: 96, minWidth: 70 },
+  desc: { id: 'desc', defaultWidth: 192, minWidth: 120 },
   confirmDate: { id: 'confirmDate', defaultWidth: 64, minWidth: 56 },
   customerOrderNo: { id: 'customerOrderNo', defaultWidth: 200, minWidth: 100 },
   deliveryStatus: { id: 'deliveryStatus', defaultWidth: 144, minWidth: 100 },
@@ -107,15 +113,19 @@ export function OrderTable({
   const adminCols = showAdminCols(bp, canViewFinancials);
   const resizable = bp === 'xl';
 
-  // 当前实际渲染的可拖拽列 id（与下方 <th> 渲染条件一一对应，desc 除外），只在 resizable 断点计算/使用
+  // 渲染顺序里实际的最后一列：有金额权限（adminCols）时是"到账金额"，否则是"执行情况"——
+  // 这一列不设显式宽度、不给拖拽手柄，负责吸收剩余空间撑满表格，见上方注释。
+  const flexColumnId = adminCols ? 'receivedAmount' : 'deliveryStatus';
+
+  // 当前实际渲染的可拖拽列 id（与下方 <th> 渲染条件一一对应，flexColumnId 除外），只在 resizable 断点计算/使用
   const visibleResizableIds = [
     'orderNo',
     'deliveryDate',
     ...(customerCol ? ['customer'] : []),
+    'desc',
     ...(confirmDateCol ? ['confirmDate'] : []),
     ...(lgCols ? ['customerOrderNo'] : []),
-    'deliveryStatus',
-    ...(adminCols ? ['amount', 'paymentDate', 'receivedAmount'] : []),
+    ...(adminCols ? ['deliveryStatus', 'amount', 'paymentDate'] : []),
   ];
   const resizableColumns = visibleResizableIds.map((id) => RESIZABLE_COLUMN_DEFS[id]);
   const { widths, startResize, resetColumn } = useResizableColumns('order.tableColWidths', resizableColumns);
@@ -173,15 +183,19 @@ export function OrderTable({
               <col style={{ width: widths.orderNo ?? RESIZABLE_COLUMN_DEFS.orderNo.defaultWidth }} />
               <col style={{ width: widths.deliveryDate ?? RESIZABLE_COLUMN_DEFS.deliveryDate.defaultWidth }} />
               {customerCol && <col style={{ width: widths.customer ?? RESIZABLE_COLUMN_DEFS.customer.defaultWidth }} />}
-              <col />
+              <col style={{ width: widths.desc ?? RESIZABLE_COLUMN_DEFS.desc.defaultWidth }} />
               {confirmDateCol && <col style={{ width: widths.confirmDate ?? RESIZABLE_COLUMN_DEFS.confirmDate.defaultWidth }} />}
               {lgCols && <col style={{ width: widths.customerOrderNo ?? RESIZABLE_COLUMN_DEFS.customerOrderNo.defaultWidth }} />}
-              <col style={{ width: widths.deliveryStatus ?? RESIZABLE_COLUMN_DEFS.deliveryStatus.defaultWidth }} />
+              {flexColumnId === 'deliveryStatus' ? (
+                <col />
+              ) : (
+                <col style={{ width: widths.deliveryStatus ?? RESIZABLE_COLUMN_DEFS.deliveryStatus.defaultWidth }} />
+              )}
               {adminCols && (
                 <>
                   <col style={{ width: widths.amount ?? RESIZABLE_COLUMN_DEFS.amount.defaultWidth }} />
                   <col style={{ width: widths.paymentDate ?? RESIZABLE_COLUMN_DEFS.paymentDate.defaultWidth }} />
-                  <col style={{ width: widths.receivedAmount ?? RESIZABLE_COLUMN_DEFS.receivedAmount.defaultWidth }} />
+                  <col />
                 </>
               )}
             </>
@@ -218,8 +232,9 @@ export function OrderTable({
                 {handle('customer', '客户')}
               </th>
             )}
-            <th className={headerCellClass}>
+            <th className={th('desc')}>
               <span className="block truncate">内容简述</span>
+              {handle('desc', '内容简述')}
             </th>
             {confirmDateCol && (
               <th className={`${th('confirmDate')} px-1.5 sm:px-2`}>
@@ -235,12 +250,20 @@ export function OrderTable({
                 {handle('customerOrderNo', '客户订单号')}
               </th>
             )}
-            <th className={`${th('deliveryStatus')} px-1.5 sm:px-2`}>
-              <span className="block truncate">
-                {bp === 'sm' ? '执行' : '执行情况'}
-              </span>
-              {handle('deliveryStatus', '执行情况')}
-            </th>
+            {flexColumnId === 'deliveryStatus' ? (
+              <th className={`${headerCellClass} px-1.5 sm:px-2`}>
+                <span className="block truncate">
+                  {bp === 'sm' ? '执行' : '执行情况'}
+                </span>
+              </th>
+            ) : (
+              <th className={`${th('deliveryStatus')} px-1.5 sm:px-2`}>
+                <span className="block truncate">
+                  {bp === 'sm' ? '执行' : '执行情况'}
+                </span>
+                {handle('deliveryStatus', '执行情况')}
+              </th>
+            )}
             {adminCols && (
               <>
                 <th className={`${headerCellRightClass} ${resizable ? 'relative' : ''}`}>
@@ -251,9 +274,8 @@ export function OrderTable({
                   <span className="block truncate">回款</span>
                   {handle('paymentDate', '回款')}
                 </th>
-                <th className={`${headerCellRightClass} ${resizable ? 'relative' : ''}`}>
+                <th className={headerCellRightClass}>
                   <span className="block truncate">到账金额</span>
-                  {handle('receivedAmount', '到账金额')}
                 </th>
               </>
             )}

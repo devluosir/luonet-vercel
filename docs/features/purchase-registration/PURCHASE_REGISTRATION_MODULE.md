@@ -59,7 +59,9 @@ purchaseQuotedStatuses?: CustomerQuoteStatus[];
 
 ### 表格列宽（TASK-157 起）
 
-`PurchaseRegistrationTable` 本身没有响应式断点逻辑（任何屏宽都渲染同样 4 列），已全量接入通用可拖拽列宽 hook（`src/components/table/useResizableColumns.ts`），列宽按 id 存 `localStorage`（key `purchaseRegistration.tableColWidths`），双击列头拖拽手柄可重置为默认宽度。"询报价状态"列默认宽度从原先约 26%（约 234px）加宽到 340px，解决状态提示装不下的问题。"内容描述"列故意不参与拖拽、不设显式像素宽度，交给 `table-layout: fixed` 把表格 `w-full` 减去其它列显式宽度后的剩余空间全部分给它，保证表格始终撑满容器、不会在列宽总和小于容器宽度时右侧留白。这套 hook 同时也接入了询报价登记（`InquiryTable`，`lg` 断点）、订单状态表（`OrderTable`，`xl` 断点）、采购订单表（`PurchaseOrderTable`，`lg`/`xl` 断点）——这三张表各自只在"全列展示"的断点启用拖拽，更窄断点保持原有百分比响应式布局不受影响，同样各自保留一列（内容简述/内容描述）不参与拖拽、负责撑满剩余空间。
+`PurchaseRegistrationTable` 本身没有响应式断点逻辑（任何屏宽都渲染同样 4 列），已全量接入通用可拖拽列宽 hook（`src/components/table/useResizableColumns.ts`），列宽按 id 存 `localStorage`（key `purchaseRegistration.tableColWidths`），双击列头拖拽手柄可重置为默认宽度。"询报价状态"列默认宽度从原先约 26%（约 234px）加宽到 340px，解决状态提示装不下的问题。渲染顺序里**最后一列**（"状态描述"）故意不参与拖拽、不设显式像素宽度，交给 `table-layout: fixed` 把表格 `w-full` 减去其它列显式宽度后的剩余空间全部分给它，保证表格始终撑满容器、不会在列宽总和小于容器宽度时右侧留白；"内容描述"是正常可拖拽列。这套 hook 同时也接入了询报价登记（`InquiryTable`，`lg` 断点）、订单状态表（`OrderTable`，`xl` 断点）、采购订单表（`PurchaseOrderTable`，`lg`/`xl` 断点）——这三张表各自只在"全列展示"的断点启用拖拽，更窄断点保持原有百分比响应式布局不受影响，同样各自把撑满职责放在渲染顺序里**最后一列**（`InquiryTable` 的"询报价状态"、`PurchaseOrderTable` 的"执行情况"、`OrderTable` 按 `canViewFinancials` 权限动态取"到账金额"或"执行情况"），"内容简述/内容描述"均为正常可拖拽列。
+
+**踩过的坑**：撑满列最初被放在每张表偏靠前的位置（第 2 列），导致拖动其后任意可拖拽列的手柄时，宽度变化要靠撑满列反向补偿——撑满列在左边，视觉上就变成"往左扩展"而不是正常的"往右扩展"，且撑满列本身没有手柄，用户会感知成"手柄选不中"。撑满列必须放在渲染顺序里实际最后一列才不会有这个问题（已修复）。
 
 ### 采购部登记表状态描述列（TASK-156 起，TASK-157 改名+带日期）
 

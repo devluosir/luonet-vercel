@@ -32,14 +32,15 @@ describe('InquiryTable 可拖拽列宽（只在 lg 断点启用，其余断点�
     window.localStorage.clear();
   });
 
-  it('lg 断点（全列展示）下，询价编号/询价人/客户编号/询报价状态 4 列各有一个拖拽手柄；checkbox/操作/内容简述没有', () => {
+  it('lg 断点（全列展示）下，询价编号/询价人/客户编号/内容简述 4 列各有一个拖拽手柄；checkbox/操作/询报价状态没有', () => {
     setViewportWidth(1280);
     render(
       <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} onDeleteRecord={jest.fn()} canBatchEdit />
     );
     expect(screen.getAllByRole('separator')).toHaveLength(4);
-    // "内容简述"是唯一不设显式宽度的撑满列，交给 table-layout:fixed 分配剩余空间，没有手柄
-    expect(screen.queryByLabelText('调整"内容简述"列宽')).not.toBeInTheDocument();
+    // "询报价状态"是可拖拽列里排在最后一个（操作列 del 之前）、唯一不设显式宽度的撑满列，没有手柄——
+    // 必须是最后一个，否则拖动它前面的列会导致视觉上"往左扩展"而不是"往右扩展"（曾经的真实 bug）
+    expect(screen.queryByLabelText('调整"询报价状态"列宽')).not.toBeInTheDocument();
   });
 
   it('lg 断点下表格始终 w-full 撑满容器，不会在列宽总和小于容器宽度时留白', () => {
@@ -58,12 +59,12 @@ describe('InquiryTable 可拖拽列宽（只在 lg 断点启用，其余断点�
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
   });
 
-  it('lg 断点下拖拽"询报价状态"列手柄会增大该列宽度并持久化', () => {
+  it('lg 断点下拖拽"内容简述"列手柄会增大该列宽度并持久化', () => {
     setViewportWidth(1280);
     render(
       <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} onDeleteRecord={jest.fn()} />
     );
-    const handle = screen.getByLabelText('调整"询报价状态"列宽');
+    const handle = screen.getByLabelText('调整"内容简述"列宽');
 
     // jsdom 不支持 PointerEvent 构造函数，用带 clientX 的 MouseEvent 冒充 pointerdown
     act(() => {
@@ -79,6 +80,30 @@ describe('InquiryTable 可拖拽列宽（只在 lg 断点启用，其余断点�
     });
 
     const saved = JSON.parse(window.localStorage.getItem('inquiry.tableColWidths') || '{}');
-    expect(saved.status).toBe(320); // 290 默认 + 30
+    expect(saved.desc).toBe(260); // 230 默认 + 30
+  });
+
+  it('回归：拖拽"内容简述"手柄只改变它自己的宽度，不影响它左边"客户编号"列的宽度', () => {
+    setViewportWidth(1280);
+    render(
+      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} onDeleteRecord={jest.fn()} />
+    );
+    const custnoWidthBefore = screen.getByLabelText('调整"客户编号"列宽').closest('th')?.style.width;
+
+    const descHandle = screen.getByLabelText('调整"内容简述"列宽');
+    act(() => {
+      fireEvent(descHandle, new MouseEvent('pointerdown', { clientX: 200, bubbles: true, cancelable: true }));
+    });
+    act(() => {
+      const moveEvent = new Event('pointermove') as unknown as PointerEvent;
+      Object.defineProperty(moveEvent, 'clientX', { value: 260, configurable: true });
+      window.dispatchEvent(moveEvent);
+    });
+    act(() => {
+      window.dispatchEvent(new Event('pointerup'));
+    });
+
+    const custnoWidthAfter = screen.getByLabelText('调整"客户编号"列宽').closest('th')?.style.width;
+    expect(custnoWidthAfter).toBe(custnoWidthBefore); // "客户编号" 不受影响
   });
 });

@@ -25,12 +25,12 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
     window.localStorage.clear();
   });
 
-  it('询价编号/询报价状态/状态 3 列渲染拖拽手柄；"内容描述"是唯一不设显式宽度的撑满列，没有手柄', () => {
+  it('询价编号/内容描述/询报价状态 3 列渲染拖拽手柄；最后一列"状态描述"是唯一不设显式宽度的撑满列，没有手柄', () => {
     render(
       <PurchaseRegistrationTable records={[baseRecord()]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />
     );
     expect(screen.getAllByRole('separator')).toHaveLength(3);
-    expect(screen.queryByLabelText('调整"内容描述"列宽')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('调整"状态描述"列宽')).not.toBeInTheDocument();
   });
 
   it('表格始终 w-full 撑满容器，不会在列宽总和小于容器宽度时留白', () => {
@@ -39,9 +39,10 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
     );
     const table = container.querySelector('table');
     expect(table).toHaveClass('w-full');
-    // "内容描述"是第 2 列，故意不设 width，交给 table-layout:fixed 分配剩余空间
+    // "状态描述"是最后一列（第 4 列），故意不设 width，交给 table-layout:fixed 分配剩余空间——
+    // 必须是最后一列，否则拖动它前面的列会导致视觉上"往左扩展"而不是"往右扩展"（曾经的真实 bug）
     const cols = container.querySelectorAll('col');
-    expect((cols[1] as HTMLElement).style.width).toBe('');
+    expect((cols[3] as HTMLElement).style.width).toBe('');
   });
 
   it('"询报价状态"列默认宽度比原来的 26% 更宽（用户反馈原宽度装不下状态提示）', () => {
@@ -80,6 +81,31 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
     const saved = JSON.parse(window.localStorage.getItem('purchaseRegistration.tableColWidths') || '{}');
     expect(saved.status).toBe(400);
+  });
+
+  it('回归：拖拽"内容描述"手柄只改变它自己的宽度，不影响它左边"询价编号"列的宽度', () => {
+    const { container } = render(
+      <PurchaseRegistrationTable records={[baseRecord()]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />
+    );
+    const cols = container.querySelectorAll('col');
+    const noWidthBefore = (cols[0] as HTMLElement).style.width;
+
+    const descHandle = screen.getByLabelText('调整"内容描述"列宽');
+    act(() => {
+      fireEvent(descHandle, new MouseEvent('pointerdown', { clientX: 200, bubbles: true, cancelable: true }));
+    });
+    act(() => {
+      const moveEvent = new Event('pointermove') as unknown as PointerEvent;
+      Object.defineProperty(moveEvent, 'clientX', { value: 260, configurable: true });
+      window.dispatchEvent(moveEvent);
+    });
+    act(() => {
+      window.dispatchEvent(new Event('pointerup'));
+    });
+
+    const colsAfter = container.querySelectorAll('col');
+    expect((colsAfter[0] as HTMLElement).style.width).toBe(noWidthBefore); // "询价编号" 不受影响
+    expect(parseInt((colsAfter[1] as HTMLElement).style.width, 10)).toBe(380); // 320 默认 + 60
   });
 
   it('空记录时渲染空态提示，不渲染表格', () => {

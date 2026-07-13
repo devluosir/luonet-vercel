@@ -23,18 +23,22 @@ export type { PurchaseOrderTableBreakpoint };
 
 // 采购订单表（采购侧）：只在 lg/xl 断点（全列展示，含"客户订单号"）启用拖拽调宽，
 // sm/md 断点继续用原有百分比响应式布局，不受影响。列 id 与下方 <th> 一一对应。
-// "内容描述"（desc）故意不在这里、不给拖拽手柄：它是唯一没有显式像素宽度的列，
-// table-layout:fixed 会把 table 宽度（w-full）减去其它列显式宽度后的剩余空间全分给它，
-// 表格才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白。
+//
+// "执行情况"（渲染顺序里实际的最后一列）故意不设显式像素宽度、不给拖拽手柄：它是唯一没有显式宽度
+// 的列，table-layout:fixed 会把 table 宽度（w-full）减去其它列显式宽度后的剩余空间全分给它，表格
+// 才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白。这个"吸收剩余空间"的列必须是渲染顺序里
+// 最后一列——之前误放在中间的"内容描述"上，导致拖动它后面任意一列的手柄时，宽度变化要靠"内容描述"
+// 收缩/膨胀补偿，而"内容描述"在左边，视觉上就变成"往左扩展"而不是正常的"往右扩展"，用户反馈过这个
+// 问题。放在最后一列就不会有这个问题，"内容描述"改为正常可拖拽列。
 const RESIZABLE_COLUMN_DEFS: Record<string, ResizableColumnDef> = {
   orderNo: { id: 'orderNo', defaultWidth: 110, minWidth: 90 },
+  desc: { id: 'desc', defaultWidth: 200, minWidth: 130 },
   purchaseOrderNo: { id: 'purchaseOrderNo', defaultWidth: 110, minWidth: 80 },
   supplier: { id: 'supplier', defaultWidth: 130, minWidth: 90 },
   amount: { id: 'amount', defaultWidth: 100, minWidth: 80 },
   deliveryDate: { id: 'deliveryDate', defaultWidth: 90, minWidth: 70 },
   confirmDate: { id: 'confirmDate', defaultWidth: 90, minWidth: 70 },
   customerNo: { id: 'customerNo', defaultWidth: 130, minWidth: 90 },
-  deliveryStatus: { id: 'deliveryStatus', defaultWidth: 140, minWidth: 100 },
 };
 
 interface PurchaseOrderTableProps {
@@ -67,16 +71,17 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
   const customerNoCol = showCustomerNoCol(bp);
   const resizable = bp === 'lg' || bp === 'xl';
 
-  // 当前实际渲染的可拖拽列 id（与下方 <th> 渲染条件一一对应，desc 除外），只在 resizable 断点计算/使用
+  // 当前实际渲染的可拖拽列 id（与下方 <th> 渲染条件一一对应，最后一列"执行情况"除外），
+  // 只在 resizable 断点计算/使用
   const visibleResizableIds = [
     'orderNo',
+    'desc',
     ...(purchaseOrderNoCol ? ['purchaseOrderNo'] : []),
     'supplier',
     ...(canViewFinancials ? ['amount'] : []),
     'deliveryDate',
     ...(confirmDateCol ? ['confirmDate'] : []),
     ...(customerNoCol ? ['customerNo'] : []),
-    'deliveryStatus',
   ];
   const resizableColumns = visibleResizableIds.map((id) => RESIZABLE_COLUMN_DEFS[id]);
   const { widths, startResize, resetColumn } = useResizableColumns('purchaseOrderTable.tableColWidths', resizableColumns);
@@ -108,7 +113,7 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
           {resizable ? (
             <>
               <col style={{ width: widths.orderNo ?? RESIZABLE_COLUMN_DEFS.orderNo.defaultWidth }} />
-              <col />
+              <col style={{ width: widths.desc ?? RESIZABLE_COLUMN_DEFS.desc.defaultWidth }} />
               {purchaseOrderNoCol && (
                 <col style={{ width: widths.purchaseOrderNo ?? RESIZABLE_COLUMN_DEFS.purchaseOrderNo.defaultWidth }} />
               )}
@@ -121,7 +126,7 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
               {customerNoCol && (
                 <col style={{ width: widths.customerNo ?? RESIZABLE_COLUMN_DEFS.customerNo.defaultWidth }} />
               )}
-              <col style={{ width: widths.deliveryStatus ?? RESIZABLE_COLUMN_DEFS.deliveryStatus.defaultWidth }} />
+              <col />
             </>
           ) : (
             colWidths.map((w, i) => <col key={i} style={{ width: w }} />)
@@ -133,7 +138,10 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
               订单编号
               {handle('orderNo', '订单编号')}
             </th>
-            <th className={headerCellOverflowClass}>内容描述</th>
+            <th className={th('desc')}>
+              内容描述
+              {handle('desc', '内容描述')}
+            </th>
             {purchaseOrderNoCol && (
               <th className={`${th('purchaseOrderNo')} px-1.5 sm:px-2`}>
                 采购单号
@@ -166,10 +174,7 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
                 {handle('customerNo', '客户订单号')}
               </th>
             )}
-            <th className={`${th('deliveryStatus')} px-1.5 sm:px-2`}>
-              执行情况
-              {handle('deliveryStatus', '执行情况')}
-            </th>
+            <th className={`${headerCellOverflowClass} px-1.5 sm:px-2`}>执行情况</th>
           </tr>
         </thead>
         <tbody>
