@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import {
   headerCellOverflowClass,
-  headerCellOverflowRightClass,
   headerRowClass,
 } from '@/components/table/tableHeaderStyles';
 import { ResizeHandle } from '@/components/table/ResizeHandle';
@@ -153,7 +152,7 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
               {handle('supplier', '供应商')}
             </th>
             {canViewFinancials && (
-              <th className={`${headerCellOverflowRightClass} ${resizable ? 'relative' : ''}`}>
+              <th className={th('amount')}>
                 金额
                 {handle('amount', '金额')}
               </th>

@@ -5,7 +5,6 @@ import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import {
   headerCellCenterClass,
   headerCellOverflowClass,
-  headerCellOverflowRightClass,
   headerRowClass,
 } from '@/components/table/tableHeaderStyles';
 import { ResizeHandle } from '@/components/table/ResizeHandle';
@@ -27,7 +26,6 @@ export type SortField = 'orderNo' | 'deliveryDate';
 export type { OrderTableBreakpoint };
 
 const headerCellClass = headerCellOverflowClass;
-const headerCellRightClass = headerCellOverflowRightClass;
 
 // 全选列宽度固定、不参与拖拽调宽
 const CHECK_COL_PX = 40;
@@ -266,7 +264,7 @@ export function OrderTable({
             )}
             {adminCols && (
               <>
-                <th className={`${headerCellRightClass} ${resizable ? 'relative' : ''}`}>
+                <th className={th('amount')}>
                   <span className="block truncate">金额</span>
                   {handle('amount', '金额')}
                 </th>
@@ -274,7 +272,7 @@ export function OrderTable({
                   <span className="block truncate">回款</span>
                   {handle('paymentDate', '回款')}
                 </th>
-                <th className={headerCellRightClass}>
+                <th className={headerCellClass}>
                   <span className="block truncate">到账金额</span>
                 </th>
               </>

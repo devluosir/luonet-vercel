@@ -252,7 +252,7 @@ function AmountEditCell({ editing, value, textClassName, onActivate, onSave, onC
             if (e.key === 'Enter') e.currentTarget.blur();
             if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
           }}
-          className={`w-full rounded border border-blue-300 bg-white px-1 py-0.5 text-right text-xs outline-none focus:ring-1 focus:ring-blue-200 dark:border-blue-600 dark:bg-gray-900 dark:text-gray-100 ${NUMBER_INPUT_NO_SPINNER_CLS}`}
+          className={`w-full rounded border border-blue-300 bg-white px-1 py-0.5 text-xs outline-none focus:ring-1 focus:ring-blue-200 dark:border-blue-600 dark:bg-gray-900 dark:text-gray-100 ${NUMBER_INPUT_NO_SPINNER_CLS}`}
         />
       </div>
     );
@@ -265,7 +265,7 @@ function AmountEditCell({ editing, value, textClassName, onActivate, onSave, onC
       onClick={handleActivate}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleActivate(); }}
       title={display ?? undefined}
-      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-right text-xs hover:bg-black/5 dark:hover:bg-white/5 ${
+      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/5 ${
         display ? (textClassName ?? 'text-gray-800 dark:text-gray-100') : 'text-gray-200 dark:text-gray-700'
       }`}
     >

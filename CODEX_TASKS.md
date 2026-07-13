@@ -3971,6 +3971,24 @@ jsdom 26 不支持 `PointerEvent` 构造函数，组件级集成测试改用 `ne
 - 验证：`purchase-registration` 目录定向 Jest 98 例全部通过；`src/features/inquiry`/`order`/`purchase-order-registration`/`purchase-registration`/`components/table`/`app/api/inquiry` 共 14 个测试套件 194 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
 - `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）
 
+## TASK-160：订单状态表 / 采购订单表金额列改左对齐
+
+**状态：** 已完成（2026-07-13，本次会话由 Claude 直接实现，未经 Codex）
+
+**背景：** 用户反馈（原话）："将订单状态表格，采购订单表，使金额的列靠左排列吧，现在靠右排列，在拖动列宽的时候，它不是很自然"。TASK-157 起这两张表接入了拖拽调宽，金额类列（金额/到账金额/采购金额）此前表头和单元格文字都是右对齐——拖拽调宽时，右对齐文字的"锚点"在列右边缘，恰好和拖拽手柄所在位置重叠/贴近，视觉上不如左对齐列（文字锚点在左边缘，远离拖拽手柄）自然。
+
+**修复：** 只改对齐方式（左对齐），不改数据/校验/格式化逻辑：
+- `OrderTable.tsx`："金额"/"到账金额"表头从 `headerCellRightClass`（内部即 `headerCellOverflowRightClass`，`text-right`）改为左对齐的 `headerCellClass`（`headerCellOverflowClass`，`text-left`），"金额"列同时改用与其它列一致的 `th('amount')` 辅助函数；不再使用的 `headerCellRightClass` 本地别名与 `headerCellOverflowRightClass` 引入一并删除。
+- `OrderRow.tsx`：`AmountCell`（金额/到账金额共用同一个组件）编辑态 `<input>` 和只读态 `<span>` 都去掉 `text-right`。
+- `PurchaseOrderTable.tsx`："金额"表头从 `headerCellOverflowRightClass` 改为 `th('amount')`（左对齐），不再使用的 `headerCellOverflowRightClass` 引入一并删除。
+- `PurchaseOrderRow.tsx`：`AmountEditCell` 编辑态 `<input>` 和只读态 `<span>` 都去掉 `text-right`。
+- 未改动：两个"编辑订单"/"编辑采购订单"弹窗（`OrderEditModal.tsx`/`PurchaseOrderEditModal.tsx`）里的金额输入框——那是独立弹窗字段，不参与表格列宽拖拽，用户反馈的问题只出现在表格里，弹窗字段保持原有右对齐不受影响。
+
+- 文件：`OrderTable.tsx`、`OrderRow.tsx`、`PurchaseOrderTable.tsx`、`PurchaseOrderRow.tsx`
+- 测试：纯 CSS 对齐调整，未新增/修改测试断言（现有测试均未对这些 className 做过硬编码断言）；跑了全部既有相关测试确认无回归
+- 验证：`src/features/inquiry`/`order`/`purchase-order-registration`/`purchase-registration`/`components/table`/`app/api/inquiry` 共 14 个测试套件 194 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
+- `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）；未做真实浏览器验证，建议用户本地确认两张表的金额/到账金额/采购金额列文字改为左对齐，且拖拽调宽手感符合预期
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

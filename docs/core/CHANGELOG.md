@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2026-07-13
 
+### Changed
+
+#### 订单状态表 / 采购订单表金额列改左对齐（TASK-160）
+- 金额/到账金额/采购金额列表头与单元格文字从右对齐改为左对齐，拖拽调宽时文字不再贴着拖拽手柄，手感更自然；"编辑订单"/"编辑采购订单"弹窗里的金额输入框不受影响，保持原有右对齐。
+
 ### Added
 
 #### 销售侧"已回复客户无法报价"传递到采购部登记（TASK-159）
