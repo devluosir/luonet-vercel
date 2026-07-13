@@ -3843,8 +3843,31 @@ jsdom 26 不支持 `PointerEvent` 构造函数，组件级集成测试改用 `ne
 
 **尚存风险：**
 - 未做真实浏览器手动验证（沙箱无可视浏览器），建议用户本地打开这 4 个页面，在桌面宽度下实际拖拽几列、刷新页面确认宽度记忆生效、双击手柄确认能重置默认宽度。
-- 默认像素宽度是按常见桌面容器宽度估算的，不同用户实际窗口宽度下初次打开可能不是"刚好撑满"，属预期内的可接受体验（用户可自行拖宽/拖窄），非 bug。
 - 未做跨设备/跨浏览器 `localStorage` 同步（本来就是纯本地端偏好设置，同一账号换设备/浏览器不会带着走，符合"UI 偏好"惯例）。
+
+**追加修复（同日）：** 用户反馈"修改后的四个表，都不到全窗了"（截图确认表格右侧有明显留白，没有撑满容器）。
+
+根因：初版实现给每一列都设置了显式像素宽度，`<table>` 也跟着改成 `style={{width: 列宽总和}}`。当默认列宽总和小于用户实际窗口宽度时，`table-layout: fixed` 没有任何机制把"多出来的容器空间"分配给已经全部具名宽度的列——CSS 规范只在"存在未指定宽度的列"时才会把剩余空间分给它们；一旦每列都写死了宽度，浏览器就按总和渲染，多余空间原样留白，不会主动撑满。
+
+修复：每张表挑一列本来就最"内容型"的列（内容描述/内容简述），故意不给它设置显式宽度、也不给拖拽手柄，只让其余列可拖拽；表格本身改回固定用 `w-full`（不再手动算总宽度）。这样 `table-layout: fixed` 会把 `w-full` 减去其它列显式宽度后的剩余空间全部分给这一列——表格永远撑满容器，不会留白；容器特别窄时该列可能被压缩得比较窄，由外层 `overflow-x-auto` 兜底避免真正溢出。四张表都是这个模式，不可拖拽的列固定为：`PurchaseRegistrationTable`/`PurchaseOrderTable` 的"内容描述"、`InquiryTable`/`OrderTable` 的"内容简述"。
+
+- 文件：`PurchaseRegistrationTable.tsx`、`InquiryTable.tsx`、`OrderTable.tsx`、`PurchaseOrderTable.tsx`
+- 测试调整：`PurchaseRegistrationTable.test.tsx`（拖拽手柄数量 4→3 + 新增"表格 w-full 且内容描述列无显式宽度"断言）、`InquiryTable.test.tsx`（拖拽手柄数量 5→4 + 拖拽用例改测"询报价状态"列 + 新增 w-full 断言）
+- 验证：定向 Jest（`src/components/table` + 四张表所在的 5 个 feature 目录，共 13 个文件）131 例全部通过；`npx tsc --noEmit`、`npx eslint`（全部改动文件）均无输出
+- 未在沙箱里跑真实浏览器验证不同窗口宽度下的实际撑满效果，建议用户本地确认。
+
+**追加调整（同日）：** 用户提出三点：①采购部登记表"状态"列改名为"状态描述"；②列里的各状态表述都要带上最近的日期；③如果有"已补充信息"要显示"已补充信息"而不是"需补充信息"（确认优先级要求，非新逻辑——`computePurchaseMainStatus` 里 supplemented 判断本来就在 need_info 之前 return，逐条核实后代码层面无需为这一点改动，实现②的过程中额外补了一条回归测试固化这个顺序）。
+
+处理：
+- `purchaseInquiryStatus.ts`：`PurchaseInquiryMainStatus` 的每个 kind 都加上可选 `date?: string`；`computePurchaseMainStatus` 按 kind 各自取最贴切的日期来源——`closed` 取关闭记录日期；`ordered` 取 `orderConfirmDate`（可能为空）；`supplemented` 取采购部/销售侧两个来源里较新的一条；`need_info` 取采购供应商/销售侧飞罗两个来源里较新的一条；`others_quoted` 新增 `findLatestOtherQuotedDate`（排除飞罗，取其他已报价供应商里最新报价日期）。新增 `formatPurchaseMainStatus` 内部 `withDate()` 辅助函数：有日期时格式化成"label（日期）"（复用 `stripDateBrackets` 去掉方括号），日期为空/未定义时只显示 label，不带空括号、不报错。
+- **过程中发现并修复一个真实回归**：初版实现直接用 `findLatestPurchaseNeedInfo(...)` 的返回值做"是否存在 need_info 供应商"的存在性判断，但这个函数内部会先按"是否有日期"过滤——如果采购供应商标了 need_info 但没填日期（历史数据/用户还没来得及填日期都可能出现），会被误判成"不存在"，状态列直接跳过 need_info 判档，错误显示成更低优先级的"其他 n 家已报价"甚至"—"。修复：存在性判断改回直接看 `status === 'need_info'`（不受日期是否存在影响），日期只在"确认存在"之后才去查、允许查不到。新增回归测试固化这个场景。
+- `PurchaseRegistrationTable.tsx`：表头"状态"改为"状态描述"；该列默认宽度从 130px 加到 170px（带日期后文案变长）。
+- `PurchaseRegistrationRow.tsx`：badge 的 `<span>` 加 `truncate whitespace-nowrap` + `title` 属性，避免变长后的文案在圆角 pill 里换行，超出列宽时截断显示省略号、hover 可看完整文案。
+
+- 文件：`purchaseInquiryStatus.ts`、`PurchaseRegistrationTable.tsx`、`PurchaseRegistrationRow.tsx`
+- 新增/调整测试：`purchaseInquiryStatus.test.ts` 新增 13 例（各 kind 日期来源、"取较新日期"场景、`formatPurchaseMainStatus` 带日期文案、`findLatestOtherQuotedDate`、上述回归用例），原有几条断言补上新增的 `date` 字段
+- 验证：定向 Jest（`purchase-registration` 目录）77 例全部通过；`src/components/table` + 四张表所在 5 个 feature 目录（共 13 个文件）140 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
+- `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）
 
 ## 已关闭 / 不做
 

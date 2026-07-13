@@ -34,11 +34,13 @@ const CHECK_COL_PX = 40;
 
 // 订单状态表（销售侧）：只在 xl 断点（全列展示，含"客户订单号"）启用拖拽调宽，
 // 其余断点继续用原有百分比响应式布局，不受影响。列 id 与下方 <th> 一一对应。
+// "内容简述"（desc）故意不在这里、不给拖拽手柄：它是唯一没有显式像素宽度的列，
+// table-layout:fixed 会把 table 宽度（w-full）减去其它列显式宽度后的剩余空间全分给它，
+// 表格才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白。
 const RESIZABLE_COLUMN_DEFS: Record<string, ResizableColumnDef> = {
   orderNo: { id: 'orderNo', defaultWidth: 120, minWidth: 90 },
   deliveryDate: { id: 'deliveryDate', defaultWidth: 64, minWidth: 56 },
   customer: { id: 'customer', defaultWidth: 96, minWidth: 70 },
-  desc: { id: 'desc', defaultWidth: 192, minWidth: 120 },
   confirmDate: { id: 'confirmDate', defaultWidth: 64, minWidth: 56 },
   customerOrderNo: { id: 'customerOrderNo', defaultWidth: 200, minWidth: 100 },
   deliveryStatus: { id: 'deliveryStatus', defaultWidth: 144, minWidth: 100 },
@@ -105,12 +107,11 @@ export function OrderTable({
   const adminCols = showAdminCols(bp, canViewFinancials);
   const resizable = bp === 'xl';
 
-  // 当前实际渲染的可拖拽列 id（与下方 <th> 渲染条件一一对应），只在 resizable 断点计算/使用
+  // 当前实际渲染的可拖拽列 id（与下方 <th> 渲染条件一一对应，desc 除外），只在 resizable 断点计算/使用
   const visibleResizableIds = [
     'orderNo',
     'deliveryDate',
     ...(customerCol ? ['customer'] : []),
-    'desc',
     ...(confirmDateCol ? ['confirmDate'] : []),
     ...(lgCols ? ['customerOrderNo'] : []),
     'deliveryStatus',
@@ -118,9 +119,6 @@ export function OrderTable({
   ];
   const resizableColumns = visibleResizableIds.map((id) => RESIZABLE_COLUMN_DEFS[id]);
   const { widths, startResize, resetColumn } = useResizableColumns('order.tableColWidths', resizableColumns);
-  const totalWidth =
-    (canBatchEdit ? CHECK_COL_PX : 0) +
-    resizableColumns.reduce((sum, c) => sum + (widths[c.id] ?? c.defaultWidth), 0);
 
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const editingRecord = editingRecordId
@@ -167,17 +165,25 @@ export function OrderTable({
     <>
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <div className="overflow-x-auto">
-      <table
-        className={`table-fixed ${resizable ? '' : 'w-full'}`}
-        style={resizable ? { width: totalWidth } : undefined}
-      >
+      <table className="w-full table-fixed">
         <colgroup>
           {resizable ? (
             <>
               {canBatchEdit && <col style={{ width: CHECK_COL_PX }} />}
-              {resizableColumns.map((c) => (
-                <col key={c.id} style={{ width: widths[c.id] ?? c.defaultWidth }} />
-              ))}
+              <col style={{ width: widths.orderNo ?? RESIZABLE_COLUMN_DEFS.orderNo.defaultWidth }} />
+              <col style={{ width: widths.deliveryDate ?? RESIZABLE_COLUMN_DEFS.deliveryDate.defaultWidth }} />
+              {customerCol && <col style={{ width: widths.customer ?? RESIZABLE_COLUMN_DEFS.customer.defaultWidth }} />}
+              <col />
+              {confirmDateCol && <col style={{ width: widths.confirmDate ?? RESIZABLE_COLUMN_DEFS.confirmDate.defaultWidth }} />}
+              {lgCols && <col style={{ width: widths.customerOrderNo ?? RESIZABLE_COLUMN_DEFS.customerOrderNo.defaultWidth }} />}
+              <col style={{ width: widths.deliveryStatus ?? RESIZABLE_COLUMN_DEFS.deliveryStatus.defaultWidth }} />
+              {adminCols && (
+                <>
+                  <col style={{ width: widths.amount ?? RESIZABLE_COLUMN_DEFS.amount.defaultWidth }} />
+                  <col style={{ width: widths.paymentDate ?? RESIZABLE_COLUMN_DEFS.paymentDate.defaultWidth }} />
+                  <col style={{ width: widths.receivedAmount ?? RESIZABLE_COLUMN_DEFS.receivedAmount.defaultWidth }} />
+                </>
+              )}
             </>
           ) : (
             colWidths.map((w, i) => <col key={i} style={{ width: w }} />)
@@ -212,9 +218,8 @@ export function OrderTable({
                 {handle('customer', '客户')}
               </th>
             )}
-            <th className={th('desc')}>
+            <th className={headerCellClass}>
               <span className="block truncate">内容简述</span>
-              {handle('desc', '内容简述')}
             </th>
             {confirmDateCol && (
               <th className={`${th('confirmDate')} px-1.5 sm:px-2`}>

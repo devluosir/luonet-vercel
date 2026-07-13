@@ -32,12 +32,22 @@ describe('InquiryTable 可拖拽列宽（只在 lg 断点启用，其余断点�
     window.localStorage.clear();
   });
 
-  it('lg 断点（全列展示）下，5 个内容列各有一个拖拽手柄，checkbox/操作列没有', () => {
+  it('lg 断点（全列展示）下，询价编号/询价人/客户编号/询报价状态 4 列各有一个拖拽手柄；checkbox/操作/内容简述没有', () => {
     setViewportWidth(1280);
     render(
       <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} onDeleteRecord={jest.fn()} canBatchEdit />
     );
-    expect(screen.getAllByRole('separator')).toHaveLength(5);
+    expect(screen.getAllByRole('separator')).toHaveLength(4);
+    // "内容简述"是唯一不设显式宽度的撑满列，交给 table-layout:fixed 分配剩余空间，没有手柄
+    expect(screen.queryByLabelText('调整"内容简述"列宽')).not.toBeInTheDocument();
+  });
+
+  it('lg 断点下表格始终 w-full 撑满容器，不会在列宽总和小于容器宽度时留白', () => {
+    setViewportWidth(1280);
+    const { container } = render(
+      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} onDeleteRecord={jest.fn()} />
+    );
+    expect(container.querySelector('table')).toHaveClass('w-full');
   });
 
   it('md/sm 断点下不渲染任何拖拽手柄，沿用原有响应式百分比布局', () => {
@@ -48,12 +58,12 @@ describe('InquiryTable 可拖拽列宽（只在 lg 断点启用，其余断点�
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
   });
 
-  it('lg 断点下拖拽"内容简述"列手柄会增大该列宽度并持久化', () => {
+  it('lg 断点下拖拽"询报价状态"列手柄会增大该列宽度并持久化', () => {
     setViewportWidth(1280);
     render(
       <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} onDeleteRecord={jest.fn()} />
     );
-    const handle = screen.getByLabelText('调整"内容简述"列宽');
+    const handle = screen.getByLabelText('调整"询报价状态"列宽');
 
     // jsdom 不支持 PointerEvent 构造函数，用带 clientX 的 MouseEvent 冒充 pointerdown
     act(() => {
@@ -69,6 +79,6 @@ describe('InquiryTable 可拖拽列宽（只在 lg 断点启用，其余断点�
     });
 
     const saved = JSON.parse(window.localStorage.getItem('inquiry.tableColWidths') || '{}');
-    expect(saved.desc).toBe(260); // 230 默认 + 30
+    expect(saved.status).toBe(320); // 290 默认 + 30
   });
 });

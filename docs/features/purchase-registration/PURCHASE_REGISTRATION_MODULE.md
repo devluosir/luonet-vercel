@@ -59,20 +59,20 @@ purchaseQuotedStatuses?: CustomerQuoteStatus[];
 
 ### 表格列宽（TASK-157 起）
 
-`PurchaseRegistrationTable` 本身没有响应式断点逻辑（任何屏宽都渲染同样 4 列），已全量接入通用可拖拽列宽 hook（`src/components/table/useResizableColumns.ts`），列宽按 id 存 `localStorage`（key `purchaseRegistration.tableColWidths`），双击列头拖拽手柄可重置为默认宽度。"询报价状态"列默认宽度从原先约 26%（约 234px）加宽到 340px，解决状态提示装不下的问题。这套 hook 同时也接入了询报价登记（`InquiryTable`，`lg` 断点）、订单状态表（`OrderTable`，`xl` 断点）、采购订单表（`PurchaseOrderTable`，`lg`/`xl` 断点）——这三张表各自只在"全列展示"的断点启用拖拽，更窄断点保持原有百分比响应式布局不受影响。
+`PurchaseRegistrationTable` 本身没有响应式断点逻辑（任何屏宽都渲染同样 4 列），已全量接入通用可拖拽列宽 hook（`src/components/table/useResizableColumns.ts`），列宽按 id 存 `localStorage`（key `purchaseRegistration.tableColWidths`），双击列头拖拽手柄可重置为默认宽度。"询报价状态"列默认宽度从原先约 26%（约 234px）加宽到 340px，解决状态提示装不下的问题。"内容描述"列故意不参与拖拽、不设显式像素宽度，交给 `table-layout: fixed` 把表格 `w-full` 减去其它列显式宽度后的剩余空间全部分给它，保证表格始终撑满容器、不会在列宽总和小于容器宽度时右侧留白。这套 hook 同时也接入了询报价登记（`InquiryTable`，`lg` 断点）、订单状态表（`OrderTable`，`xl` 断点）、采购订单表（`PurchaseOrderTable`，`lg`/`xl` 断点）——这三张表各自只在"全列展示"的断点启用拖拽，更窄断点保持原有百分比响应式布局不受影响，同样各自保留一列（内容简述/内容描述）不参与拖拽、负责撑满剩余空间。
 
-### 采购部登记表状态列（TASK-156 起）
+### 采购部登记表状态描述列（TASK-156 起，TASK-157 改名+带日期）
 
-`PurchaseRegistrationTable` 的"状态"列（原"成单状态"）只显示一个优先级最高的主 badge，取第一条满足的：
+`PurchaseRegistrationTable` 的"状态描述"列（原"成单状态"，TASK-157 起由"状态"改名）只显示一个优先级最高的主 badge，取第一条满足的：
 
-1. 销售侧 `record.quotedStatuses` 含 `type === 'closed'` → "已关闭"（灰）
-2. `orderNo` 非空 → "已成单"（绿）
-3. `purchaseQuotedStatuses` 含 `type === 'supplemented'`，**或**销售侧 `record.quotedStatuses` 含 `type === 'supplemented'` → "已补充信息"（蓝）
-4. 任一 `purchaseSupplierStatuses` 为 `need_info`，或销售侧飞罗为 `need_info` → "需补充信息"（黄）
-5. 销售侧 `supplierStatuses` 里排除飞罗、按 `supplierShortName.trim()` 去重后 `status === 'quoted'` 的数量 > 0 → "其他 n 家已报价"（蓝）
+1. 销售侧 `record.quotedStatuses` 含 `type === 'closed'` → "已关闭（日期）"（灰），日期取该关闭记录的 `quoteDate`
+2. `orderNo` 非空 → "已成单（日期）"（绿），日期取 `orderConfirmDate`（可能为空，为空时不带括号）
+3. `purchaseQuotedStatuses` 含 `type === 'supplemented'`，**或**销售侧 `record.quotedStatuses` 含 `type === 'supplemented'` → "已补充信息（日期）"（蓝），两个来源都存在时取较新的日期；**优先级严格高于第 4 档 need_info**，即使 need_info 供应商的日期更新也不会反超
+4. 任一 `purchaseSupplierStatuses` 为 `need_info`，或销售侧飞罗为 `need_info` → "需补充信息（日期）"（黄），两个来源都存在时取较新的日期。**存在性判断必须直接看 `status === 'need_info'`**，不能用"是否能取到日期"来判断——历史上曾因为误用取日期的返回值做存在性判断，导致没填日期的 need_info 供应商被误判成"不存在"、状态列错误跳到更低优先级，已修复并有回归测试覆盖
+5. 销售侧 `supplierStatuses` 里排除飞罗、按 `supplierShortName.trim()` 去重后 `status === 'quoted'` 的数量 > 0 → "其他 n 家已报价（日期）"（蓝），日期取这些供应商里最新的报价日期（`findLatestOtherQuotedDate`）
 6. 均不满足 → 空态"—"（灰）
 
-计算逻辑（`computePurchaseMainStatus` / `formatPurchaseMainStatus` / `countOtherQuotedSuppliers`）与编辑弹窗里的"其他 n 家已报价"只读提示共用同一份 `purchaseInquiryStatus.ts`，不重复实现。
+日期统一用 `formatPurchaseMainStatus` 内部的 `withDate()` 辅助函数格式化成"label（日期）"（复用 `stripDateBrackets` 去掉存储用的方括号），日期缺失时只显示 label、不带空括号。计算逻辑（`computePurchaseMainStatus` / `formatPurchaseMainStatus` / `countOtherQuotedSuppliers` / `findLatestOtherQuotedDate`）与编辑弹窗里的"其他 n 家已报价"只读提示共用同一份 `purchaseInquiryStatus.ts`，不重复实现。
 
 ### 询价已关闭：完全只读化（TASK-156 起）
 

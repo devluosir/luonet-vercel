@@ -129,7 +129,10 @@ export function PurchaseRegistrationRow({ record, onUpdate, onEditRecord }: Purc
       </td>
       <td className="max-w-0 overflow-hidden px-2 py-2">
         {mainStatus ? (
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${mainStatus.className}`}>
+          <span
+            title={mainStatus.label}
+            className={`inline-flex max-w-full items-center truncate whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${mainStatus.className}`}
+          >
             {mainStatus.label}
           </span>
         ) : (

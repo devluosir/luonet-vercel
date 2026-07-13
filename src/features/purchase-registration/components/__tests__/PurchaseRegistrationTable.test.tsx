@@ -25,11 +25,23 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
     window.localStorage.clear();
   });
 
-  it('4 列表头都渲染一个拖拽手柄（role=separator）', () => {
+  it('询价编号/询报价状态/状态 3 列渲染拖拽手柄；"内容描述"是唯一不设显式宽度的撑满列，没有手柄', () => {
     render(
       <PurchaseRegistrationTable records={[baseRecord()]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />
     );
-    expect(screen.getAllByRole('separator')).toHaveLength(4);
+    expect(screen.getAllByRole('separator')).toHaveLength(3);
+    expect(screen.queryByLabelText('调整"内容描述"列宽')).not.toBeInTheDocument();
+  });
+
+  it('表格始终 w-full 撑满容器，不会在列宽总和小于容器宽度时留白', () => {
+    const { container } = render(
+      <PurchaseRegistrationTable records={[baseRecord()]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />
+    );
+    const table = container.querySelector('table');
+    expect(table).toHaveClass('w-full');
+    // "内容描述"是第 2 列，故意不设 width，交给 table-layout:fixed 分配剩余空间
+    const cols = container.querySelectorAll('col');
+    expect((cols[1] as HTMLElement).style.width).toBe('');
   });
 
   it('"询报价状态"列默认宽度比原来的 26% 更宽（用户反馈原宽度装不下状态提示）', () => {

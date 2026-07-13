@@ -1,4 +1,4 @@
-import { createId } from '@/features/inquiry/utils/inquiryUtils';
+import { createId, stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
 import type { CustomerQuoteStatus, InquiryRecord, SupplierQuoteStatus, SupplierStatus } from '@/features/inquiry/types';
 
 /** 飞罗（上海飞罗贸易有限公司）在供应商列表中的短名，代表"我方自己"这一自供应商身份 */
@@ -187,44 +187,67 @@ export function countOtherQuotedSuppliers(supplierStatuses: SupplierQuoteStatus[
   return names.size;
 }
 
+/** "其他供应商已报价"里最新的一条报价日期（排除飞罗，只看 status === 'quoted'），不涉及去重计数。 */
+export function findLatestOtherQuotedDate(supplierStatuses: SupplierQuoteStatus[] | undefined): string | undefined {
+  const others = (supplierStatuses ?? []).filter((s) => {
+    const name = s.supplierShortName?.trim();
+    return !!name && name !== SELF_SUPPLIER_NAME && s.status === 'quoted';
+  });
+  return pickLatestByDate(others)?.quoteDate;
+}
+
 export type PurchaseInquiryMainStatus =
-  | { kind: 'closed' }
-  | { kind: 'ordered' }
-  | { kind: 'supplemented' }
-  | { kind: 'need_info' }
-  | { kind: 'others_quoted'; count: number }
+  | { kind: 'closed'; date?: string }
+  | { kind: 'ordered'; date?: string }
+  | { kind: 'supplemented'; date?: string }
+  | { kind: 'need_info'; date?: string }
+  | { kind: 'others_quoted'; count: number; date?: string }
   | { kind: 'none' };
 
 /**
  * 采购部登记表状态列的主状态，按优先级（从高到低）：
- * 1. 销售侧询价已关闭（record.quotedStatuses 中 type === 'closed'）→ closed
- * 2. orderNo 非空 → ordered
+ * 1. 销售侧询价已关闭（record.quotedStatuses 中 type === 'closed'）→ closed，日期取该关闭记录的日期
+ * 2. orderNo 非空 → ordered，日期取确认日（orderConfirmDate，可能为空）
  * 3. purchaseQuotedStatuses 存在 type === 'supplemented'，或销售侧 quotedStatuses 存在
- *    type === 'supplemented' → supplemented（两边任一登记了"已补充信息"都算，互不覆盖）
- * 4. 任一采购供应商为 need_info，或销售侧飞罗为 need_info → need_info
- * 5. 其他供应商已报价数量（countOtherQuotedSuppliers）大于 0 → others_quoted
+ *    type === 'supplemented' → supplemented（两边任一登记了"已补充信息"都算，互不覆盖，
+ *    优先级严格高于 need_info——即使同时存在需补资料的供应商，也只显示"已补充信息"），
+ *    日期取两个来源里较新的一个
+ * 4. 任一采购供应商为 need_info，或销售侧飞罗为 need_info → need_info，日期取两个来源里较新的一个
+ * 5. 其他供应商已报价数量（countOtherQuotedSuppliers）大于 0 → others_quoted，日期取最新报价日期
  * 6. 均不满足 → none
  */
 export function computePurchaseMainStatus(record: InquiryRecord): PurchaseInquiryMainStatus {
-  const salesClosed = (record.quotedStatuses ?? []).some((s) => s.type === 'closed');
-  if (salesClosed) return { kind: 'closed' };
+  const closedEntry = (record.quotedStatuses ?? []).find((s) => s.type === 'closed');
+  if (closedEntry) return { kind: 'closed', date: closedEntry.quoteDate };
 
-  if (record.orderNo?.trim()) return { kind: 'ordered' };
+  if (record.orderNo?.trim()) return { kind: 'ordered', date: record.orderConfirmDate };
 
-  const purchaseQuoted = record.purchaseQuotedStatuses ?? [];
-  if (purchaseQuoted.some((s) => s.type === 'supplemented') || isSalesSupplemented(record.quotedStatuses)) {
-    return { kind: 'supplemented' };
+  const purchaseSupplementedEntry = findPurchaseSupplemented(record.purchaseQuotedStatuses);
+  const salesSupplementedEntry = findSalesSupplemented(record.quotedStatuses);
+  if (purchaseSupplementedEntry || salesSupplementedEntry) {
+    const latest = pickLatestByDate(
+      [purchaseSupplementedEntry, salesSupplementedEntry].filter((s): s is CustomerQuoteStatus => !!s)
+    );
+    return { kind: 'supplemented', date: latest?.quoteDate };
   }
 
-  const anyPurchaseSupplierNeedInfo = (record.purchaseSupplierStatuses ?? []).some(
-    (s) => s.status === 'need_info'
-  );
-  if (anyPurchaseSupplierNeedInfo || isSelfSupplierNeedInfo(record.supplierStatuses)) {
-    return { kind: 'need_info' };
+  // 存在性判断不能用 findLatestPurchaseNeedInfo 的返回值（它内部按"是否有日期"筛选，
+  // 没填日期的 need_info 供应商会被判定成"不存在"，误判成更低优先级的状态）——
+  // 存在性必须直接看 status 字段，日期只是"存在"之后锦上添花的展示信息，可以缺失。
+  const anyPurchaseSupplierNeedInfo = (record.purchaseSupplierStatuses ?? []).some((s) => s.status === 'need_info');
+  const selfNeedInfo = findSelfSupplierNeedInfo(record.supplierStatuses);
+  if (anyPurchaseSupplierNeedInfo || selfNeedInfo) {
+    const latestPurchaseNeedInfo = findLatestPurchaseNeedInfo(record.purchaseSupplierStatuses);
+    const latest = pickLatestByDate(
+      [latestPurchaseNeedInfo, selfNeedInfo].filter((s): s is SupplierQuoteStatus => !!s)
+    );
+    return { kind: 'need_info', date: latest?.quoteDate };
   }
 
   const othersCount = countOtherQuotedSuppliers(record.supplierStatuses);
-  if (othersCount > 0) return { kind: 'others_quoted', count: othersCount };
+  if (othersCount > 0) {
+    return { kind: 'others_quoted', count: othersCount, date: findLatestOtherQuotedDate(record.supplierStatuses) };
+  }
 
   return { kind: 'none' };
 }
@@ -234,20 +257,38 @@ export interface PurchaseMainStatusBadge {
   className: string;
 }
 
+/** 有日期时格式化成"label（日期）"，日期为空/未定义时只显示 label，不报错、不带空括号。 */
+function withDate(label: string, date: string | undefined): string {
+  const clean = date ? stripDateBrackets(date).trim() : '';
+  return clean ? `${label}（${clean}）` : label;
+}
+
 /** 把主状态转成表格/弹窗展示用的 badge 文案与配色（均不满足时返回 null，由调用方展示低强调空态）。 */
 export function formatPurchaseMainStatus(status: PurchaseInquiryMainStatus): PurchaseMainStatusBadge | null {
   switch (status.kind) {
     case 'closed':
-      return { label: '已关闭', className: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' };
+      return {
+        label: withDate('已关闭', status.date),
+        className: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+      };
     case 'ordered':
-      return { label: '已成单', className: 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300' };
+      return {
+        label: withDate('已成单', status.date),
+        className: 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300',
+      };
     case 'supplemented':
-      return { label: '已补充信息', className: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' };
+      return {
+        label: withDate('已补充信息', status.date),
+        className: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300',
+      };
     case 'need_info':
-      return { label: '需补充信息', className: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300' };
+      return {
+        label: withDate('需补充信息', status.date),
+        className: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300',
+      };
     case 'others_quoted':
       return {
-        label: `其他 ${status.count} 家已报价`,
+        label: withDate(`其他 ${status.count} 家已报价`, status.date),
         className: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300',
       };
     case 'none':

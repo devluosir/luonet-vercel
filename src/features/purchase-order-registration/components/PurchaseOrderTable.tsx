@@ -23,9 +23,11 @@ export type { PurchaseOrderTableBreakpoint };
 
 // 采购订单表（采购侧）：只在 lg/xl 断点（全列展示，含"客户订单号"）启用拖拽调宽，
 // sm/md 断点继续用原有百分比响应式布局，不受影响。列 id 与下方 <th> 一一对应。
+// "内容描述"（desc）故意不在这里、不给拖拽手柄：它是唯一没有显式像素宽度的列，
+// table-layout:fixed 会把 table 宽度（w-full）减去其它列显式宽度后的剩余空间全分给它，
+// 表格才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白。
 const RESIZABLE_COLUMN_DEFS: Record<string, ResizableColumnDef> = {
   orderNo: { id: 'orderNo', defaultWidth: 110, minWidth: 90 },
-  desc: { id: 'desc', defaultWidth: 200, minWidth: 130 },
   purchaseOrderNo: { id: 'purchaseOrderNo', defaultWidth: 110, minWidth: 80 },
   supplier: { id: 'supplier', defaultWidth: 130, minWidth: 90 },
   amount: { id: 'amount', defaultWidth: 100, minWidth: 80 },
@@ -65,10 +67,9 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
   const customerNoCol = showCustomerNoCol(bp);
   const resizable = bp === 'lg' || bp === 'xl';
 
-  // 当前实际渲染的可拖拽列 id（与下方 <th> 渲染条件一一对应），只在 resizable 断点计算/使用
+  // 当前实际渲染的可拖拽列 id（与下方 <th> 渲染条件一一对应，desc 除外），只在 resizable 断点计算/使用
   const visibleResizableIds = [
     'orderNo',
-    'desc',
     ...(purchaseOrderNoCol ? ['purchaseOrderNo'] : []),
     'supplier',
     ...(canViewFinancials ? ['amount'] : []),
@@ -79,7 +80,6 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
   ];
   const resizableColumns = visibleResizableIds.map((id) => RESIZABLE_COLUMN_DEFS[id]);
   const { widths, startResize, resetColumn } = useResizableColumns('purchaseOrderTable.tableColWidths', resizableColumns);
-  const totalWidth = resizableColumns.reduce((sum, c) => sum + (widths[c.id] ?? c.defaultWidth), 0);
 
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
 
@@ -103,14 +103,29 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
     <>
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <div className="overflow-x-auto">
-      <table
-        className={`table-fixed ${resizable ? '' : 'w-full'}`}
-        style={resizable ? { width: totalWidth } : undefined}
-      >
+      <table className="w-full table-fixed">
         <colgroup>
-          {resizable
-            ? resizableColumns.map((c) => <col key={c.id} style={{ width: widths[c.id] ?? c.defaultWidth }} />)
-            : colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}
+          {resizable ? (
+            <>
+              <col style={{ width: widths.orderNo ?? RESIZABLE_COLUMN_DEFS.orderNo.defaultWidth }} />
+              <col />
+              {purchaseOrderNoCol && (
+                <col style={{ width: widths.purchaseOrderNo ?? RESIZABLE_COLUMN_DEFS.purchaseOrderNo.defaultWidth }} />
+              )}
+              <col style={{ width: widths.supplier ?? RESIZABLE_COLUMN_DEFS.supplier.defaultWidth }} />
+              {canViewFinancials && <col style={{ width: widths.amount ?? RESIZABLE_COLUMN_DEFS.amount.defaultWidth }} />}
+              <col style={{ width: widths.deliveryDate ?? RESIZABLE_COLUMN_DEFS.deliveryDate.defaultWidth }} />
+              {confirmDateCol && (
+                <col style={{ width: widths.confirmDate ?? RESIZABLE_COLUMN_DEFS.confirmDate.defaultWidth }} />
+              )}
+              {customerNoCol && (
+                <col style={{ width: widths.customerNo ?? RESIZABLE_COLUMN_DEFS.customerNo.defaultWidth }} />
+              )}
+              <col style={{ width: widths.deliveryStatus ?? RESIZABLE_COLUMN_DEFS.deliveryStatus.defaultWidth }} />
+            </>
+          ) : (
+            colWidths.map((w, i) => <col key={i} style={{ width: w }} />)
+          )}
         </colgroup>
         <thead>
           <tr className={headerRowClass}>
@@ -118,10 +133,7 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
               订单编号
               {handle('orderNo', '订单编号')}
             </th>
-            <th className={th('desc')}>
-              内容描述
-              {handle('desc', '内容描述')}
-            </th>
+            <th className={headerCellOverflowClass}>内容描述</th>
             {purchaseOrderNoCol && (
               <th className={`${th('purchaseOrderNo')} px-1.5 sm:px-2`}>
                 采购单号

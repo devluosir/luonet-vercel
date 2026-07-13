@@ -10,6 +10,7 @@ import {
   computeSelfSupplierPatch,
   computeSelfSupplierTarget,
   countOtherQuotedSuppliers,
+  findLatestOtherQuotedDate,
   findLatestPurchaseNeedInfo,
   findPurchaseSupplemented,
   findSalesSupplemented,
@@ -152,31 +153,44 @@ describe('countOtherQuotedSuppliers', () => {
 });
 
 describe('computePurchaseMainStatus 优先级（状态列五种状态）', () => {
-  it('8-1. 销售侧询价已关闭 → closed，优先级最高（即使已成单）', () => {
+  it('8-1. 销售侧询价已关闭 → closed，优先级最高（即使已成单），日期取关闭记录的日期', () => {
     const record = baseRecord({
       orderNo: 'PO-001',
       quotedStatuses: [quoted({ type: 'closed', quoteDate: '[6.1]', supplierShortName: '', version: '' })],
     });
-    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'closed' });
+    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'closed', date: '[6.1]' });
   });
 
-  it('8-2. orderNo 非空 → ordered', () => {
+  it('8-2. orderNo 非空 → ordered，日期取确认日（orderConfirmDate）', () => {
+    const record = baseRecord({ orderNo: 'PO-002', orderConfirmDate: '[6.15]' });
+    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'ordered', date: '[6.15]' });
+  });
+
+  it('8-2b. orderNo 非空但没有确认日 → ordered，date 为 undefined', () => {
     const record = baseRecord({ orderNo: 'PO-002' });
     expect(computePurchaseMainStatus(record)).toEqual({ kind: 'ordered' });
   });
 
-  it('8-3. purchaseQuotedStatuses 存在 supplemented → supplemented', () => {
+  it('8-3. purchaseQuotedStatuses 存在 supplemented → supplemented，日期取该记录日期', () => {
     const record = baseRecord({
-      purchaseQuotedStatuses: [quoted({ type: 'supplemented', supplierShortName: '', version: '' })],
+      purchaseQuotedStatuses: [quoted({ type: 'supplemented', quoteDate: '[6.1]', supplierShortName: '', version: '' })],
     });
-    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'supplemented' });
+    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'supplemented', date: '[6.1]' });
   });
 
-  it('8-3b. 销售侧 quotedStatuses 存在 supplemented（采购部自己没标记）→ 同样是 supplemented', () => {
+  it('8-3b. 销售侧 quotedStatuses 存在 supplemented（采购部自己没标记）→ 同样是 supplemented，日期取该记录日期', () => {
     const record = baseRecord({
-      quotedStatuses: [quoted({ type: 'supplemented', supplierShortName: '', version: '' })],
+      quotedStatuses: [quoted({ type: 'supplemented', quoteDate: '[6.1]', supplierShortName: '', version: '' })],
     });
-    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'supplemented' });
+    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'supplemented', date: '[6.1]' });
+  });
+
+  it('8-3c. 采购部与销售侧都标记了 supplemented → 取两者中较新的日期', () => {
+    const record = baseRecord({
+      purchaseQuotedStatuses: [quoted({ id: 'p', type: 'supplemented', quoteDate: '[6.1]', supplierShortName: '', version: '' })],
+      quotedStatuses: [quoted({ id: 's', type: 'supplemented', quoteDate: '[6.20]', supplierShortName: '', version: '' })],
+    });
+    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'supplemented', date: '[6.20]' });
   });
 
   it('8-4a. 任一采购供应商 need_info → need_info', () => {
@@ -193,6 +207,22 @@ describe('computePurchaseMainStatus 优先级（状态列五种状态）', () =>
     expect(computePurchaseMainStatus(record)).toEqual({ kind: 'need_info' });
   });
 
+  it('回归：need_info 供应商没填日期时，仍要判定为 need_info（不能因为取不到日期就判定成更低优先级）', () => {
+    const record = baseRecord({
+      purchaseSupplierStatuses: [supplier({ status: 'need_info' })], // 故意不给 quoteDate
+      supplierStatuses: [supplier({ id: '1', supplierShortName: 'A', status: 'quoted' })], // 若误判会掉到 others_quoted
+    });
+    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'need_info' });
+  });
+
+  it('8-4c. 采购供应商与销售侧飞罗都是 need_info → 取两者中较新的日期', () => {
+    const record = baseRecord({
+      purchaseSupplierStatuses: [supplier({ id: 'p', status: 'need_info', quoteDate: '[6.5]' })],
+      supplierStatuses: [supplier({ supplierShortName: '飞罗', status: 'need_info', quoteDate: '[6.25]' })],
+    });
+    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'need_info', date: '[6.25]' });
+  });
+
   it('8-5. 其他供应商已报价数量 > 0 → others_quoted', () => {
     const record = baseRecord({
       supplierStatuses: [
@@ -201,6 +231,16 @@ describe('computePurchaseMainStatus 优先级（状态列五种状态）', () =>
       ],
     });
     expect(computePurchaseMainStatus(record)).toEqual({ kind: 'others_quoted', count: 2 });
+  });
+
+  it('8-5b. others_quoted 日期取其他供应商里最新的报价日期', () => {
+    const record = baseRecord({
+      supplierStatuses: [
+        supplier({ id: '1', supplierShortName: 'A', status: 'quoted', quoteDate: '[6.5]' }),
+        supplier({ id: '2', supplierShortName: 'B', status: 'quoted', quoteDate: '[6.28]' }),
+      ],
+    });
+    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'others_quoted', count: 2, date: '[6.28]' });
   });
 
   it('8-6. 均不满足 → none', () => {
@@ -215,12 +255,14 @@ describe('computePurchaseMainStatus 优先级（状态列五种状态）', () =>
     expect(computePurchaseMainStatus(record).kind).toBe('need_info');
   });
 
-  it('优先级：supplemented 高于 need_info', () => {
+  it('优先级：supplemented 高于 need_info（即使 need_info 日期更新，仍显示已补充信息而不是需补充信息）', () => {
     const record = baseRecord({
-      purchaseQuotedStatuses: [quoted({ type: 'supplemented', supplierShortName: '', version: '' })],
-      purchaseSupplierStatuses: [supplier({ status: 'need_info' })],
+      purchaseQuotedStatuses: [quoted({ type: 'supplemented', quoteDate: '[6.1]', supplierShortName: '', version: '' })],
+      purchaseSupplierStatuses: [supplier({ status: 'need_info', quoteDate: '[6.30]' })],
     });
-    expect(computePurchaseMainStatus(record).kind).toBe('supplemented');
+    const status = computePurchaseMainStatus(record);
+    expect(status.kind).toBe('supplemented');
+    expect(formatPurchaseMainStatus(status)?.label).toBe('已补充信息（6.1）');
   });
 
   it('优先级：ordered 高于 supplemented', () => {
@@ -239,6 +281,37 @@ describe('formatPurchaseMainStatus', () => {
 
   it('others_quoted 文案带上具体数量', () => {
     expect(formatPurchaseMainStatus({ kind: 'others_quoted', count: 3 })?.label).toBe('其他 3 家已报价');
+  });
+
+  it('有日期时文案带上日期（方括号会被去掉）', () => {
+    expect(formatPurchaseMainStatus({ kind: 'closed', date: '[6.1]' })?.label).toBe('已关闭（6.1）');
+    expect(formatPurchaseMainStatus({ kind: 'ordered', date: '[6.15]' })?.label).toBe('已成单（6.15）');
+    expect(formatPurchaseMainStatus({ kind: 'supplemented', date: '[6.20]' })?.label).toBe('已补充信息（6.20）');
+    expect(formatPurchaseMainStatus({ kind: 'need_info', date: '[6.25]' })?.label).toBe('需补充信息（6.25）');
+    expect(formatPurchaseMainStatus({ kind: 'others_quoted', count: 2, date: '[6.28]' })?.label).toBe('其他 2 家已报价（6.28）');
+  });
+
+  it('日期为 undefined 或空字符串时只显示 label，不带空括号', () => {
+    expect(formatPurchaseMainStatus({ kind: 'need_info', date: undefined })?.label).toBe('需补充信息');
+    expect(formatPurchaseMainStatus({ kind: 'need_info', date: '' })?.label).toBe('需补充信息');
+  });
+});
+
+describe('findLatestOtherQuotedDate（"其他供应商已报价"状态的日期来源，排除飞罗）', () => {
+  it('多个其他供应商已报价时取日期最新的一条', () => {
+    const list: SupplierQuoteStatus[] = [
+      supplier({ id: '1', supplierShortName: 'A', status: 'quoted', quoteDate: '[6.5]' }),
+      supplier({ id: '2', supplierShortName: 'B', status: 'quoted', quoteDate: '[6.28]' }),
+      supplier({ id: '3', supplierShortName: '飞罗', status: 'quoted', quoteDate: '[7.1]' }), // 排除飞罗
+    ];
+    expect(findLatestOtherQuotedDate(list)).toBe('[6.28]');
+  });
+
+  it('没有其他已报价供应商 / 全部缺日期时返回 undefined', () => {
+    expect(findLatestOtherQuotedDate([supplier({ supplierShortName: 'A', status: 'pending' })])).toBeUndefined();
+    expect(findLatestOtherQuotedDate([supplier({ supplierShortName: 'A', status: 'quoted' })])).toBeUndefined();
+    expect(findLatestOtherQuotedDate([])).toBeUndefined();
+    expect(findLatestOtherQuotedDate(undefined)).toBeUndefined();
   });
 });
 
