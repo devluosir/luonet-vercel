@@ -102,4 +102,32 @@ describe('销售侧"采购侧提示"（需补充信息 / 已补充信息）只�
     await renderModal(null);
     expect(screen.queryByText(/采购侧提示/)).not.toBeInTheDocument();
   });
+
+  it('purchaseQuotedStatuses 有 unavailable（我司无法报价）时显示"采购侧提示：我司无法报价"，带日期', async () => {
+    const record = baseRecord({
+      purchaseQuotedStatuses: [
+        { id: 'pq1', type: 'unavailable', quoteDate: '[7.13]', supplierShortName: '', version: '' },
+      ],
+    });
+    await renderModal(record);
+    expect(screen.getByText('采购侧提示：我司无法报价（7.13）')).toBeInTheDocument();
+  });
+
+  it('三条提示（需补充信息/已补充信息/我司无法报价）可以同时显示在同一行', async () => {
+    const record = baseRecord({
+      purchaseSupplierStatuses: [
+        { id: 'p1', supplierShortName: 'A供应商', status: 'need_info', quoteDate: '[6.5]' },
+      ],
+      purchaseQuotedStatuses: [
+        { id: 'pq1', type: 'supplemented', quoteDate: '[6.10]', supplierShortName: '', version: '' },
+        { id: 'pq2', type: 'unavailable', quoteDate: '[7.13]', supplierShortName: '', version: '' },
+      ],
+    });
+    await renderModal(record);
+    const needInfoBanner = screen.getByText('采购侧提示：需补充信息（6.5）');
+    const supplementedBanner = screen.getByText('采购侧提示：已补充信息（6.10）');
+    const unavailableBanner = screen.getByText('采购侧提示：我司无法报价（7.13）');
+    expect(needInfoBanner.parentElement).toBe(supplementedBanner.parentElement);
+    expect(needInfoBanner.parentElement).toBe(unavailableBanner.parentElement);
+  });
 });

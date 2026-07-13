@@ -13,6 +13,7 @@ import {
   findLatestOtherQuotedDate,
   findLatestPurchaseNeedInfo,
   findPurchaseSupplemented,
+  findPurchaseUnavailable,
   findSalesSupplemented,
   findSalesUnavailable,
   findSelfSupplierNeedInfo,
@@ -488,6 +489,30 @@ describe('findPurchaseSupplemented（销售侧只读读取采购部自己标记�
   it('空数组/undefined 输入安全返回 undefined', () => {
     expect(findPurchaseSupplemented([])).toBeUndefined();
     expect(findPurchaseSupplemented(undefined)).toBeUndefined();
+  });
+});
+
+describe('findPurchaseUnavailable（销售侧只读读取采购部自己标记的"我司无法报价"）', () => {
+  it('purchaseQuotedStatuses 有 unavailable 记录时能找到', () => {
+    const unavailable = quoted({ id: 'p1', type: 'unavailable', quoteDate: '[7.13]', supplierShortName: '', version: '' });
+    expect(findPurchaseUnavailable([unavailable])).toEqual(unavailable);
+  });
+
+  it('没有 unavailable 记录时返回 undefined', () => {
+    expect(findPurchaseUnavailable([quoted({ type: 'quoted' })])).toBeUndefined();
+  });
+
+  it('空数组/undefined 输入安全返回 undefined', () => {
+    expect(findPurchaseUnavailable([])).toBeUndefined();
+    expect(findPurchaseUnavailable(undefined)).toBeUndefined();
+  });
+
+  it('与销售侧 findSalesUnavailable（quotedStatuses）是独立字段，不会混读', () => {
+    const record = baseRecord({
+      purchaseQuotedStatuses: [],
+      quotedStatuses: [quoted({ type: 'unavailable', quoteDate: '[7.1]', supplierShortName: '', version: '' })],
+    });
+    expect(findPurchaseUnavailable(record.purchaseQuotedStatuses)).toBeUndefined();
   });
 });
 

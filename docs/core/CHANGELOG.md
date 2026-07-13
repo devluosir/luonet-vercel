@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2026-07-13
 
+### Added
+
+#### 采购侧"我司无法报价"传递到销售侧"采购侧提示"（TASK-161）
+- 询报价登记编辑/新增弹窗新增"采购侧提示：我司无法报价（日期）"灰色只读提示，与已有的"需补充信息"/"已补充信息"提示同行显示，补齐这三档采购部状态到销售侧的对称展示。
+
 ### Changed
 
 #### 订单状态表 / 采购订单表金额列改左对齐（TASK-160）

@@ -54,8 +54,9 @@ purchaseQuotedStatuses?: CustomerQuoteStatus[];
 **询报价登记弹窗对称展示"采购侧提示"**：`InquiryFormModal.tsx`（询报价登记的新增/编辑弹窗）新增只读提示区，读取**未经本地编辑、直接来自 props 的** `record.purchaseSupplierStatuses` / `record.purchaseQuotedStatuses`：
 - "采购侧提示：需补充信息（日期）"（黄）：`findLatestPurchaseNeedInfo` 取 `purchaseSupplierStatuses` 里最新一条 `need_info` 供应商的日期
 - "采购侧提示：已补充信息（日期）"（蓝）：`findPurchaseSupplemented` 取 `purchaseQuotedStatuses.type === 'supplemented'` 的日期
+- "采购侧提示：我司无法报价（日期）"（灰，TASK-161 新增）：`findPurchaseUnavailable` 取 `purchaseQuotedStatuses.type === 'unavailable'` 的日期；与 `computeSelfSupplierTarget` 内部推导"应同步给销售侧飞罗状态"用的是同一份数据来源，但这里是独立的只读展示需求，两处共用同一个导出函数，不重复内联判断
 
-两者同样放在 `flex flex-wrap` 容器里同行显示，不提供编辑入口。这是 `src/features/inquiry` 首次反向 import `src/features/purchase-registration/utils`（这两个字段的读取逻辑已经沉淀在 `purchaseInquiryStatus.ts`，不重复实现）。
+三者同样放在 `flex flex-wrap` 容器里同行显示，不提供编辑入口。这是 `src/features/inquiry` 首次反向 import `src/features/purchase-registration/utils`（这三个字段的读取逻辑已经沉淀在 `purchaseInquiryStatus.ts`，不重复实现）。
 
 ### 表格列宽（TASK-157 起）
 

@@ -3989,6 +3989,21 @@ jsdom 26 不支持 `PointerEvent` 构造函数，组件级集成测试改用 `ne
 - 验证：`src/features/inquiry`/`order`/`purchase-order-registration`/`purchase-registration`/`components/table`/`app/api/inquiry` 共 14 个测试套件 194 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
 - `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）；未做真实浏览器验证，建议用户本地确认两张表的金额/到账金额/采购金额列文字改为左对齐，且拖拽调宽手感符合预期
 
+## TASK-161：采购侧"我司无法报价"也要传递到销售侧"采购侧提示"
+
+**状态：** 已完成（2026-07-13，本次会话由 Claude 直接实现，未经 Codex）
+
+**背景：** 用户要求（原话）："采购侧的需补充信息，和已补充信息，无法报价，也要在销售侧有提醒'采购侧提示'的文字"。询报价登记编辑/新增弹窗（`InquiryFormModal.tsx`）此前只对称展示了"采购侧提示：需补充信息（日期）"和"采购侧提示：已补充信息（日期）"（TASK-156 起），漏了采购部勾选"我司无法报价"（`purchaseQuotedStatuses.type === 'unavailable'`）这一档——销售侧完全看不到采购部已经确定无法报价。
+
+**修复：**
+- `purchaseInquiryStatus.ts` 新增 `findPurchaseUnavailable(purchaseQuotedStatuses)`（模式与既有的 `findPurchaseSupplemented` 完全一致）；顺带把 `computeSelfSupplierTarget` 内部原本内联的 `quoted.find(s => s.type === 'unavailable')` 判断也改为调用这个新导出函数，避免同一条判断逻辑写两遍。
+- `InquiryFormModal.tsx` 顶部提示行（与"需补充信息"/"已补充信息"同一个 `flex flex-wrap` 容器）新增"采购侧提示：我司无法报价（日期）"灰色只读提示（配色与"已关闭"/"无法报价"等终态提示保持一致的灰色调）。
+
+- 文件：`purchaseInquiryStatus.ts`、`InquiryFormModal.tsx`
+- 新增测试：`purchaseInquiryStatus.test.ts` 新增 `findPurchaseUnavailable` 4 例（含"与销售侧 findSalesUnavailable 是独立字段"的隔离回归）；`InquiryFormModal.test.tsx` 新增 2 例（显示带日期、三条提示同行显示）
+- 验证：`src/features/inquiry`/`order`/`purchase-order-registration`/`purchase-registration`/`components/table`/`app/api/inquiry` 共 14 个测试套件 200 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
+- `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）；未做真实浏览器验证，建议用户本地在采购部登记勾选"我司无法报价"后，到询报价登记编辑该记录，确认顶部出现"采购侧提示：我司无法报价（日期）"
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

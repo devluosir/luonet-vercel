@@ -102,6 +102,18 @@ export function findPurchaseSupplemented(
   return (purchaseQuotedStatuses ?? []).find((s) => s.type === 'supplemented');
 }
 
+/**
+ * 采购部自己在 purchaseQuotedStatuses 里勾选的"我司无法报价"记录，用于询报价登记页面只读展示，
+ * 让销售侧知道采购部这边已经确定无法报价，不用再继续等待供应商报价。与
+ * `computeSelfSupplierTarget` 内部推导"应同步给销售侧飞罗的状态"用的是同一份数据来源，
+ * 但这里是独立的只读展示需求，直接暴露成导出函数，不重复内联判断逻辑。
+ */
+export function findPurchaseUnavailable(
+  purchaseQuotedStatuses: CustomerQuoteStatus[] | undefined
+): CustomerQuoteStatus | undefined {
+  return (purchaseQuotedStatuses ?? []).find((s) => s.type === 'unavailable');
+}
+
 export interface SelfSupplierTarget {
   status: SupplierStatus;
   quoteDate: string;
@@ -122,7 +134,7 @@ export function computeSelfSupplierTarget(
   const quoted = purchaseQuotedStatuses ?? [];
   const suppliers = purchaseSupplierStatuses ?? [];
 
-  const unavailable = quoted.find((s) => s.type === 'unavailable');
+  const unavailable = findPurchaseUnavailable(purchaseQuotedStatuses);
   if (unavailable) {
     return { status: 'unavailable', quoteDate: unavailable.quoteDate };
   }

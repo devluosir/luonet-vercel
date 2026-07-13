@@ -29,6 +29,7 @@ import { InquiryQuoteStatus } from './InquiryQuoteStatus';
 import {
   findLatestPurchaseNeedInfo,
   findPurchaseSupplemented,
+  findPurchaseUnavailable,
 } from '@/features/purchase-registration/utils/purchaseInquiryStatus';
 
 /** YYYY-MM-DD → m.D（如 6.21） */
@@ -212,6 +213,7 @@ export function InquiryFormModal({
   // 让销售侧知道采购部还在等哪家供应商补资料、或者采购部那边已经处理完了。
   const purchaseNeedInfoEntry = findLatestPurchaseNeedInfo(record?.purchaseSupplierStatuses);
   const purchaseSupplementedEntry = findPurchaseSupplemented(record?.purchaseQuotedStatuses);
+  const purchaseUnavailableEntry = findPurchaseUnavailable(record?.purchaseQuotedStatuses);
 
   const adjustDate = (delta: number) => {
     const date = dateInputToDate(dateInput);
@@ -508,8 +510,8 @@ export function InquiryFormModal({
             </div>
           </div>
 
-          {/* ── 采购部侧只读提示：需补充信息 / 已补充信息，只读展示，不提供编辑入口 ── */}
-          {(purchaseNeedInfoEntry || purchaseSupplementedEntry) && (
+          {/* ── 采购部侧只读提示：需补充信息 / 已补充信息 / 我司无法报价，只读展示，不提供编辑入口 ── */}
+          {(purchaseNeedInfoEntry || purchaseSupplementedEntry || purchaseUnavailableEntry) && (
             <div className="mb-4 flex flex-wrap items-center gap-2">
               {purchaseNeedInfoEntry && (
                 <span className="inline-flex items-center rounded-lg bg-yellow-50 px-3 py-2 text-xs font-medium text-yellow-700 ring-1 ring-yellow-100 dark:bg-yellow-950/30 dark:text-yellow-400 dark:ring-yellow-900">
@@ -520,6 +522,11 @@ export function InquiryFormModal({
               {purchaseSupplementedEntry && (
                 <span className="inline-flex items-center rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:ring-blue-900">
                   采购侧提示：已补充信息（{stripDateBrackets(purchaseSupplementedEntry.quoteDate)}）
+                </span>
+              )}
+              {purchaseUnavailableEntry && (
+                <span className="inline-flex items-center rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-600 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700">
+                  采购侧提示：我司无法报价（{stripDateBrackets(purchaseUnavailableEntry.quoteDate)}）
                 </span>
               )}
             </div>
