@@ -1,6 +1,6 @@
 # Current State
 
-最后更新：2026-07-12
+最后更新：2026-07-13
 当前分支：`main`
 当前提交：以 `git log -1 --oneline` 为准
 应用版本：`1.2.0`（`package.json`）
@@ -208,6 +208,7 @@ theme-config
 - 询报价登记表的「已成单」统一按有效 `orderNo` 判断，包含普通、辙销C、悬挂P、善后S 的全部成单记录；「已辙销」和「善后」保留为可重叠的细分筛选，筛选列表与角标数量共用同一判定（TASK-153）。
 - 订单状态表与采购订单表的「正常」统一通过 `isNormalOrder` 判断：无 C/P/S 标记（兼容旧缓存/旧 D1 的 `null`）或悬挂P 均计入；Worker 收到可清空询报价字段的显式 `null` 时会删除对应 JSON 属性，不再持久化 `orderSubStatus: null`；迁移 013 已清理既有空状态字段（TASK-154）。
 - 订单状态表行内日期/回款月份以及“编辑订单”弹窗中的原生日期/月选择器支持浏览器“清除”操作：行内直接提交 `undefined`，弹窗先写入空字符串并在保存时转换为 `undefined`；正常选择仍沿用 `m.D` / `m` 存储格式（TASK-155）。
+- 采购部登记同步销售侧“飞罗”状态改为三级优先级（我司无法报价 > 采购供应商需补资料 > 普通已报价，均不满足时不清空/回退），逻辑集中在 `purchaseInquiryStatus.ts` 纯函数；采购部登记表状态列（原“成单状态”）按已关闭/已成单/已补充资料/需补充资料/其他 n 家已报价/空态六档优先级只显示一个主 badge；采购部弹窗“询价已关闭”改为完全只读，只依据销售侧 `record.quotedStatuses`，不再提供可编辑 checkbox，历史 `purchaseQuotedStatuses.type === 'closed'` 数据不参与判断也不被清除；仅有 `purchaseRegistration` 权限的受限视图 GET 响应新增只读完整 `quotedStatuses`，但仍不允许写入（TASK-156）。
 - 询价 Excel 导入导出包含 `订单标记`、`订单备注` 两列；D1 仍通过 `Document.data` JSON 透传，无需 schema 迁移。
 - 新增询价要求选择客户/联络人；旧记录可保留文本继续编辑。
 - 批量关联客户会写入 `customerId`、`contactId` 和规范化 `inquirer`。

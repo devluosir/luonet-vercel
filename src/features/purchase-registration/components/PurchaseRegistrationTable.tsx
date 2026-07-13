@@ -39,7 +39,7 @@ export function PurchaseRegistrationTable({ records, onUpdate, onEditRecord }: P
             <th className={headerCellOverflowClass}>询价编号</th>
             <th className={headerCellOverflowClass}>内容描述</th>
             <th className={headerCellOverflowClass}>询报价状态</th>
-            <th className={headerCellOverflowClass}>成单状态</th>
+            <th className={headerCellOverflowClass}>状态</th>
           </tr>
         </thead>
         <tbody>

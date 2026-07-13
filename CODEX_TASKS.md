@@ -1,6 +1,6 @@
 # CODEX_TASKS.md — 任务索引（精简）
 
-最后更新：2026-07-12
+最后更新：2026-07-13
 
 执行前阅读 `AGENTS.md`。当前事实以 `docs/core/CURRENT_STATE.md`、`docs/core/CHANGELOG.md` 为准。
 
@@ -3690,6 +3690,76 @@ onChange={(e) => {
 - `npx eslint src/features/order/components/OrderRow.tsx src/features/order/components/OrderEditModal.tsx`
 - `npm run build`（沙箱历史上多次 45 秒超时被打断，属已知限制，建议用户本地或 CI 补跑一次）
 - 手动验证（建议用户在浏览器里过一遍）：订单状态表行内点开日期单元格和回款月份单元格的原生选择器，选中后点"清除"，确认单元格变回占位符（`m.D` / `m`）；打开"编辑订单"弹窗对日期字段和回款月份字段重复同样验证。
+
+## TASK-156：采购部登记与询报价登记的询报价状态集中梳理（飞罗同步优先级 / 状态列 / 关闭状态只读化）
+
+**状态：** 已完成（2026-07-13，本次会话由 Claude 直接实现，未经 Codex）
+
+**背景：**
+
+采购部登记（`purchaseSupplierStatuses` / `purchaseQuotedStatuses`）与询报价登记（`supplierStatuses` / `quotedStatuses`）共用同一条 `InquiryRecord`，此前只有"采购部普通已报价 → 同步销售侧'飞罗'为 quoted"这一条零散写在 `PurchaseInquiryEditModal.handleSave` 里的规则，且：
+- 没有处理"我司无法报价""需补资料"两种更高优先级的采购状态该如何同步飞罗；
+- 采购部表格状态列仍是简单的"已成单/未成单"，没有反映询价关闭、需补资料、其它供应商已报价等信息；
+- "询价已关闭"在采购部弹窗里是一份独立、可编辑的历史遗留状态（`purchaseQuotedStatuses.type === 'closed'`），与销售侧真实关闭状态（`record.quotedStatuses.type === 'closed'`）脱节，采购部理论上能创建/修改一个跟销售侧不一致的"关闭"；
+- 受限视图（只有 `purchaseRegistration`、无 `inquiry` 权限）此前拿不到 `quotedStatuses`，无法读到销售侧真实关闭状态。
+
+**改动模块：**
+- `src/features/purchase-registration/utils/purchaseInquiryStatus.ts`（新增）：飞罗同步（`computeSelfSupplierTarget` / `applySelfSupplierSync` / `computeSelfSupplierPatch`）、"其他 n 家已报价"去重计数（`countOtherQuotedSuppliers`）、状态列优先级（`computePurchaseMainStatus` / `formatPurchaseMainStatus`）、飞罗需补资料读取（`isSelfSupplierNeedInfo`）等纯函数，表格与弹窗共用同一套逻辑。
+- `src/features/purchase-registration/components/PurchaseInquiryEditModal.tsx`：`handleSave` 改为调用 `computeSelfSupplierPatch`；按 `record.id` 从 `useInquiryStore` 最新状态解析记录（`useEffect` 依赖改成 `record?.id`，只在切换到不同记录时重置本地编辑态，后台同步不清空未保存输入）；新增销售侧需补资料/"其他 n 家已报价"/关闭状态三处只读展示。
+- `src/features/purchase-registration/components/PurchaseRegistrationTable.tsx`：表头"成单状态"改为"状态"。
+- `src/features/purchase-registration/components/PurchaseRegistrationRow.tsx`：状态列改用 `computePurchaseMainStatus` + `formatPurchaseMainStatus` 渲染单一主 badge。
+- `src/features/inquiry/components/InquiryQuoteStatus.tsx`：新增 `unavailableLabel`（默认"已回复客户无法报价"）、`quotedTrailingContent`（默认无）、`showClosedControl`（默认 `true`）三个窄配置 props，默认值保持询报价登记页面行为不变。
+- `src/app/api/inquiry/[[...path]]/restrictedView.ts`（新增，从 `route.ts` 拆出）：`sanitizeRestrictedRecord` 采购只读响应新增完整 `quotedStatuses`（只读，未裁剪成部分数组）；`PURCHASE_REGISTRATION_WRITE_FIELDS` 有意不包含 `quotedStatuses`。拆分原因：`route.ts` 顶层 `import next/server` 会在 jsdom 测试环境里因缺全局 `Request`/`Response` 而加载失败，拆成独立纯函数模块便于直接单测。
+- `src/app/api/inquiry/[[...path]]/route.ts`：改为从 `./restrictedView` 导入这几个函数，行为不变。
+
+**状态映射与优先级：**
+
+飞罗同步（采购部保存时，按顺序取第一条满足的）：
+1. `purchaseQuotedStatuses` 里勾了"我司无法报价" → 飞罗 `unavailable`，日期取该状态日期
+2. 任一 `purchaseSupplierStatuses` 为 `need_info` → 飞罗 `need_info`，日期取最新一条需补资料日期
+3. `purchaseQuotedStatuses` 存在普通报价 → 飞罗 `quoted`，日期取最新报价日期
+4. 均不满足 → 不产生补丁，不清空/回退飞罗现状（兼容旧行为）
+只在目标状态与飞罗当前状态/日期不同时才写 `supplierStatuses`，且只替换飞罗这一条。
+
+采购部状态列主 badge（取第一条满足的）：
+1. 销售侧 `quotedStatuses` 含 `closed` → "已关闭"（灰）
+2. `orderNo` 非空 → "已成单"（绿）
+3. `purchaseQuotedStatuses` 含 `supplemented` → "已补充资料"（蓝）
+4. 任一采购供应商 `need_info`，或销售侧飞罗 `need_info` → "需补充资料"（黄）
+5. 销售侧 `supplierStatuses` 里排除飞罗、按简称去重后 `quoted` 数量 > 0 → "其他 n 家已报价"（蓝）
+6. 均不满足 → 空态"—"（灰）
+
+**权限边界：**
+- 受限视图（仅 `purchaseRegistration`）GET 响应新增完整只读 `quotedStatuses`，用于展示销售侧真实关闭/需补资料状态。
+- `quotedStatuses` 不在 `PURCHASE_REGISTRATION_WRITE_FIELDS` 里；受限 PUT 即使请求体带了 `quotedStatuses`，`pickRestrictedPatch` 也会丢弃，采购部无法写销售侧关闭状态。
+- 采购部弹窗不再提供"询价已关闭"的 checkbox/日期编辑，完全只读展示销售侧 `record.quotedStatuses`。
+
+**历史数据兼容策略：**
+- 历史 `purchaseQuotedStatuses` 中可能已有的 `type === 'closed'` 记录：不再用于判断采购部是否关闭，不在普通保存时主动删除，也不会覆盖销售侧真实关闭状态——纯粹是死数据，留着不处理。
+- 飞罗同步在"四种目标都不满足"时不清空/回退现有飞罗状态，保持此前已上线的兼容策略不变。
+- 未新增 D1 表、未改 `schema.sql`、未改 Worker 数据结构。
+
+**测试：**
+新增/覆盖 4 个测试文件、共 34 个用例（均通过）：
+- `purchaseInquiryStatus.test.ts`（29 例）：飞罗同步四级优先级、去重计数、状态列六种优先级、需补资料读取
+- `route.test.ts`（5 例，新建于 `__tests__/`，实际 import `restrictedView.ts`）：`pickRestrictedPatch` 丢弃 `quotedStatuses`、`sanitizeRestrictedRecord` 只读透传完整 `quotedStatuses`
+- `InquiryQuoteStatus.test.tsx`（7 例）：默认 props 下询报价登记原有文案/可编辑关闭 checkbox 不变；窄配置 props 生效
+- `PurchaseInquiryEditModal.test.tsx`（13 例）：销售侧关闭只读展示、需补资料提示、"其他 n 家已报价"、复选框文案、补丁不含 `quotedStatuses`、状态一致时不发补丁、弹窗打开期间 store 后台更新不清空未保存输入
+
+**验证结果：**
+- 定向 Jest（上述 4 个文件 + 关联套件，共 8 个测试文件）：81 用例全部通过
+- `npx tsc --noEmit`：通过
+- `npx eslint`（本次修改/新增文件）：无输出（首次跑出 2 处 `react/no-unescaped-entities`，已用 `&ldquo;`/`&rdquo;` 修复）
+- `git diff --check`：通过
+- `node scripts/pre-release-check.js`（`check:selectors`）：通过
+- 全量 `npx jest`：除本次改动外，另有 3 个测试套件（`quotation` 解析、`CustomerTimeline`、`useQuotationStore`）及全部 `e2e/*.spec.ts` 失败，经确认均为改动前已存在、与本次改动的文件无关的既有问题（未触碰这些文件，`git status` 显示无变更）
+- `npm run build`：沙箱单次命令 45 秒超时限制下，两次尝试都只跑到 "Creating an optimized production build ..." 阶段未等到结束，未能在本次会话完整验证，建议用户本地或 CI 补跑一次完整 `npm run build`
+- 手动多权限场景验证（销售账号 `inquiry` / 采购账号仅 `purchaseRegistration`）：未在本次会话执行（沙箱无可登录的浏览器环境），建议用户按任务说明第七节步骤 1–8 手动过一遍双向流程
+
+**尚存风险：**
+- `npm run build` 未在本次会话跑完，理论上 `tsc --noEmit` + eslint 已覆盖类型和语法层面，但构建期的 tree-shaking/SSG 边界情况未实测。
+- 未做真实登录态下的手动双向验证（销售↔采购两端互相看到对方状态变化），建议按文档步骤人工过一遍。
+- `purchaseSupplierStatuses` 里 `need_info` 供应商若全部缺失 `quoteDate`（理论上 UI 会强制填日期，但历史脏数据不能完全排除），`computeSelfSupplierTarget` 会同步出 `quoteDate: ''` 到飞罗，未做专门兜底，属已知边界情况，未见于当前数据但值得关注。
 
 ## 已关闭 / 不做
 

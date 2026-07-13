@@ -4,32 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { InquiryQuoteStatus } from '@/features/inquiry/components/InquiryQuoteStatus';
-import { createId } from '@/features/inquiry/utils/inquiryUtils';
+import { stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
+import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import type { CustomerQuoteStatus, InquiryRecord, SupplierQuoteStatus } from '@/features/inquiry/types';
-
-/** 飞罗（上海飞罗贸易有限公司）在供应商列表中的短名，代表"我方自己"这一自供应商身份 */
-const SELF_SUPPLIER_NAME = '飞罗';
-
-/**
- * 从采购部登记的"已报价"列表里取出用来同步的日期：
- * 只看常规已报价条目（排除无法报价/已补充/已关闭），按 m.D 取最大（最新）的一条。
- */
-function pickLatestQuoteDate(statuses: CustomerQuoteStatus[]): string | undefined {
-  const regular = statuses.filter((s) => !s.type || s.type === 'quoted');
-  if (regular.length === 0) return undefined;
-
-  const parse = (raw: string): number => {
-    const clean = raw.replace(/[[\]]/g, '');
-    const [mStr, dStr] = clean.split('.');
-    const m = parseInt(mStr ?? '0', 10);
-    const d = parseInt(dStr ?? '0', 10);
-    return m ? m * 100 + (d || 0) : 0;
-  };
-
-  return regular.reduce((best, current) =>
-    parse(current.quoteDate) >= parse(best.quoteDate) ? current : best
-  ).quoteDate;
-}
+import {
+  computeSelfSupplierPatch,
+  countOtherQuotedSuppliers,
+  isSelfSupplierNeedInfo,
+} from '../utils/purchaseInquiryStatus';
 
 interface PurchaseInquiryEditModalProps {
   record: InquiryRecord | null;
@@ -39,17 +21,28 @@ interface PurchaseInquiryEditModalProps {
   supplierOptions?: string[];
 }
 
-export function PurchaseInquiryEditModal({ record, onClose, onSave, supplierOptions }: PurchaseInquiryEditModalProps) {
+export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, supplierOptions }: PurchaseInquiryEditModalProps) {
+  // 弹窗打开期间 store 可能因为后台同步而更新（例如另一设备/受限视图周期性拉取），
+  // 优先按 record.id 从最新 store 解析记录，避免保存时用打开弹窗那一刻的旧快照覆盖飞罗同步判断。
+  // 找不到（记录被删除等极端情况）时退回 props 传入的快照，不阻塞关闭弹窗。
+  const storeRecord = useInquiryStore((s) =>
+    recordProp ? s.records.find((r) => r.id === recordProp.id) : undefined
+  );
+  const record = storeRecord ?? recordProp;
+
   const [localSuppliers, setLocalSuppliers] = useState<SupplierQuoteStatus[]>([]);
   const [localQuoted, setLocalQuoted] = useState<CustomerQuoteStatus[]>([]);
   const [localDescription, setLocalDescription] = useState('');
 
+  // 依赖 record?.id（而非整个 record 对象）：只在打开一条新记录时重置本地编辑状态，
+  // 避免同一条记录在编辑过程中因为 store 后台同步刷新而清空用户尚未保存的输入。
   useEffect(() => {
     if (!record) return;
     setLocalSuppliers(record.purchaseSupplierStatuses ?? []);
     setLocalQuoted(record.purchaseQuotedStatuses ?? []);
     setLocalDescription(record.description ?? '');
-  }, [record]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [record?.id]);
 
   // 借用询报价登记的供应商/已报价编辑器：该组件只读写 record.supplierStatuses / record.quotedStatuses，
   // 与 record 其余字段无关，因此用「影子记录」把采购部专属数组接到这两个字段名上即可复用，
@@ -61,6 +54,15 @@ export function PurchaseInquiryEditModal({ record, onClose, onSave, supplierOpti
 
   if (!record || !shimRecord) return null;
 
+  // 销售侧真实的"询价已关闭"状态：只读展示，采购部不能创建/取消/修改，也不能被历史遗留的
+  // purchaseQuotedStatuses.type === 'closed' 覆盖——那是旧数据，不再作为采购部关闭状态的依据。
+  const salesClosedStatus = record.quotedStatuses?.find((s) => s.type === 'closed');
+  // 销售侧飞罗为需补资料时，采购部要能读到提示；但不能凭空创建/修改某一家 purchaseSupplierStatuses，
+  // 因为销售侧信息无法确定具体是哪一家采购供应商需要资料。
+  const selfSupplierNeedInfo = isSelfSupplierNeedInfo(record.supplierStatuses);
+  // "其他 n 家已报价"：数据来源、去重、排除飞罗的规则与采购部登记表状态列完全共用同一个工具函数。
+  const othersQuotedCount = countOtherQuotedSuppliers(record.supplierStatuses);
+
   const handleSave = () => {
     const patch: Partial<InquiryRecord> = {
       description: localDescription.trim(),
@@ -68,28 +70,12 @@ export function PurchaseInquiryEditModal({ record, onClose, onSave, supplierOpti
       purchaseQuotedStatuses: localQuoted,
     };
 
-    // 采购部登记的询报价状态一旦变为"已报价"——不管这次用的供应商、已报价单位是不是飞罗——
-    // 都自动把询报价登记原始供应商列表里的"飞罗"同步为已报价，日期取采购部登记这边已报价的日期。
-    const latestQuoteDate = pickLatestQuoteDate(localQuoted);
-    if (latestQuoteDate) {
-      const selfSupplier = record.supplierStatuses.find(
-        (s) => s.supplierShortName === SELF_SUPPLIER_NAME
-      );
-      const needsSync =
-        !selfSupplier || selfSupplier.status !== 'quoted' || selfSupplier.quoteDate !== latestQuoteDate;
-
-      if (needsSync) {
-        patch.supplierStatuses = selfSupplier
-          ? record.supplierStatuses.map((s) =>
-              s.supplierShortName === SELF_SUPPLIER_NAME
-                ? { ...s, status: 'quoted', quoteDate: latestQuoteDate }
-                : s
-            )
-          : [
-              ...record.supplierStatuses,
-              { id: createId(), supplierShortName: SELF_SUPPLIER_NAME, status: 'quoted', quoteDate: latestQuoteDate },
-            ];
-      }
+    // 采购部登记状态变化后，按优先级（无法报价 > 需补资料 > 已报价）把销售侧"飞罗"同步过去；
+    // 只在确实需要修改时才带上 supplierStatuses 补丁，且只改飞罗这一条，不动其它供应商，
+    // 也绝不写 quotedStatuses（采购部无权修改询报价登记的关闭状态等销售侧字段）。
+    const supplierPatch = computeSelfSupplierPatch(record.supplierStatuses, localSuppliers, localQuoted);
+    if (supplierPatch) {
+      patch.supplierStatuses = supplierPatch;
     }
 
     onSave(record.id, patch);
@@ -131,16 +117,38 @@ export function PurchaseInquiryEditModal({ record, onClose, onSave, supplierOpti
             />
           </div>
 
+          {selfSupplierNeedInfo && (
+            <div className="mb-4 rounded-lg bg-yellow-50 px-3 py-2 text-xs font-medium text-yellow-700 ring-1 ring-yellow-100 dark:bg-yellow-950/30 dark:text-yellow-400 dark:ring-yellow-900">
+              销售侧提示：飞罗需补充资料
+            </div>
+          )}
+
           <div className="mb-4 rounded-xl bg-gray-50 p-4 ring-1 ring-gray-100 dark:bg-gray-800/50 dark:ring-gray-700">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-              询报价状态（更新为已报价后，报价状态会同步到销售部“飞罗已报价”）
+              询报价状态（更新为已报价后，报价状态会同步到销售部&ldquo;飞罗已报价&rdquo;）
             </p>
             <InquiryQuoteStatus
               record={shimRecord}
               onSuppliersChange={setLocalSuppliers}
               onQuotedChange={setLocalQuoted}
               supplierOptions={supplierOptions ?? []}
+              unavailableLabel="我司无法报价"
+              showClosedControl={false}
+              quotedTrailingContent={
+                othersQuotedCount > 0 ? (
+                  <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600 dark:bg-blue-950/30 dark:text-blue-400">
+                    其他 {othersQuotedCount} 家已报价
+                  </span>
+                ) : null
+              }
             />
+
+            {/* 询价已关闭：完全由销售侧 record.quotedStatuses 决定，采购部只读展示，不提供任何编辑入口 */}
+            {salesClosedStatus && (
+              <p className="mt-3 rounded-lg bg-gray-100 px-3 py-2 text-xs text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                询价已关闭（{stripDateBrackets(salesClosedStatus.quoteDate)}）
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-2">

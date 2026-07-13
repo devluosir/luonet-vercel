@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2026-07-12
+## [Unreleased] - 2026-07-13
+
+### Changed
+
+#### 采购部登记与询报价登记的询报价状态集中梳理（TASK-156）
+- **飞罗同步三级优先级**：采购部保存时按“我司无法报价 > 采购供应商需补资料 > 普通已报价”的优先级同步销售侧“飞罗”状态与日期（此前只处理普通已报价一种情况），均不满足时不清空/回退飞罗现状；同步逻辑集中到可测试的纯函数 `purchaseInquiryStatus.ts`，不再散落在 `handleSave` 里。
+- **采购部状态列改版**：表头“成单状态”改为“状态”，只显示一个优先级最高的主 badge（已关闭 > 已成单 > 已补充资料 > 需补充资料 > 其他 n 家已报价 > 空态），“其他 n 家已报价”按供应商简称去重、排除飞罗，与编辑弹窗内的同名只读提示共用同一份计数逻辑。
+- **询价已关闭完全只读化**：采购部弹窗不再提供可编辑的“询价已关闭” checkbox，改为只读展示销售侧 `record.quotedStatuses` 中的真实关闭状态；历史 `purchaseQuotedStatuses.type === 'closed'` 数据不再参与判断，也不会被覆盖或清除。
+- **受限视图只读开放 `quotedStatuses`**：仅有 `purchaseRegistration` 权限的用户 GET 响应新增完整只读 `quotedStatuses`（用于读取销售侧关闭/需补资料状态），但该字段仍不在受限 PUT 的允许写入字段列表里，写入会被丢弃。
+- `InquiryQuoteStatus` 新增 `unavailableLabel` / `quotedTrailingContent` / `showClosedControl` 三个窄配置 props（默认值保持询报价登记页面行为不变），采购部场景据此定制文案与隐藏关闭编辑入口，避免复制整个组件。
+- 弹窗按 `record.id` 从 store 最新状态解析记录，后台同步不再用旧快照覆盖飞罗判断，也不会清空用户尚未保存的输入。
 
 ### Added
 
