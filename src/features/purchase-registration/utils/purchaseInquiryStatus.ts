@@ -46,6 +46,19 @@ export function isSalesSupplemented(quotedStatuses: CustomerQuoteStatus[] | unde
 }
 
 /**
+ * 销售侧 quotedStatuses 里的"已回复客户无法报价"记录（type === 'unavailable'）。这是销售在
+ * 询报价登记页面勾选的、面向客户的终态标记，与采购部自己勾选的"我司无法报价"
+ * （purchaseQuotedStatuses.type === 'unavailable'，用于同步销售侧"飞罗"供应商状态，见
+ * computeSelfSupplierTarget）是两个独立概念、独立存储——这里读取的是销售侧那一份，
+ * 用于采购部状态列/编辑弹窗只读展示，让采购部知道客户那边已经被回复"无法报价"。
+ */
+export function findSalesUnavailable(
+  quotedStatuses: CustomerQuoteStatus[] | undefined
+): CustomerQuoteStatus | undefined {
+  return (quotedStatuses ?? []).find((s) => s.type === 'unavailable');
+}
+
+/**
  * 解析 [m.D] / m.D 形式的短日期为可比较的数字，越大越新。
  * 缺失或无法解析时返回 -1，保证有值的日期总是排在前面。
  */
@@ -198,6 +211,7 @@ export function findLatestOtherQuotedDate(supplierStatuses: SupplierQuoteStatus[
 
 export type PurchaseInquiryMainStatus =
   | { kind: 'closed'; date?: string }
+  | { kind: 'unavailable'; date?: string }
   | { kind: 'ordered'; date?: string }
   | { kind: 'supplemented'; date?: string }
   | { kind: 'need_info'; date?: string }
@@ -207,18 +221,24 @@ export type PurchaseInquiryMainStatus =
 /**
  * 采购部登记表状态列的主状态，按优先级（从高到低）：
  * 1. 销售侧询价已关闭（record.quotedStatuses 中 type === 'closed'）→ closed，日期取该关闭记录的日期
- * 2. orderNo 非空 → ordered，日期取确认日（orderConfirmDate，可能为空）
- * 3. purchaseQuotedStatuses 存在 type === 'supplemented'，或销售侧 quotedStatuses 存在
+ * 2. 销售侧已回复客户无法报价（record.quotedStatuses 中 type === 'unavailable'）→ unavailable，
+ *    日期取该记录的日期——与"已关闭"同属销售侧终态标记，优先级仅次于"已关闭"、高于"已成单"
+ *    （两者理论上不应与真实成单同时出现，出现即视为历史遗留数据未清理，仍按此优先级展示）
+ * 3. orderNo 非空 → ordered，日期取确认日（orderConfirmDate，可能为空）
+ * 4. purchaseQuotedStatuses 存在 type === 'supplemented'，或销售侧 quotedStatuses 存在
  *    type === 'supplemented' → supplemented（两边任一登记了"已补充信息"都算，互不覆盖，
  *    优先级严格高于 need_info——即使同时存在需补资料的供应商，也只显示"已补充信息"），
  *    日期取两个来源里较新的一个
- * 4. 任一采购供应商为 need_info，或销售侧飞罗为 need_info → need_info，日期取两个来源里较新的一个
- * 5. 其他供应商已报价数量（countOtherQuotedSuppliers）大于 0 → others_quoted，日期取最新报价日期
- * 6. 均不满足 → none
+ * 5. 任一采购供应商为 need_info，或销售侧飞罗为 need_info → need_info，日期取两个来源里较新的一个
+ * 6. 其他供应商已报价数量（countOtherQuotedSuppliers）大于 0 → others_quoted，日期取最新报价日期
+ * 7. 均不满足 → none
  */
 export function computePurchaseMainStatus(record: InquiryRecord): PurchaseInquiryMainStatus {
   const closedEntry = (record.quotedStatuses ?? []).find((s) => s.type === 'closed');
   if (closedEntry) return { kind: 'closed', date: closedEntry.quoteDate };
+
+  const unavailableEntry = findSalesUnavailable(record.quotedStatuses);
+  if (unavailableEntry) return { kind: 'unavailable', date: unavailableEntry.quoteDate };
 
   if (record.orderNo?.trim()) return { kind: 'ordered', date: record.orderConfirmDate };
 
@@ -288,6 +308,11 @@ export function formatPurchaseMainStatus(status: PurchaseInquiryMainStatus): Pur
     case 'closed':
       return {
         label: withDate('已关闭', status.date),
+        className: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+      };
+    case 'unavailable':
+      return {
+        label: withDate('无法报价', status.date),
         className: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
       };
     case 'ordered':

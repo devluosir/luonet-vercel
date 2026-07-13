@@ -14,6 +14,7 @@ import {
   findLatestPurchaseNeedInfo,
   findPurchaseSupplemented,
   findSalesSupplemented,
+  findSalesUnavailable,
   findSelfSupplierNeedInfo,
   formatPurchaseMainStatus,
   isSalesSupplemented,
@@ -162,6 +163,31 @@ describe('computePurchaseMainStatus 优先级（状态列五种状态）', () =>
     expect(computePurchaseMainStatus(record)).toEqual({ kind: 'closed', date: '[6.1]' });
   });
 
+  it('8-1b. 销售侧已回复客户无法报价 → unavailable，日期取该记录日期', () => {
+    const record = baseRecord({
+      quotedStatuses: [quoted({ type: 'unavailable', quoteDate: '[6.2]', supplierShortName: '', version: '' })],
+    });
+    expect(computePurchaseMainStatus(record)).toEqual({ kind: 'unavailable', date: '[6.2]' });
+  });
+
+  it('优先级：closed 高于 unavailable（同时存在时显示已关闭）', () => {
+    const record = baseRecord({
+      quotedStatuses: [
+        quoted({ id: 'c', type: 'closed', quoteDate: '[6.1]', supplierShortName: '', version: '' }),
+        quoted({ id: 'u', type: 'unavailable', quoteDate: '[6.2]', supplierShortName: '', version: '' }),
+      ],
+    });
+    expect(computePurchaseMainStatus(record).kind).toBe('closed');
+  });
+
+  it('优先级：unavailable 高于 ordered（即使已成单，历史遗留数据未清理时仍显示无法报价）', () => {
+    const record = baseRecord({
+      orderNo: 'PO-009',
+      quotedStatuses: [quoted({ type: 'unavailable', quoteDate: '[6.2]', supplierShortName: '', version: '' })],
+    });
+    expect(computePurchaseMainStatus(record).kind).toBe('unavailable');
+  });
+
   it('8-2. orderNo 非空 → ordered，日期取确认日（orderConfirmDate）', () => {
     const record = baseRecord({ orderNo: 'PO-002', orderConfirmDate: '[6.15]' });
     expect(computePurchaseMainStatus(record)).toEqual({ kind: 'ordered', date: '[6.15]' });
@@ -286,6 +312,7 @@ describe('formatPurchaseMainStatus', () => {
 
   it('有日期时文案带上日期（方括号会被去掉）', () => {
     expect(formatPurchaseMainStatus({ kind: 'closed', date: '[6.1]' })?.label).toBe('已关闭（6.1）');
+    expect(formatPurchaseMainStatus({ kind: 'unavailable', date: '[6.2]' })?.label).toBe('无法报价（6.2）');
     expect(formatPurchaseMainStatus({ kind: 'ordered', date: '[6.15]' })?.label).toBe('已成单（6.15）');
     expect(formatPurchaseMainStatus({ kind: 'supplemented', date: '[6.20]' })?.label).toBe('已补充信息（6.20）');
     expect(formatPurchaseMainStatus({ kind: 'need_info', date: '[6.25]' })?.label).toBe('需补充信息（6.25）');
@@ -350,6 +377,30 @@ describe('findSalesSupplemented / isSalesSupplemented（销售侧登记的"已�
     expect(findSalesSupplemented([])).toBeUndefined();
     expect(findSalesSupplemented(undefined)).toBeUndefined();
     expect(isSalesSupplemented(undefined)).toBe(false);
+  });
+});
+
+describe('findSalesUnavailable（销售侧登记的"已回复客户无法报价"能被采购部读取）', () => {
+  it('销售侧 quotedStatuses 有 unavailable 记录时能找到并返回该条', () => {
+    const unavailable = quoted({ id: 'u1', type: 'unavailable', quoteDate: '[7.2]', supplierShortName: '', version: '' });
+    expect(findSalesUnavailable([unavailable])).toEqual(unavailable);
+  });
+
+  it('没有 unavailable 记录时返回 undefined', () => {
+    expect(findSalesUnavailable([quoted({ type: 'quoted' })])).toBeUndefined();
+  });
+
+  it('空数组/undefined 输入安全返回 undefined', () => {
+    expect(findSalesUnavailable([])).toBeUndefined();
+    expect(findSalesUnavailable(undefined)).toBeUndefined();
+  });
+
+  it('与采购部自己的"我司无法报价"（purchaseQuotedStatuses）是独立字段，不会混读', () => {
+    const record = baseRecord({
+      purchaseQuotedStatuses: [quoted({ type: 'unavailable', quoteDate: '[7.1]', supplierShortName: '', version: '' })],
+      quotedStatuses: [],
+    });
+    expect(findSalesUnavailable(record.quotedStatuses)).toBeUndefined();
   });
 });
 

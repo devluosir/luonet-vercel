@@ -190,6 +190,47 @@ describe('销售侧登记的"已补充信息"在采购部只读展示（销售�
   });
 });
 
+describe('销售侧登记的"已回复客户无法报价"在采购部只读展示', () => {
+  it('record.quotedStatuses 有 unavailable 时显示灰色只读提示，带日期', () => {
+    const record = baseRecord({
+      quotedStatuses: [
+        { id: 'u1', type: 'unavailable', quoteDate: '[7.2]', supplierShortName: '', version: '' },
+      ],
+    });
+    renderModal(record);
+    expect(screen.getByText('销售侧提示：已回复客户无法报价（7.2）')).toBeInTheDocument();
+  });
+
+  it('quotedStatuses 没有 unavailable 时不显示', () => {
+    renderModal(baseRecord());
+    expect(screen.queryByText(/销售侧提示：已回复客户无法报价/)).not.toBeInTheDocument();
+  });
+
+  it('历史 purchaseQuotedStatuses 里的 unavailable（采购部自己的"我司无法报价"）不应触发这条销售侧提示，来源不同', () => {
+    const record = baseRecord({
+      quotedStatuses: [],
+      purchaseQuotedStatuses: [
+        { id: 'legacy', type: 'unavailable', quoteDate: '[5.1]', supplierShortName: '', version: '' },
+      ],
+    });
+    renderModal(record);
+    expect(screen.queryByText(/销售侧提示：已回复客户无法报价/)).not.toBeInTheDocument();
+  });
+
+  it('与已补充信息提示可以同一行并列显示', () => {
+    const record = baseRecord({
+      quotedStatuses: [
+        { id: 'u1', type: 'unavailable', quoteDate: '[7.2]', supplierShortName: '', version: '' },
+      ],
+      supplierStatuses: [{ id: 'fl', supplierShortName: '飞罗', status: 'need_info', quoteDate: '[6.1]' }],
+    });
+    renderModal(record);
+    const needInfoBanner = screen.getByText('销售侧提示：飞罗需补充信息（6.1）');
+    const unavailableBanner = screen.getByText('销售侧提示：已回复客户无法报价（7.2）');
+    expect(needInfoBanner.parentElement).toBe(unavailableBanner.parentElement);
+  });
+});
+
 describe('"其他 n 家已报价"只读提示', () => {
   it('大于 0 时显示', () => {
     const record = baseRecord({

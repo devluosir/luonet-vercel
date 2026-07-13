@@ -71,18 +71,19 @@ purchaseQuotedStatuses?: CustomerQuoteStatus[];
 
 修复：新增纯函数 `restoreOriginalRecords(shadowRecords, originalById)`，在 `filteredAndSorted` 筛选排序完成、`finalRecords` 计算的最后一步，按 id 把每条记录换回 `activeRecords` 里的原始对象（找不到时原样返回，不阻塞渲染），确保表格实际渲染和状态计算用的永远是真实数据，筛选/排序判断依据不受影响。
 
-### 采购部登记表状态描述列（TASK-156 起，TASK-157 改名+带日期）
+### 采购部登记表状态描述列（TASK-156 起，TASK-157 改名+带日期，TASK-159 新增无法报价档）
 
 `PurchaseRegistrationTable` 的"状态描述"列（原"成单状态"，TASK-157 起由"状态"改名）只显示一个优先级最高的主 badge，取第一条满足的：
 
 1. 销售侧 `record.quotedStatuses` 含 `type === 'closed'` → "已关闭（日期）"（灰），日期取该关闭记录的 `quoteDate`
-2. `orderNo` 非空 → "已成单（日期）"（绿），日期取 `orderConfirmDate`（可能为空，为空时不带括号）
-3. `purchaseQuotedStatuses` 含 `type === 'supplemented'`，**或**销售侧 `record.quotedStatuses` 含 `type === 'supplemented'` → "已补充信息（日期）"（蓝），两个来源都存在时取较新的日期；**优先级严格高于第 4 档 need_info**，即使 need_info 供应商的日期更新也不会反超
-4. 任一 `purchaseSupplierStatuses` 为 `need_info`，或销售侧飞罗为 `need_info` → "需补充信息（日期）"（黄），两个来源都存在时取较新的日期。**存在性判断必须直接看 `status === 'need_info'`**，不能用"是否能取到日期"来判断——历史上曾因为误用取日期的返回值做存在性判断，导致没填日期的 need_info 供应商被误判成"不存在"、状态列错误跳到更低优先级，已修复并有回归测试覆盖
-5. 销售侧 `supplierStatuses` 里排除飞罗、按 `supplierShortName.trim()` 去重后 `status === 'quoted'` 的数量 > 0 → "其他 n 家已报价（日期）"（蓝），日期取这些供应商里最新的报价日期（`findLatestOtherQuotedDate`）
-6. 均不满足 → 空态"—"（灰）
+2. 销售侧 `record.quotedStatuses` 含 `type === 'unavailable'`（已回复客户无法报价）→ "无法报价（日期）"（灰，与"已关闭"同色调），日期取该记录的 `quoteDate`；`findSalesUnavailable` 读取（TASK-159 新增，与采购部自己勾选的"我司无法报价"——`purchaseQuotedStatuses` 里的同名 type——是完全独立的两份数据，互不影响）
+3. `orderNo` 非空 → "已成单（日期）"（绿），日期取 `orderConfirmDate`（可能为空，为空时不带括号）
+4. `purchaseQuotedStatuses` 含 `type === 'supplemented'`，**或**销售侧 `record.quotedStatuses` 含 `type === 'supplemented'` → "已补充信息（日期）"（蓝），两个来源都存在时取较新的日期；**优先级严格高于第 5 档 need_info**，即使 need_info 供应商的日期更新也不会反超
+5. 任一 `purchaseSupplierStatuses` 为 `need_info`，或销售侧飞罗为 `need_info` → "需补充信息（日期）"（黄），两个来源都存在时取较新的日期。**存在性判断必须直接看 `status === 'need_info'`**，不能用"是否能取到日期"来判断——历史上曾因为误用取日期的返回值做存在性判断，导致没填日期的 need_info 供应商被误判成"不存在"、状态列错误跳到更低优先级，已修复并有回归测试覆盖
+6. 销售侧 `supplierStatuses` 里排除飞罗、按 `supplierShortName.trim()` 去重后 `status === 'quoted'` 的数量 > 0 → "其他 n 家已报价（日期）"（蓝），日期取这些供应商里最新的报价日期（`findLatestOtherQuotedDate`）
+7. 均不满足 → 空态"—"（灰）
 
-日期统一用 `formatPurchaseMainStatus` 内部的 `withDate()` 辅助函数格式化成"label（日期）"（复用 `stripDateBrackets` 去掉存储用的方括号），日期缺失时只显示 label、不带空括号。计算逻辑（`computePurchaseMainStatus` / `formatPurchaseMainStatus` / `countOtherQuotedSuppliers` / `findLatestOtherQuotedDate`）与编辑弹窗里的"其他 n 家已报价"只读提示共用同一份 `purchaseInquiryStatus.ts`，不重复实现。
+日期统一用 `formatPurchaseMainStatus` 内部的 `withDate()` 辅助函数格式化成"label（日期）"（复用 `stripDateBrackets` 去掉存储用的方括号），日期缺失时只显示 label、不带空括号。计算逻辑（`computePurchaseMainStatus` / `formatPurchaseMainStatus` / `countOtherQuotedSuppliers` / `findLatestOtherQuotedDate`）与编辑弹窗里的"其他 n 家已报价"只读提示共用同一份 `purchaseInquiryStatus.ts`，不重复实现。编辑弹窗顶部提示行同步展示"销售侧提示：已回复客户无法报价（日期）"（与"飞罗需补充信息"/"已补充信息"同一行）。
 
 ### 询价已关闭：完全只读化（TASK-156 起）
 

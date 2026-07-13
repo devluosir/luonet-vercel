@@ -11,6 +11,7 @@ import {
   computeSelfSupplierPatch,
   countOtherQuotedSuppliers,
   findSalesSupplemented,
+  findSalesUnavailable,
   findSelfSupplierNeedInfo,
 } from '../utils/purchaseInquiryStatus';
 
@@ -64,6 +65,9 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
   // 销售侧登记的"已补充信息"（从客户那边拿到资料）：与采购部自己的 purchaseQuotedStatuses.supplemented
   // 是两个独立标记，互不覆盖，这里只读展示，让采购部知道客户那边的资料已经补上了。
   const salesSupplementedStatus = findSalesSupplemented(record.quotedStatuses);
+  // 销售侧登记的"已回复客户无法报价"：与采购部自己的"我司无法报价"是两个独立标记，这里只读展示，
+  // 让采购部知道客户那边已经被回复无法报价，不用再继续跟进供应商报价。
+  const salesUnavailableStatus = findSalesUnavailable(record.quotedStatuses);
   // "其他 n 家已报价"：数据来源、去重、排除飞罗的规则与采购部登记表状态列完全共用同一个工具函数。
   const othersQuotedCount = countOtherQuotedSuppliers(record.supplierStatuses);
 
@@ -121,7 +125,7 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
             />
           </div>
 
-          {(selfSupplierNeedInfoEntry || salesSupplementedStatus) && (
+          {(selfSupplierNeedInfoEntry || salesSupplementedStatus || salesUnavailableStatus) && (
             <div className="mb-4 flex flex-wrap items-center gap-2">
               {selfSupplierNeedInfoEntry && (
                 <span className="inline-flex items-center rounded-lg bg-yellow-50 px-3 py-2 text-xs font-medium text-yellow-700 ring-1 ring-yellow-100 dark:bg-yellow-950/30 dark:text-yellow-400 dark:ring-yellow-900">
@@ -132,6 +136,11 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
               {salesSupplementedStatus && (
                 <span className="inline-flex items-center rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:ring-blue-900">
                   销售侧提示：已补充信息（{stripDateBrackets(salesSupplementedStatus.quoteDate)}）
+                </span>
+              )}
+              {salesUnavailableStatus && (
+                <span className="inline-flex items-center rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-600 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700">
+                  销售侧提示：已回复客户无法报价（{stripDateBrackets(salesUnavailableStatus.quoteDate)}）
                 </span>
               )}
             </div>

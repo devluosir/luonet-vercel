@@ -3932,6 +3932,25 @@ jsdom 26 不支持 `PointerEvent` 构造函数，组件级集成测试改用 `ne
 - 验证：`src/features/inquiry`/`order`/`purchase-order-registration`/`purchase-registration`/`components/table`/`app/api/inquiry` 共 14 个测试套件 177 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过；全量 `npx jest`（不含 `e2e/`）另有 3 个套件、15 个用例失败，均在 `useQuotationStore.test.ts`，`git status` 确认未改动 quotation 相关任何文件，是改动前已存在的既有问题
 - `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）；未做真实浏览器验证，建议用户本地在订单状态表打开一条善后S 记录的"编辑订单"弹窗，勾选"善后完成"保存后确认：①订单编号旁变成 "S" 红 + "-OK" 绿；②行背景从红色恢复正常；③"正常"筛选能筛到这条；④"善后"筛选依然能筛到这条
 
+## TASK-159：销售侧"已回复客户无法报价"状态传递到采购部登记
+
+**状态：** 已完成（2026-07-13，本次会话由 Claude 直接实现，未经 Codex）
+
+**背景：** 用户要求（原话）："如果销售侧，将此单归为 已回复客户无法报价，和询价已关闭，它的状态和提示也要传递到采购侧"。
+
+排查发现"询价已关闭"（`quotedStatuses` 中 `type === 'closed'`）在 TASK-156 已经完整传递到采购侧（状态列最高优先级 + 编辑弹窗只读提示），无需改动。但"已回复客户无法报价"（`quotedStatuses` 中 `type === 'unavailable'`，销售在询报价登记页面对客户回复无法报价时勾选）此前完全没有传递到采购侧——`computePurchaseMainStatus` 不识别这个 type，编辑弹窗也没有对应的只读提示，采购部完全看不到销售已经回复客户无法报价这件事。
+
+**注意区分两个同名字段、不同来源的"无法报价"：** 采购部自己勾选的"我司无法报价"写在 `purchaseQuotedStatuses`（用于同步销售侧"飞罗"供应商状态，`computeSelfSupplierTarget` 已有的既有逻辑，不受本次改动影响）；本次新增读取的是销售侧 `quotedStatuses` 里的 `unavailable`，是完全独立的另一份数据，只读展示给采购部，不建立任何写入通路。
+
+**修复：**
+- `purchaseInquiryStatus.ts` 新增 `findSalesUnavailable(quotedStatuses)`（模式与既有的 `findSalesSupplemented` 完全一致）；`PurchaseInquiryMainStatus` 新增 `unavailable` 档，`computePurchaseMainStatus` 优先级插入在"已关闭"之后、"已成单"之前（与"已关闭"同属销售侧终态标记，理论上不应与真实成单同时出现，出现即视为历史遗留数据未清理，仍按此优先级展示，不特殊处理）；`formatPurchaseMainStatus` 新增对应 case，文案"无法报价"，配色沿用与"已关闭"相同的灰色调（呼应 `getRecordColorState` 里"unavailable/closed 同归一类"的既有配色惯例）。
+- `PurchaseInquiryEditModal.tsx` 顶部提示行（与"飞罗需补充信息"/"已补充信息"同一个 `flex flex-wrap` 容器）新增"销售侧提示：已回复客户无法报价（日期）"灰色只读提示。
+
+- 文件：`purchaseInquiryStatus.ts`、`PurchaseInquiryEditModal.tsx`
+- 新增测试：`purchaseInquiryStatus.test.ts` 新增 findSalesUnavailable 4 例 + computePurchaseMainStatus/formatPurchaseMainStatus 相关 4 例（含"closed 高于 unavailable"、"unavailable 高于 ordered"两条优先级回归）；`PurchaseInquiryEditModal.test.tsx` 新增 4 例（显示/不显示/来源隔离/与其它提示同行）
+- 验证：`purchase-registration` 目录定向 Jest 92 例全部通过；`src/features/inquiry`/`order`/`purchase-order-registration`/`purchase-registration`/`components/table`/`app/api/inquiry` 共 14 个测试套件 188 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
+- `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）；未做真实浏览器验证，建议用户本地在询报价登记勾选"已回复客户无法报价"后，到采购部登记确认状态列显示"无法报价（日期）"、编辑弹窗显示对应只读提示
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

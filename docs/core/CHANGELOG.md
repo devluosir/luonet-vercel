@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### 销售侧"已回复客户无法报价"传递到采购部登记（TASK-159）
+- 采购部登记表状态列、编辑弹窗新增识别销售侧 `quotedStatuses` 中 `type === 'unavailable'`（已回复客户无法报价），优先级仅次于"已关闭"、高于"已成单"；与采购部自己勾选的"我司无法报价"（`purchaseQuotedStatuses`）是完全独立的两份数据，互不影响。"询价已关闭"此前已完整传递（TASK-156），本次未改动。
+
 #### 善后S 支持标记"完成"，完成后归入正常单（TASK-158）
 - 订单状态表"编辑订单"弹窗，选中"善后S"后新增"善后完成" checkbox；勾选并保存后，该订单归入"正常"筛选/统计，订单编号旁的字母标记从红色"S"变为红色"S" + 绿色"-OK"，行背景从红色高亮恢复正常；未完成前及"辙销C"/"悬挂P"行为不变。"善后"细分筛选不受影响，完成后依然能筛出这些记录。
 - 新增字段 `orderFollowupCompleted`（纯 JSON 字段，无需 D1 迁移）。`isInProgressOrder`（原在 `OrderPage.tsx`/`PurchaseOrderRegistrationPage.tsx` 各有一份完全一致的重复实现）、行背景色 `getRowBgClass`（原在 `OrderRow.tsx`/`PurchaseOrderRow.tsx` 逐字节重复）、订单号旁字母标记组件 `OrderNoText`（同样两处重复）均收敛到共享实现，降低"改一处漏一处"的风险。
