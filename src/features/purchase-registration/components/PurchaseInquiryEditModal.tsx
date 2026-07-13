@@ -10,6 +10,7 @@ import type { CustomerQuoteStatus, InquiryRecord, SupplierQuoteStatus } from '@/
 import {
   computeSelfSupplierPatch,
   countOtherQuotedSuppliers,
+  findLatestOtherQuotedDate,
   findSalesSupplemented,
   findSalesUnavailable,
   findSelfSupplierNeedInfo,
@@ -68,8 +69,10 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
   // 销售侧登记的"已回复客户无法报价"：与采购部自己的"我司无法报价"是两个独立标记，这里只读展示，
   // 让采购部知道客户那边已经被回复无法报价，不用再继续跟进供应商报价。
   const salesUnavailableStatus = findSalesUnavailable(record.quotedStatuses);
-  // "其他 n 家已报价"：数据来源、去重、排除飞罗的规则与采购部登记表状态列完全共用同一个工具函数。
+  // "其他 n 家已报价"：数据来源、去重、排除飞罗的规则，以及日期取值（最新一条报价日期）
+  // 都与采购部登记表状态列完全共用同一组工具函数，不重复实现。
   const othersQuotedCount = countOtherQuotedSuppliers(record.supplierStatuses);
+  const othersQuotedDate = findLatestOtherQuotedDate(record.supplierStatuses);
 
   const handleSave = () => {
     const patch: Partial<InquiryRecord> = {
@@ -162,6 +165,7 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
                 othersQuotedCount > 0 ? (
                   <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600 dark:bg-blue-950/30 dark:text-blue-400">
                     其他 {othersQuotedCount} 家已报价
+                    {othersQuotedDate ? `（${stripDateBrackets(othersQuotedDate)}）` : ''}
                   </span>
                 ) : null
               }

@@ -3962,6 +3962,15 @@ jsdom 26 不支持 `PointerEvent` 构造函数，组件级集成测试改用 `ne
 - 验证：`purchase-registration` 目录定向 Jest 97 例全部通过；`src/features/inquiry`/`order`/`purchase-order-registration`/`purchase-registration`/`components/table`/`app/api/inquiry` 共 14 个测试套件 193 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
 - `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）；未做真实浏览器验证，建议用户本地确认销售侧标记关闭/无法报价后，采购部登记表对应行的询价编号和内容描述文字都变灰
 
+**追加修复（同日）：** 用户反馈"采购部登记表的编辑询价中，已报价里的'其他n家已报价'也要跟日期的"——编辑弹窗"询报价状态"区域内、"已报价"行尾部的"其他 n 家已报价"只读提示（`quotedTrailingContent`）此前没有带日期，只有状态列的同名 badge 带了日期（TASK-157 起）。
+
+修复：`PurchaseInquiryEditModal.tsx` 新增读取 `findLatestOtherQuotedDate(record.supplierStatuses)`（与状态列共用同一个工具函数，不重复实现），拼进 `quotedTrailingContent` 文案，格式与状态列一致："其他 n 家已报价（日期）"，日期缺失时只显示数量、不带空括号。
+
+- 文件：`PurchaseInquiryEditModal.tsx`
+- 测试调整：`PurchaseInquiryEditModal.test.tsx`"其他 n 家已报价"describe 块更新为断言带日期的完整文案，新增一例覆盖日期缺失时不带空括号
+- 验证：`purchase-registration` 目录定向 Jest 98 例全部通过；`src/features/inquiry`/`order`/`purchase-order-registration`/`purchase-registration`/`components/table`/`app/api/inquiry` 共 14 个测试套件 194 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
+- `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

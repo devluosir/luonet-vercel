@@ -232,7 +232,7 @@ describe('销售侧登记的"已回复客户无法报价"在采购部只读展�
 });
 
 describe('"其他 n 家已报价"只读提示', () => {
-  it('大于 0 时显示', () => {
+  it('大于 0 时显示，带上最新一条报价日期', () => {
     const record = baseRecord({
       supplierStatuses: [
         { id: 's1', supplierShortName: 'A供应商', status: 'quoted', quoteDate: '[6.1]' },
@@ -240,7 +240,17 @@ describe('"其他 n 家已报价"只读提示', () => {
       ],
     });
     renderModal(record);
-    expect(screen.getByText('其他 2 家已报价')).toBeInTheDocument();
+    expect(screen.getByText('其他 2 家已报价（6.2）')).toBeInTheDocument();
+  });
+
+  it('日期缺失时只显示数量，不带空括号', () => {
+    const record = baseRecord({
+      supplierStatuses: [
+        { id: 's1', supplierShortName: 'A供应商', status: 'quoted' },
+      ],
+    });
+    renderModal(record);
+    expect(screen.getByText('其他 1 家已报价')).toBeInTheDocument();
   });
 
   it('等于 0 时不显示', () => {

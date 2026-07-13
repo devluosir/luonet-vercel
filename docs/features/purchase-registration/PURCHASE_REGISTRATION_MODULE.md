@@ -83,7 +83,7 @@ purchaseQuotedStatuses?: CustomerQuoteStatus[];
 6. 销售侧 `supplierStatuses` 里排除飞罗、按 `supplierShortName.trim()` 去重后 `status === 'quoted'` 的数量 > 0 → "其他 n 家已报价（日期）"（蓝），日期取这些供应商里最新的报价日期（`findLatestOtherQuotedDate`）
 7. 均不满足 → 空态"—"（灰）
 
-日期统一用 `formatPurchaseMainStatus` 内部的 `withDate()` 辅助函数格式化成"label（日期）"（复用 `stripDateBrackets` 去掉存储用的方括号），日期缺失时只显示 label、不带空括号。计算逻辑（`computePurchaseMainStatus` / `formatPurchaseMainStatus` / `countOtherQuotedSuppliers` / `findLatestOtherQuotedDate`）与编辑弹窗里的"其他 n 家已报价"只读提示共用同一份 `purchaseInquiryStatus.ts`，不重复实现。编辑弹窗顶部提示行同步展示"销售侧提示：已回复客户无法报价（日期）"（与"飞罗需补充信息"/"已补充信息"同一行）。
+日期统一用 `formatPurchaseMainStatus` 内部的 `withDate()` 辅助函数格式化成"label（日期）"（复用 `stripDateBrackets` 去掉存储用的方括号），日期缺失时只显示 label、不带空括号。计算逻辑（`computePurchaseMainStatus` / `formatPurchaseMainStatus` / `countOtherQuotedSuppliers` / `findLatestOtherQuotedDate`）与编辑弹窗里"询报价状态"区域"已报价"行尾部的"其他 n 家已报价"只读提示（`quotedTrailingContent`）共用同一份 `purchaseInquiryStatus.ts`，两处文案格式完全一致（均为"其他 n 家已报价（日期）"，日期缺失时不带括号），不重复实现、不会出现只有状态列带日期而编辑弹窗不带的不一致。编辑弹窗顶部提示行同步展示"销售侧提示：已回复客户无法报价（日期）"（与"飞罗需补充信息"/"已补充信息"同一行）。
 
 **整行文字颜色同步变灰：** `PurchaseRegistrationRow.tsx` 的 `mainColorClass`（询价编号 + 内容描述的文字颜色）用 `getPurchaseRowColorClass(record)` 计算——直接复用 `computePurchaseMainStatus(record).kind`，命中 `closed`/`unavailable`（正是状态列最高两档优先级）时整行灰色；否则回退到按采购部自己的 `purchaseQuotedStatuses` 判断（已报价→蓝，其余→粉，规则与询报价登记表 `getRecordColorState` 一致）。这样"整行是否变灰"和"状态列 badge 显示什么"共用同一份优先级判断，不会出现口径不一致（此前整行颜色只看采购部自己的数据，销售侧关闭/无法报价时只有状态列 badge 变化、整行文字颜色不受影响，属真实回归，已修复）。
 
