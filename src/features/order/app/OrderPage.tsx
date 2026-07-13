@@ -73,7 +73,7 @@ function matchesKeyword(record: InquiryRecord, keyword: string): boolean {
 // ── OrderPage ─────────────────────────────────────────────────────────────────
 
 export function OrderPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const { user, handleLogout } = useAppUser();
   const permissionUser = usePermissionStore((s) => s.user);
@@ -101,6 +101,7 @@ export function OrderPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const { lastSyncedAt, syncStatus } = useInquirySync({
     enabled: status === 'authenticated' && hasOrderAccess,
+    userKey: session?.user?.username || session?.user?.name || '',
   });
 
   useEffect(() => {

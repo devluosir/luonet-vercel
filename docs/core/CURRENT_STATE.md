@@ -40,7 +40,7 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 | `/dashboard` | 首页 | 快速创建（外贸报价/外贸合同/内销报价/内销合同各自独立入口+双维度图标）、今日新增/本月累计询价与订单统计、可切换粒度的询价/订单趋势图（`recharts`，仅 `inquiry` 权限可见）、最近文档、权限过滤入口 |
 | `/quotation` | 外贸报价合同（报价单 / 销售确认） | 已合并为同一入口，页面顶部不再有 tab 按钮，改在设置面板内用 "Type: Quotation / Sales Confirmation" 切换；本地历史为主，支持 PDF/Excel、复制、编辑 |
 | `/quotation?tab=domestic` | 内销报价合同 | 独立侧边栏入口，复用报价单页面与 `quotation_history` 存储 key，默认 CNY，中文录入表单和中文合同式 PDF，历史记录使用独立 `type='domestic'`，避免混入外贸报价单 |
-| `/inquiry` | 询报价登记 | 已接入 D1 `Document`，支持客户/联络人关联、批量关联、筛选 |
+| `/inquiry` | 询报价登记 | 已接入 D1 `Document`，支持客户/联络人关联、批量关联、筛选；与另外三张登记表共用按用户/视图组隔离的跨标签自适应同步 |
 | `/order` | 订单状态表 | 复用询报价记录，支持订单状态、金额权限和进行中筛选 |
 | `/purchase-registration` | 采购部登记 | 复用询报价 D1 JSON 记录，只开放内容描述（与询报价登记共享 description）和采购部专属供应商/报价状态字段；不含备货/交货/发票 |
 | `/purchase-order-table` | 采购订单表 | 询报价登记的过滤视图（与订单状态表之于询报价登记关系相同），只展示 orderNo 有值的记录，不能新增/删除；交货日期/执行情况与订单状态表双向共享，确认日期/客户订单号只读来自订单状态表 |
@@ -96,7 +96,16 @@ rmb
 - `history` 不再是独立可编辑权限：由 `quotation`、`domesticQuotation`、`packing`、`invoice`、`purchase` 任一开启自动开启，五项全关时自动关闭；管理后台只读展示该派生状态。Dashboard 单据筛选区域、侧边栏“单据历史”入口与 History 页面入口共用这一权限结果，管理员也按该模块权限配置显示和访问。
 - 左侧 `IMPA物料` 已从公开硬编码入口改为 `impa` 模块权限。
 - 管理员不能在用户详情弹窗中关闭自己的管理员身份；该开关会禁用并提示需由其他管理员操作。
-- Worker 在单个或批量模块权限更新成功后刷新目标用户 `User.updatedAt`。前端通过 `/api/auth/permissions-meta` 在可见标签页每 90 秒检查该时间戳，变化时复用 `usePermissionRefresh` 自动刷新 session/权限并重载；后台标签页停止轮询，恢复前台立即补检，首次挂载只建立基准而不刷新。
+- Worker 在单个或批量模块权限更新成功后刷新目标用户 `User.updatedAt`。前端通过 `/api/auth/permissions-meta` 在可见且聚焦的标签页每 3 分钟检查该时间戳；同一用户名的多个标签页由跨标签协调器只保留一次检查。变化时 leader 复用 `usePermissionRefresh` 完成 silent-refresh 后广播，其它同账号标签页再重载；后台/失焦停止，恢复前台受 30 秒节流后补检，首次挂载只建立基准而不刷新。
+
+## 登记表同步现状
+
+- `/inquiry`、`/order` 属于 `full` 同步组，`/purchase-registration`、`/purchase-order-table` 属于 `restricted` 同步组；两组水位和字段完整度严格隔离。协调 key 同时包含用户名，避免账号串线。
+- 同浏览器同用户同组优先通过 Web Locks 选出一个前台 leader，BroadcastChannel 广播同步完成；不支持时使用带 owner id、5 秒 heartbeat、15 秒 TTL 的 localStorage lease，leader 离开前台后 follower 可接管。
+- 周期检查只在 `visibilityState === 'visible' && document.hasFocus()` 时运行：最近 5 分钟有离散操作时每 2 分钟检查 meta，空闲后每 10 分钟；恢复聚焦或空闲后的首次操作立即补检，并受 30 秒跨标签最小节流约束。
+- 强制整表兜底为 6 小时；meta/增量/整表请求失败保留本地数据并按 1、2、5、10 分钟退避，不会因 meta 失败退化为整表请求。`mergeFromD1`、`mergeFieldsOnly`、pending 队列及完整/受限水位语义保持不变。
+- 协调器可用 `NEXT_PUBLIC_INQUIRY_SYNC_COORDINATOR_ENABLED=false` 全局关闭，或在单浏览器设置 `inquiry_sync_coordinator_disabled=1` 诊断关闭；关闭后退回逐标签独立同步，但仍保留自适应频率和前后台保护。
+- NextAuth `SessionProvider` 周期重读为 24 小时，`refetchWhenOffline=false`；首次 session、登录/退出广播及权限变化后的 silent-refresh 不受影响。
 
 ## 数据存储现状
 

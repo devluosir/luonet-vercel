@@ -4004,6 +4004,99 @@ jsdom 26 不支持 `PointerEvent` 构造函数，组件级集成测试改用 `ne
 - 验证：`src/features/inquiry`/`order`/`purchase-order-registration`/`purchase-registration`/`components/table`/`app/api/inquiry` 共 14 个测试套件 200 例全部通过；`npx tsc --noEmit`、`npx eslint`（改动文件）均无输出；`git diff --check` 通过
 - `npm run build` 未在本次会话执行（沙箱单次命令有时长限制，历史已知问题）；未做真实浏览器验证，建议用户本地在采购部登记勾选"我司无法报价"后，到询报价登记编辑该记录，确认顶部出现"采购侧提示：我司无法报价（日期）"
 
+## TASK-162：四张登记表轮询跨标签去重 + 自适应降频，降低 Vercel Fluid Active CPU
+
+**状态：** 已完成，待部署后指标观察（P0，2026-07-13）
+
+### 背景
+
+`/inquiry`、`/order`、`/purchase-registration`、`/purchase-order-table` 都挂载 `useInquirySync`。当前每个可见标签页每 60 秒请求一次 `/api/inquiry/meta`，每小时强制整表同步一次；同时根 `Providers` 还会每 90 秒请求 `/api/auth/permissions-meta`、每 5 分钟请求 `/api/auth/session`。单个持续可见的登记表标签页稳定状态约产生 `60 + 40 + 12 = 112` 次 Vercel Function 调用/小时，多个窗口或标签页会继续叠加。
+
+现有可见性保护只能挡住 `document.visibilityState === 'hidden'` 的周期询报价/权限检查，仍有四个浪费点：
+
+1. 多个可见窗口各自独立轮询，没有按用户/视图跨标签去重。
+2. 页面长时间无操作仍保持 60 秒询报价轮询。
+3. `/api/inquiry/meta` 失败会退化成每 60 秒整表同步，异常期间反而放大 CPU。
+4. NextAuth 每 5 分钟只是重读现有 JWT claims，不会从 D1 刷新权限；后台标签页也会保留这个定时请求，实际权限更新已由 `usePermissionChangeWatcher` 负责。
+
+### 目标方案
+
+#### 1. 询报价同步：按用户、按视图组协调
+
+- 新增轻量跨标签协调器，优先使用 Web Locks + `BroadcastChannel`，并提供不支持这些 API 时的安全降级。协调 key 必须包含当前用户名和视图组：`full`（询报价登记/订单状态表）与 `restricted`（采购部登记/采购订单表）继续严格隔离，禁止合并水位。
+- 协调器必须提供双层 kill switch：全局使用 `NEXT_PUBLIC_INQUIRY_SYNC_COORDINATOR_ENABLED=false` 关闭，另以 `localStorage.setItem('inquiry_sync_coordinator_disabled', '1')` 作为单浏览器诊断开关。开关只允许退回“逐标签独立但仍遵守自适应频率/前后台保护”的同步模式，禁止把同步整体关闭；全局环境变量的变更允许通过一次 Vercel 重新部署生效，不要求引入新的远程配置接口。
+- 同一用户、同一视图组在同一浏览器内，同一时刻最多一个标签页请求 meta 或执行数据同步；同步完成后广播通知，同组其它标签页从现有 localStorage 重新装载 store，不再重复请求 D1。
+- Web Locks 正常释放之外，fallback lease 还必须有明确的 owner id、heartbeat 和 TTL；leader 标签崩溃、关闭、切到后台或长时间失去响应后，符合条件的前台 follower 必须在 30 秒内接管，不能永久停留在“已有 leader”的假状态。
+- 只有 `document.visibilityState === 'visible' && document.hasFocus()` 的标签页参与周期轮询；`hidden`、窗口失焦、最小化时停止。恢复可见并获得焦点后立即补检，但增加 30 秒最小节流，避免频繁切窗产生请求风暴。
+- 改成自适应频率：最近 5 分钟发生过键盘、指针或触摸操作时，每 2 分钟检查 meta；连续 5 分钟无操作后，每 10 分钟检查。空闲后的第一次用户操作立即补检，然后恢复 2 分钟频率。
+- 活跃检测只监听 `pointerdown`、`keydown`、`touchstart` 这类离散事件，禁止监听 `pointermove`、`mousemove`、`scroll` 等连续高频事件。适用的监听器使用 `passive: true`；多个事件共用同一个 leading throttle，最多每 1 秒更新一次活跃时间，禁止为每次事件新建 debounce timer。处理函数只更新 `useRef` 时间戳，不写 React state、不触发渲染、不持续写 localStorage，并在 hook 停用或组件卸载时完整清理，避免优化轮询时反而增加主线程开销。
+- 强制整表兜底从 1 小时调整为 6 小时；首次无水位、切换账号、持久化基准失效时仍立即整表同步。完整视图和受限视图分别维护上次整表时间。
+- 初次挂载时如果页面不可见或窗口未聚焦，不立即同步，等待首次可见/聚焦事件。
+
+#### 2. 失败策略：meta 失败不能触发整表
+
+- `getMeta()` 失败时保留现有数据，不再调用 `fullSync()`；按 `1 → 2 → 5 → 10` 分钟指数退避重试，成功后恢复正常频率。
+- 只有“没有可用基准”“已到 6 小时整表兜底时间”或用户明确触发强制同步时允许整表拉取。网络/Worker/meta 单点失败不能成为整表条件。
+- 任一 meta、增量或整表请求都要保持 single-flight；组件卸载、失焦或切到后台后取消后续调度，已发出的请求允许安全结束但不得更新已卸载组件。
+
+#### 3. 清理全局空轮询
+
+- `SessionProvider` 的 `refetchInterval` 从 5 分钟改为 24 小时，并设置 `refetchWhenOffline={false}`；保留首次 session 获取、跨标签登录/退出广播和权限变更后的既有 `silent-refresh`。不要依赖 session 定时重读来刷新权限，因为当前 JWT callback 不会在普通 `GET /api/auth/session` 时查询 D1。
+- `usePermissionChangeWatcher` 从每 90 秒改为每 3 分钟，并按用户名做跨标签 single-flight；后台/失焦停止，恢复前台立即补检但受 30 秒最小节流约束。
+- 权限变化由协调标签页完成 `silent-refresh` 后广播；其它同账号标签页再重载并读取更新后的共享 cookie，避免每个标签页分别执行权限刷新请求。
+
+### Files in scope
+
+- `src/features/inquiry/hooks/useInquirySync.ts`
+- `src/features/inquiry/services/inquiry.service.ts`
+- 新建 `src/features/inquiry/services/inquirySyncCoordinator.ts`（或同职责的窄模块）
+- 四个页面调用方：传入稳定的当前用户标识；不得改变现有 `pushLocal`/`mergeLocal` 权限语义
+- `src/hooks/usePermissionChangeWatcher.ts`
+- `src/app/providers.tsx`
+- 对应 Jest 测试文件
+
+### 验收标准
+
+- 单个持续操作的前台登记表：询报价 meta 不超过 30 次/小时；连续空闲后不超过 6 次/小时。
+- 同一用户打开多个同组登记表标签页，请求数不随标签页数量线性增长；完整视图组与受限视图组最多各保留一条独立同步链路。
+- 全局或单浏览器 kill switch 关闭协调器后，四张表仍能按逐标签独立模式正常同步；不能出现“为了降级而停止同步”的情况。
+- leader 标签直接关闭、崩溃、进入后台或停止 heartbeat 后，前台 follower 在 30 秒内接管；旧 leader 恢复后不得与新 leader 并发同步。
+- 标签页隐藏、窗口失焦或最小化 30 分钟期间，不产生询报价 meta、询报价数据或权限 meta 请求；重新聚焦后只补一次检查。
+- meta 连续失败 30 分钟时，不出现 `/api/inquiry?limit=...` 无 `since` 的周期整表请求；重试间隔符合退避序列。
+- 正常协作编辑时：活跃用户最多约 2 分钟看到其它设备更新；空闲页面在用户重新操作或重新聚焦时立即补检。
+- 同组其它标签页收到同步完成广播后，列表数据自动更新；不同视图组水位和字段完整度互不污染。
+- 权限变更在前台最长约 3 分钟自动生效；多个标签页只执行一次权限刷新，其它标签页正确重载。
+- `/api/auth/session` 不再每 5 分钟出现；登录、退出、30 天 JWT 有效期、管理员/普通用户权限刷新流程均无回归。
+- 高频鼠标移动、页面滚动不会延长活跃窗口、触发 React 渲染或增加网络请求；离散活跃事件监听器不存在重复注册和卸载残留。
+- 部署前记录 Network 基线；部署后观察 2–3 个工作日的 Vercel Function Invocations 与 Fluid Active CPU，目标是单个长期打开且大部分时间空闲的登记表场景，周期 Function 调用量较当前降低至少 70%。
+
+### 测试与验证
+
+- `useInquirySync` fake timers：前台活跃/空闲频率、hidden、blur/focus、首次后台挂载、30 秒节流、6 小时整表、meta 失败退避。
+- 跨标签协调器：同用户同组只请求一次、跨组隔离、广播后 store 重载、API 不支持时安全降级。
+- 协调器故障测试：两个 kill switch、leader heartbeat/TTL、leader 异常退出后 follower 接管、旧 leader 恢复后的双 leader 防护。
+- 活跃检测测试：只注册约定的离散事件；`pointermove`/`scroll` 不更新时间戳；1 秒内连续离散事件只更新一次；事件只改 ref、不造成额外渲染或残留 debounce timer；停用和卸载后监听器完整移除。
+- 权限 watcher：多标签只刷新一次、广播后其它标签重载、后台不轮询、恢复前台补检。
+- 回归运行 `npx jest useInquirySync inquiry.service usePermissionChangeWatcher --runInBand`、`npx tsc --noEmit`、目标文件 ESLint、`npm run build`。
+- 手动用两个普通窗口 + 一个隐私窗口验证：同账号跨标签去重、不同账号隔离、完整/受限权限字段安全、编辑弹窗内容不被后台广播清空。
+- Network 面板单独过滤 `/api/auth/session`：登录后的首次 session 请求保留，随后观察超过原 5 分钟周期，确认不再出现旧的周期请求；同时验证登录、退出、跨标签退出和权限变更后的 `silent-refresh` 仍正常。24 小时间隔本身通过配置断言或 `SessionProvider` 包装层测试确认，不要求人工等待 24 小时。
+
+### Non-goals / 红线
+
+- 不把 Worker `API_TOKEN` 或任何长期凭证下发浏览器，不把 meta 接口改成公开接口。
+- 不引入 SSE/WebSocket/Cloudflare Durable Objects；先完成低风险客户端降频与去重。
+- 不合并完整视图和受限视图的水位，不改变 `mergeFromD1`/`mergeFieldsOnly`/pending 队列的数据保护语义。
+- 不取消权限自动刷新，只把它跨标签去重并从 90 秒调整到 3 分钟。
+- 不以牺牲本地未提交编辑、删除同步或账号隔离为代价换取请求数下降。
+
+### 实施结果
+
+- 新增通用跨标签协调器与询报价同步协调层：Web Locks 优先，BroadcastChannel 通知，localStorage lease/heartbeat/TTL 降级；按用户名和 `full`/`restricted` 视图组隔离，并提供环境变量与单浏览器双 kill switch。
+- `useInquirySync` 已改为前台且聚焦才调度，活跃 2 分钟、空闲 10 分钟、强制整表 6 小时；只监听节流后的离散活跃事件。meta/数据请求失败按 `1 → 2 → 5 → 10` 分钟退避，失败不再触发整表，现有合并水位和 pending 队列语义保持不变。
+- 权限检查改为每 3 分钟、按用户跨标签 single-flight；`SessionProvider` 定时重读改为 24 小时并关闭离线 refetch。四张登记表均传入稳定用户标识。
+- 验证：TASK-162 相关 5 个 Jest 套件 35 例通过；四张登记表相关回归 17 个套件 218 例通过；`npx tsc --noEmit`、改动文件 ESLint、`npm run build`、`git diff --check` 通过。浏览器登录态下四张登记表均正常加载、交互，未出现 warning/error。
+- 全量 Jest 当前仍有与本任务无关的既有失败：客户时间轴缺少 ToastProvider、报价 store 日志断言、增强解析映射断言，以及 Jest 误收集 Playwright E2E；TASK-162 改动覆盖的套件全部通过。Vercel Function Invocations / Fluid Active CPU 的 2–3 个工作日观察留作部署后运维验收。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

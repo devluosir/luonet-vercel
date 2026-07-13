@@ -11,6 +11,8 @@ import { LogoutTransitionOverlay } from '@/components/layout/LogoutTransitionOve
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { usePermissionChangeWatcher } from '@/hooks/usePermissionChangeWatcher';
 
+export const SESSION_REFETCH_INTERVAL_SECONDS = 24 * 60 * 60;
+
 // ✅ 全局权限初始化组件
 function PermissionInitializer() {
   usePermissionInit();
@@ -31,8 +33,9 @@ function D1SyncInitializer() {
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider
-      refetchInterval={5 * 60} // 每5分钟刷新一次
+      refetchInterval={SESSION_REFETCH_INTERVAL_SECONDS} // JWT 会话每日兜底刷新一次
       refetchOnWindowFocus={false} // 窗口获得焦点时不刷新
+      refetchWhenOffline={false}
     >
       <ThemeProvider>
         <SidebarCollapseProvider>

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2026-07-13
 
+### Changed
+
+#### 四张登记表轮询跨标签去重与自适应降频（TASK-162）
+- 询报价同步新增按用户名与 `full`/`restricted` 视图组隔离的跨标签协调：Web Locks 优先，BroadcastChannel 通知，localStorage lease/heartbeat/TTL 兜底；同组只保留一个前台 leader，并提供环境变量和单浏览器双 kill switch。
+- `useInquirySync` 只在页面可见且窗口聚焦时运行，活跃期每 2 分钟、空闲 5 分钟后每 10 分钟检查，强制整表兜底从 1 小时延长到 6 小时；meta/增量/整表失败按 `1 → 2 → 5 → 10` 分钟退避，失败不再退化为整表拉取。
+- 活跃检测仅使用 `pointerdown`、`keydown`、`touchstart` 离散事件并做 1 秒 leading throttle；`pointermove`、滚动等高频事件不会续期或触发渲染。
+- 权限 meta 检查从 90 秒改为 3 分钟并按用户跨标签 single-flight；`SessionProvider` 周期重读从 5 分钟改为 24 小时并关闭离线 refetch，权限变化仍通过既有 silent-refresh 生效。
+- `pullFromD1` 在网络或非 2xx 响应时显式失败，避免分页中途失败仍被当作完整同步并推进水位。
+
 ### Added
 
 #### 采购侧"我司无法报价"传递到销售侧"采购侧提示"（TASK-161）

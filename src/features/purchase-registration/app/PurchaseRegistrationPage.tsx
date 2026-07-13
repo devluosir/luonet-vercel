@@ -32,7 +32,7 @@ function recordMatchesSupplierLink(
 }
 
 export function PurchaseRegistrationPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const { user, handleLogout } = useAppUser();
   const permissionUser = usePermissionStore((s) => s.user);
@@ -41,6 +41,7 @@ export function PurchaseRegistrationPage() {
   const patchRecordForView = useInquiryStore((s) => s.patchRecordForView);
   const { lastSyncedAt, syncStatus } = useInquirySync({
     enabled: status === 'authenticated' && hasAccess,
+    userKey: session?.user?.username || session?.user?.name || '',
     pushLocal: false,
     mergeLocal: false,
   });

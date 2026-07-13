@@ -250,26 +250,24 @@ export const inquiryService = {
     let offset = 0;
     const sinceQuery = since ? `&since=${encodeURIComponent(since)}` : '';
 
-    try {
-      while (true) {
-        const res = await fetch(
-          `${API_BASE}?limit=${PAGE_SIZE}&offset=${offset}${sinceQuery}`,
-          { cache: 'no-store' }
-        );
-        if (!res.ok) break;
-
-        const data = await res.json() as { records?: InquiryRecord[]; total?: number };
-        const page = Array.isArray(data.records) ? data.records : [];
-        all.push(...page);
-
-        // 若本页不足一页，或已达到服务端报告的总数，则结束
-        if (page.length < PAGE_SIZE) break;
-        if (typeof data.total === 'number' && all.length >= data.total) break;
-
-        offset += PAGE_SIZE;
+    while (true) {
+      const res = await fetch(
+        `${API_BASE}?limit=${PAGE_SIZE}&offset=${offset}${sinceQuery}`,
+        { cache: 'no-store' }
+      );
+      if (!res.ok) {
+        throw new Error(`询报价同步请求失败：HTTP ${res.status}`);
       }
-    } catch {
-      // 网络失败时返回已拉到的部分，不清空
+
+      const data = await res.json() as { records?: InquiryRecord[]; total?: number };
+      const page = Array.isArray(data.records) ? data.records : [];
+      all.push(...page);
+
+      // 若本页不足一页，或已达到服务端报告的总数，则结束
+      if (page.length < PAGE_SIZE) break;
+      if (typeof data.total === 'number' && all.length >= data.total) break;
+
+      offset += PAGE_SIZE;
     }
 
     return all;

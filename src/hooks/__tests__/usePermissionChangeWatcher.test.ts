@@ -31,6 +31,14 @@ function setVisibility(state: DocumentVisibilityState) {
   document.dispatchEvent(new Event('visibilitychange'));
 }
 
+function setFocus(focused: boolean) {
+  Object.defineProperty(document, 'hasFocus', {
+    configurable: true,
+    value: () => focused,
+  });
+  window.dispatchEvent(new Event(focused ? 'focus' : 'blur'));
+}
+
 function mockMeta(updatedAt: string) {
   fetchMock.mockResolvedValue({
     ok: true,
@@ -63,6 +71,7 @@ describe('usePermissionChangeWatcher', () => {
       refreshError: null,
       refreshSuccess: false,
     });
+    setFocus(true);
     setVisibility('visible');
   });
 
@@ -130,7 +139,7 @@ describe('usePermissionChangeWatcher', () => {
     hook.unmount();
   });
 
-  it('polls every 90 seconds while visible', async () => {
+  it('polls every 3 minutes while visible', async () => {
     jest.useFakeTimers();
     mockMeta('2026-07-11T11:00:00.000Z');
 
@@ -142,7 +151,7 @@ describe('usePermissionChangeWatcher', () => {
     });
 
     act(() => {
-      jest.advanceTimersByTime(89_999);
+      jest.advanceTimersByTime(179_999);
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
@@ -150,6 +159,22 @@ describe('usePermissionChangeWatcher', () => {
       jest.advanceTimersByTime(1);
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    hook.unmount();
+  });
+
+  it('stops while the window is blurred and checks after focus returns', async () => {
+    jest.useFakeTimers();
+    mockMeta('2026-07-11T12:00:00.000Z');
+    setFocus(false);
+
+    const hook = renderHook(() => usePermissionChangeWatcher());
+    act(() => {
+      jest.advanceTimersByTime(10 * 60_000);
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    act(() => setFocus(true));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     hook.unmount();
   });
 });

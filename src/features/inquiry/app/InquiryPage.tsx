@@ -142,6 +142,7 @@ export function InquiryPage() {
   }, [session]);
   const { lastSyncedAt, syncStatus } = useInquirySync({
     enabled: permissionChecked && hasInquiryAccess,
+    userKey: session?.user?.username || session?.user?.name || '',
     suspended: isModalOpen,
   });
 
