@@ -130,9 +130,19 @@ describe('采购供应商活动派生与展示', () => {
 
     expect(screen.getByText('INQ-ORDERED')).toBeInTheDocument();
     expect(screen.getByText('已转订单')).toBeInTheDocument();
+    expect(screen.getByText('客户询价编号：CN-001')).toBeInTheDocument();
+    expect(screen.getByText('报价日期：[7.12]')).toBeInTheDocument();
     expect(screen.getByText(/PO-1001/)).toBeInTheDocument();
+    expect(screen.getByText(/时间：/)).toBeInTheDocument();
+    expect(screen.getByText('INQ-ORDERED').closest('article')?.firstElementChild).toHaveClass(
+      'flex-wrap',
+      'md:flex-nowrap'
+    );
     expect(screen.queryByRole('button', { name: /编辑/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /打开采购部登记/ })).toHaveAttribute('href', '/purchase-registration');
+    expect(screen.getByRole('link', { name: /打开采购部登记/ })).toHaveAttribute(
+      'href',
+      '/purchase-registration?purchaseSupplierId=supplier-target&supplierName=%E7%9B%AE%E6%A0%87'
+    );
   });
 
   it('零命中时显示明确空状态', () => {

@@ -1,5 +1,6 @@
 import {
   clearPurchaseSupplierLocalState,
+  deletePurchaseSupplierPermanently,
   fetchPurchaseSuppliers,
   getPurchaseSupplierCacheKey,
 } from '../purchaseSupplierService';
@@ -56,5 +57,16 @@ describe('purchase supplier user-scoped cache', () => {
     expect(localStorage.getItem(getPurchaseSupplierCacheKey('b'))).not.toBeNull();
     clearPurchaseSupplierLocalState();
     expect(localStorage.getItem(getPurchaseSupplierCacheKey('b'))).toBeNull();
+  });
+
+  it('永久删除使用独立 hard-delete 路由，不复用归档接口', async () => {
+    fetchMock.mockResolvedValueOnce(response({ success: true }));
+
+    await deletePurchaseSupplierPermanently('supplier-1');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/purchase-suppliers/supplier-1/hard-delete',
+      { method: 'DELETE' }
+    );
   });
 });

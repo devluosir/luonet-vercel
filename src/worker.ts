@@ -409,6 +409,10 @@ const worker = {
       return handleUpdatePurchaseSupplier(request, env);
     }
 
+    if (path.startsWith('/api/purchase-suppliers/') && path.split('/').length === 5 && path.endsWith('/hard-delete') && request.method === 'DELETE') {
+      return handleHardDeletePurchaseSupplier(request, env);
+    }
+
     if (path.startsWith('/api/purchase-suppliers/') && path.split('/').length === 4 && request.method === 'DELETE') {
       return handleArchivePurchaseSupplier(request, env);
     }
@@ -2402,6 +2406,26 @@ async function handleArchivePurchaseSupplier(request: Request, env: Env): Promis
       WHERE id = ? AND status != 'archived'
     `).bind(updatedBy, supplierId).run();
     if (result.meta.changes === 0) return jsonResponse({ error: '采购供应商不存在' }, 404);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleHardDeletePurchaseSupplier(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+    const supplierId = decodeURIComponent(new URL(request.url).pathname.split('/')[3] || '');
+    const existing = await readPurchaseSupplier(env, supplierId);
+    if (!existing) return jsonResponse({ error: '采购供应商不存在' }, 404);
+
+    await env.USERS_DB.batch([
+      env.USERS_DB.prepare('DELETE FROM PurchaseSupplierContact WHERE supplier_id = ?').bind(supplierId),
+      env.USERS_DB.prepare('DELETE FROM PurchaseSupplier WHERE id = ?').bind(supplierId),
+    ]);
     return jsonResponse({ success: true });
   } catch (error) {
     return jsonResponse({

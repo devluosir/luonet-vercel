@@ -232,6 +232,13 @@ export async function archivePurchaseSupplier(id: string): Promise<void> {
   await requestJson(`/api/purchase-suppliers/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
+export async function deletePurchaseSupplierPermanently(id: string): Promise<void> {
+  await requestJson(
+    `/api/purchase-suppliers/${encodeURIComponent(id)}/hard-delete`,
+    { method: 'DELETE' }
+  );
+}
+
 export function getPrimaryPurchaseSupplierContact(supplier: PurchaseSupplier) {
   return supplier.contacts.find((contact) => contact.isPrimary) ?? supplier.contacts[0];
 }

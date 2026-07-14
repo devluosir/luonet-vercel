@@ -51,8 +51,8 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 | `/history` | 单据历史 | 汇总本地历史，支持搜索、筛选、导入导出 |
 | `/customer` | 客户管理 | 客户/供应商/收货人统一资料库，支持分类、卡片/列表视图、详情 |
 | `/customer/detail` | 资料详情 | 客户/供应商/收货人详情；名称和地址支持行内编辑；客户详情显示联络人、统计、活动列表、跟进记录；收货人详情显示收货订单 |
-| `/purchase-supplier` | 采购供应商 | 采购侧独立主档四列列表（简称/全称/主联系人/供货范围），支持新增、归档、服务端搜索和点击进入详情；不与销售侧供应商同步 |
-| `/purchase-supplier/detail` | 采购供应商详情 | 按 ID 加载（含归档资料），公司/采购设置逐字段保存、联系人分区保存；按 `purchaseSupplierId` 精确派生只读采购活动及已转订单提示 |
+| `/purchase-supplier` | 采购供应商 | 采购侧独立主档三列列表（全称/简称堆叠、主联系人、供货范围），支持新增、归档、服务端搜索和点击进入详情；不与销售侧供应商同步 |
+| `/purchase-supplier/detail` | 采购供应商详情 | 按 ID 加载（含归档资料），公司/采购设置采用紧凑字段布局并逐项保存、联系人分区保存；可分别归档或永久删除；按 `purchaseSupplierId` 精确派生只读采购活动，并可跳到采购部登记的全部时间精确筛选 |
 | `/mail` | AI 邮件 | DeepSeek 邮件生成和回复 |
 | `/admin` | 管理后台 | 用户管理、账号状态、管理员状态、模块权限 |
 | `/clock` | 时区汇率 | 工具模块，受权限控制；包含时间轴城市联动和外币兑人民币换算 / 走势 |
@@ -230,6 +230,7 @@ theme-config
 - 批量关联客户会写入 `customerId`、`contactId` 和规范化 `inquirer`。
 - 订单状态表可通过 `quoteStatus=has_order` 从客户详情跳转到”已成单”筛选。
 - 询报价登记 `/inquiry`、采购部登记 `/purchase-registration`（两者共用 `useInquiryFilter.ts`）默认进入时时间范围筛选选中”当月”（`` `month:${todayMonth()}` ``，即月份导航器 `MonthRangeNav` 的当月挡位），而非此前的”近3月”；该默认值在每次挂载/点击”重置”时用 `todayMonth()` 动态计算，不会因跨月不刷新页面而停留在旧月份。
+- 从采购供应商详情通过 `purchaseSupplierId` 深链接进入 `/purchase-registration` 时例外：页面自动切到“全部”时间，并优先按供应商主档 ID 精确筛选；没有 ID 的手动下拉和历史自由文本仍按供应商名称匹配。
 - 订单状态表 `/order`、采购订单表 `/purchase-order-table` 默认进入时状态筛选选中”进行中”，时间范围一并放宽到”全部”（订单状态表排序同时默认按订单号降序），与手动点击”进行中”筛选芯片的效果一致；两页的”重置筛选”也回到这个组合，而不是回到”全部状态 + 近3个月”。
 - 修复：执行情况（`orderDeliveryStatus`）是自由文本框，此前 `isInProgressOrder`/行文字颜色逻辑（`OrderPage.tsx`/`PurchaseOrderRegistrationPage.tsx`/`OrderRow.tsx`/`PurchaseOrderRow.tsx`，四处重复实现）反过来”白名单”匹配 备货/交货 前缀，导致用户手写任何不是这两个前缀的说明文字（如”合同确认中”）就被误判成”已完成”、行也从粉色变灰。现改为：只有明确写”发票...”前缀才算完成态，其余任何文字（含空、备货、交货、自定义说明）都算”进行中”并保持粉色。
 - 修复：执行情况文本框的”清除”按钮此前不生效（清空后刷新/同步又被旧值覆盖）。同步前由 `normalizeSyncPayload()` 把 payload 里明确出现的 `undefined` 转成可序列化的 `null`；Worker 再将可清空询报价字段的 `null` 解释为“删除该 JSON 属性”。这样既能把清空意图传到服务端，也不会把 `orderSubStatus: null` 等无业务含义的值长期保存在 D1。

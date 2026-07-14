@@ -4338,7 +4338,7 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 ## TASK-165：采购供应商详情页视觉微调（字段间距收紧 + 活动记录单行化）
 
-**状态：** 未开始（P3，TASK-164 视觉验收反馈）
+**状态：** 已完成（2026-07-14）
 
 **背景：** TASK-164 上线后用户对照真实截图（供应商"盐城豪泰"详情页）反馈两处间距问题：1）"基本信息"/"采购设置"字段展示区域行间距偏松，页面显得空旷；2）"采购活动"列表每条记录目前占三行（第一行 编号+报价状态徽章+已转订单徽章，第二行"客户询价编号：xxx"，第三行"报价日期：xxx"，右侧另有独立日期），希望收紧成一行展示。这是纯视觉/布局调整，不涉及数据逻辑。
 
@@ -4353,7 +4353,7 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **Non-goals / 红线：**
 - 不改变活动列表的数据来源、匹配/排序逻辑，不改字段编辑保存逻辑，不改权限门（`canRead`/`canWrite`）。
-- 不改动 `/purchase-supplier` 列表页的四列展示（TASK-164 已定稿，这次反馈只针对详情页）。
+- 不改动 `/purchase-supplier` 列表页的展示结构——注意：列表页后续又收到新一轮反馈，已在 TASK-166 里改列布局，TASK-166 的范围会覆盖/取代这一条非目标，实施顺序上两个任务谁先谁后都要保证最终列表页布局以 TASK-166 为准。
 - 不为了让单行更紧凑而删减字段信息（询价编号/状态/客户询价编号/报价日期/订单号/时间都要保留，只是布局改成一行）。
 
 **测试与验证：**
@@ -4361,7 +4361,55 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 - 现有 `purchaseSupplierActivity.test.tsx`、`PurchaseSupplierInfoCard.test.tsx` 等测试需要继续通过；如果布局调整导致某些 `getByText`/`getByRole` 定位方式失效，同步更新测试选择器，而不是为了迁就旧测试选择器改回原来的堆叠布局。
 - 手动对照本次反馈的截图（供应商"盐城豪泰"）复验一次，确认间距和单行布局符合预期。
 
-**Status:** not started
+**Status:** completed（2026-07-14）
+
+## TASK-166：采购供应商列表改版（全称/简称堆叠）+ 详情页真删除按钮 + 采购部登记精确跳转
+
+**状态：** 已完成（2026-07-14）
+
+**背景：** 用户对采购供应商模块继续给反馈，这次范围比 TASK-165 的纯间距微调更大，涉及三处：
+
+1. 列表页（`PurchaseSupplierPage.tsx`）目前"简称"和"全称"分两列平铺；希望改成客户管理模块 `src/features/customer/components/ProfileListParts.tsx`（`ProfileShortName` 组件）+ `SupplierList.tsx` 的样式——**全称作为主行（加粗），简称作为全称下方的第二行小字**，供货范围仍是独立一列，整体行间距也要收紧。
+2. 详情页要有"归档"和"删除"两个独立图标按钮。**已跟用户确认："删除"是真正的物理删除**，不是现有代码里"归档/删除"混用的软删除语义（现有 `handleDeleteCustomer`/`handleArchivePurchaseSupplier` 底层都只是 `UPDATE ... SET status='archived'`，这个代码库至今没有真正 `DELETE FROM` 业务主数据表的先例，这次是第一次引入真正的硬删除操作，需要谨慎处理）。
+3. 详情页"打开采购部登记"链接（`PurchaseSupplierActivityFeed.tsx` 第 50-55 行，当前硬编码 `href="/purchase-registration"`）点击后应该带上筛选条件跳转：定位到"此供应商"，并且把采购部登记默认的当月筛选重置为"全部"。`PurchaseRegistrationPage.tsx` 用的 `useInquiryFilter`（`src/features/inquiry/hooks/useInquiryFilter.ts`）里 `timeRange` 默认是 `month:<当月>`（`getDefaultFilter()`），不是"全部"，如果只传供应商不重置时间范围，历史月份的记录会被当月默认筛选挡住看不到。
+
+**Files in scope：**
+
+- `src/features/purchase-supplier/app/PurchaseSupplierPage.tsx` — 名称列改成参考 `ProfileShortName` 的堆叠样式：主行显示 `supplier.name`（全称，加粗），下方小字显示 `supplier.shortName`（若有，无则不渲染第二行）；表头去掉独立的"简称"列标题；供货范围保留独立列；行容器纵向 padding 进一步收紧（参考 TASK-165 对详情页的收紧幅度，不需要精确像素值）。
+- `src/features/purchase-supplier/app/PurchaseSupplierDetailPage.tsx` 和 `src/features/purchase-supplier/components/PurchaseSupplierInfoCard.tsx` — `PurchaseSupplierInfoCard.tsx` 当前头部（约第 182-202 行）右侧只有"只读"徽章，`canWrite` 为真时需要在这个头部区域新增"归档"和"删除"两个图标按钮（新增 `onArchive`/`onDelete` 两个 props，由 `PurchaseSupplierDetailPage.tsx` 传入并接住回调）；归档复用 `PurchaseSupplierPage.tsx` 里已有的确认弹窗交互模式和 `archivePurchaseSupplier` 服务，删除走下面新增的真删除服务，删除成功后从详情页跳转回 `/purchase-supplier` 列表页并提示"已删除"。
+- `src/features/purchase-supplier/services/purchaseSupplierService.ts` — 新增 `deletePurchaseSupplierPermanently(id: string): Promise<void>`（区别于现有 `archivePurchaseSupplier`），调用下面新的 Worker 硬删除路由。
+- `src/app/api/purchase-suppliers/[[...path]]/route.ts` 与 `src/worker.ts` — 新增一个和现有归档路由 `DELETE /api/purchase-suppliers/:id`（映射到 `handleArchivePurchaseSupplier`）**路径不同**的真删除路由，例如 `DELETE /api/purchase-suppliers/:id/hard-delete`（用独立路径段，不要用 query 参数区分，避免误触发）。Worker 侧新增 `handleHardDeletePurchaseSupplier`：仍需 `verifyBearerToken` + 与创建/归档一致的权限校验（`purchaseSupplier` 写权限）；执行前显式 `DELETE FROM PurchaseSupplierContact WHERE supplier_id = ?` 再 `DELETE FROM PurchaseSupplier WHERE id = ?`（两条语句放进同一个 `env.USERS_DB.batch()`，不要依赖 D1 是否默认开启外键级联，显式删两张表更保险）；成功返回 200/204，删除后按同一 ID `GET` 应该 404。
+- `src/features/purchase-supplier/app/PurchaseSupplierDetailPage.tsx`（或就近放在触发删除的地方）——删除前的二次确认弹窗文案要包含"此操作不可撤销、将永久移除该供应商主档"的明确警示；如果 `derivePurchaseSupplierActivities(records, supplier.id)` 返回的关联采购活动数量 > 0，确认弹窗要额外提示"该供应商仍关联 N 条采购登记记录，删除后这些记录只保留原始文本快照，供应商 ID 关联会失效"，但不强行阻止删除（只是更强的警示文案）；文案还要如实说明这个数字只覆盖询价登记，不覆盖正式采购单历史（`purchase_history` 存在客户端 localStorage，服务端拿不到，属于已知的检查盲区），不能让用户误以为这是全量关联统计。
+- `src/features/purchase-registration/app/PurchaseRegistrationPage.tsx` — 用 `useSearchParams()`（Next.js app router）读取新增的 `purchaseSupplierId` 和可选 `supplierName` 两个 query 参数；如果外层 `src/app/purchase-registration/page.tsx` 目前没有包 `Suspense`，按 Next 14 要求补上，避免构建报 "useSearchParams should be wrapped in a suspense boundary"。挂载时如果存在 `purchaseSupplierId`，用 `setFilter` 把 `timeRange` 强制设为 `'all'`，并把供应商筛选设置为按 ID 精确匹配（见下一条），而不是依赖现有按名称字符串匹配的 `supplier` state。
+  - `recordMatchesSupplier`（当前第 23-27 行，逻辑是 `status.supplierShortName === supplier` 纯名称匹配）需要升级成同时支持"按 ID 精确匹配"：新增一个 `supplierId` 维度（比如 `const [supplierId, setSupplierId] = useState('')`），匹配函数改成优先判断 `supplierId` 非空时 `(record.purchaseSupplierStatuses ?? []).some((status) => status.purchaseSupplierId === supplierId)`，否则回退到现有按 `supplierShortName` 字符串匹配的旧逻辑（保留给没有主档 ID 的历史自由文本和现有手动下拉筛选使用，不要破坏现有行为）。这是因为供应商改名后旧记录的名称快照会跟主档当前名称不一致，按 ID 筛选才能在改名后依然准确命中，纯名称匹配在这种场景下会漏结果。
+  - 深链接进入时的 URL 形如 `/purchase-registration?purchaseSupplierId=<id>&supplierName=<shortName>`，`PurchaseSupplierActivityFeed.tsx`（当前硬编码 `href="/purchase-registration"`）需要改成动态拼接这个 URL。
+
+**验收标准：**
+
+- 列表页每行只显示：全称（主行加粗）+ 简称（下方小字，若无简称则不显示这一行）、主联系人、供货范围；不再有单独的"简称"列标题；整体行间距比当前实现更紧凑。
+- 详情页顶部能看到独立的"归档"和"删除"两个图标按钮（仅 `canWrite` 为真时可见）；点击"删除"前必须二次确认，文案清楚说明是不可撤销的永久删除，且如有关联采购活动要显示对应数量和"仅覆盖询价登记、不覆盖正式采购单历史"的说明。
+- 确认删除后，Worker 端真正执行 `DELETE FROM PurchaseSupplier`（及其联系人），之后用同一个 ID `GET /api/purchase-suppliers/:id` 应返回 404，而不是仍能读到（用来和"归档"区分：归档后按 ID 还能读到，只是不出现在候选列表里；删除后按 ID 彻底读不到）。
+- 删除成功后跳转回列表页，原供应商不再出现在列表和任何候选选择器里。
+- 归档功能保持现状不变（按钮、确认文案、行为都不受本任务影响），删除是新增的独立能力，不能把现有归档误改成走新的硬删除接口。
+- 从供应商详情页点击"打开采购部登记"，落地页面自动：a) 时间范围筛选变成"全部"（不是当月）；b) 供应商筛选精确定位到这个供应商主档 ID 关联的记录（哪怕这些记录的名称快照跟主档当前名称不一样，只要 `purchaseSupplierId` 匹配就要能筛出来）。
+- 采购部登记页面原有的手动"供应商"下拉筛选（按名称字符串）行为不受影响，两套筛选逻辑（按 ID 深链接 / 按名称手动选择）可以共存，不冲突。
+
+**Non-goals / 红线：**
+
+- 不改动现有"归档"功能的语义和实现，归档依然是软删除（`status='archived'`），只是现在多了一个真正物理删除的独立入口。
+- 不试图让删除前的关联检查做到全量覆盖正式采购单历史，文案里如实说明覆盖范围即可，不做虚假的"全量安全"承诺，也不新增服务端接口去扫 `purchase_history`。
+- 不改动询报价登记表/订单状态表的筛选逻辑和 UI，只在采购部登记页面新增 ID 感知的供应商筛选维度，不影响 `/inquiry`、`/order` 等其它使用 `useInquiryFilter` 的页面。
+- 不改 D1 schema、不改 `PurchaseSupplierContact` 外键约束定义。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`、改动/新建文件定向 ESLint。
+- Worker/API：新硬删除路由的 Bearer/权限矩阵、删除后 `GET` 返回 404、联系人一并被删除（数据库层面验证，不只是接口返回）、归档路由行为不受影响的回归测试。
+- 前端：`recordMatchesSupplier` 升级后的单测（按 ID 精确匹配、无 ID 回退按名称匹配、改名后旧记录仍能按 ID 命中三种场景）；深链接 URL 参数解析后 `timeRange`/供应商筛选被正确设置的组件测试；删除确认弹窗文案（含/不含关联活动两种情况）的组件测试；列表页全称/简称堆叠展示的组件测试。
+- `npm run build`（沙箱里单次可能跑不满 45 秒，建议本地/CI 补一次完整验证）。
+- 手动验证：真实删掉一个测试用的采购供应商，确认它从数据库彻底消失（不是列表隐藏）；从详情页点"打开采购部登记"确认落地页确实是全部时间范围且已经按这个供应商筛选好。
+
+**Status:** completed（2026-07-14）
 
 ## 已关闭 / 不做
 

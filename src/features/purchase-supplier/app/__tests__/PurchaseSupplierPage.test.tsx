@@ -68,16 +68,18 @@ describe('PurchaseSupplierPage', () => {
     });
   });
 
-  it('只展示四个业务列，点击行进入对应详情', async () => {
+  it('全称与简称上下堆叠，并只保留供应商、主联系人、供货范围三列', async () => {
     render(<PurchaseSupplierPage />);
 
     await waitFor(() => expect(screen.getByText('阀门与备件')).toBeInTheDocument());
-    expect(screen.getByText('简称')).toBeInTheDocument();
-    expect(screen.getByText('全称')).toBeInTheDocument();
+    expect(screen.getByText('供应商')).toBeInTheDocument();
+    expect(screen.queryByText('简称')).not.toBeInTheDocument();
     expect(screen.getByText('主联系人')).toBeInTheDocument();
     expect(screen.getByText('供货范围')).toBeInTheDocument();
     expect(screen.queryByText('电话')).not.toBeInTheDocument();
     expect(screen.queryByText('SHOULD-NOT-SHOW')).not.toBeInTheDocument();
+    expect(screen.getByText('测试供应商有限公司')).toHaveClass('font-semibold');
+    expect(screen.getByText('测试供应商')).toHaveClass('text-xs');
     expect(screen.getByText('张三')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('link', { name: '查看采购供应商 测试供应商' }));

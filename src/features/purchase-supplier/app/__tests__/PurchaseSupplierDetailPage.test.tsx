@@ -1,11 +1,21 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { fetchPurchaseSupplierById } from '../../services/purchaseSupplierService';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  deletePurchaseSupplierPermanently,
+  fetchPurchaseSupplierById,
+} from '../../services/purchaseSupplierService';
 import type { PurchaseSupplier } from '../../types';
 import { PurchaseSupplierDetailPage } from '../PurchaseSupplierDetailPage';
 
 const mockAccess = jest.fn();
 const mockInit = jest.fn();
 const mockShowToast = jest.fn();
+const mockConfirm = jest.fn();
+const mockPush = jest.fn();
+let mockActivities: Array<{ id: string }> = [];
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
 
 jest.mock('../../hooks/usePurchaseSupplierAccess', () => ({
   usePurchaseSupplierAccess: () => mockAccess(),
@@ -14,12 +24,19 @@ jest.mock('../../hooks/usePurchaseSupplierAccess', () => ({
 jest.mock('../../services/purchaseSupplierService', () => ({
   fetchPurchaseSupplierById: jest.fn(),
   savePurchaseSupplier: jest.fn(),
+  archivePurchaseSupplier: jest.fn(),
+  deletePurchaseSupplierPermanently: jest.fn(),
 }));
 
 jest.mock('@/features/inquiry/state/inquiry.store', () => ({
-  useInquiryStore: {
-    getState: () => ({ init: mockInit }),
-  },
+  useInquiryStore: Object.assign(
+    (selector: (state: { records: [] }) => unknown) => selector({ records: [] }),
+    { getState: () => ({ init: mockInit }) }
+  ),
+}));
+
+jest.mock('../../services/purchaseSupplierActivity', () => ({
+  derivePurchaseSupplierActivities: () => mockActivities,
 }));
 
 jest.mock('@/hooks/useAppUser', () => ({
@@ -28,6 +45,10 @@ jest.mock('@/hooks/useAppUser', () => ({
 
 jest.mock('@/components/ui/Toast', () => ({
   useToast: () => ({ showToast: mockShowToast }),
+}));
+
+jest.mock('@/components/ui/ConfirmDialog', () => ({
+  useConfirm: () => mockConfirm,
 }));
 
 jest.mock('@/components/layout', () => ({
@@ -46,14 +67,20 @@ jest.mock('../../components/PurchaseSupplierInfoCard', () => ({
   PurchaseSupplierInfoCard: ({
     supplier,
     canWrite,
+    onArchive,
+    onDelete,
   }: {
     supplier: PurchaseSupplier;
     canWrite: boolean;
+    onArchive: () => void;
+    onDelete: () => void;
   }) => (
     <div>
       <span>{supplier.name}</span>
       <span>{canWrite ? '可写详情' : '只读详情'}</span>
       {canWrite && <button type="button">编辑资料</button>}
+      {canWrite && <button type="button" onClick={onArchive}>归档供应商</button>}
+      {canWrite && <button type="button" onClick={onDelete}>永久删除供应商</button>}
     </div>
   ),
 }));
@@ -77,7 +104,10 @@ const supplier: PurchaseSupplier = {
 describe('PurchaseSupplierDetailPage 权限门', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockActivities = [];
+    mockConfirm.mockResolvedValue(false);
     jest.mocked(fetchPurchaseSupplierById).mockResolvedValue(supplier);
+    jest.mocked(deletePurchaseSupplierPermanently).mockResolvedValue(undefined);
   });
 
   it('无读权限时显示 PermissionDenied 且不请求详情', () => {
@@ -112,5 +142,34 @@ describe('PurchaseSupplierDetailPage 权限门', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: '未找到采购供应商' })).toBeInTheDocument());
     expect(screen.getByText(/缺少供应商 ID/)).toBeInTheDocument();
     expect(fetchPurchaseSupplierById).not.toHaveBeenCalled();
+  });
+
+  it('永久删除确认明确说明不可撤销、统计盲区，零关联时不显示关联数量', async () => {
+    mockAccess.mockReturnValue({ ready: true, canRead: true, canWrite: true, userId: 'user-1' });
+    render(<PurchaseSupplierDetailPage supplierId="supplier-1" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '永久删除供应商' }));
+    await waitFor(() => expect(mockConfirm).toHaveBeenCalled());
+    const options = mockConfirm.mock.calls[0][0];
+    expect(options.description).toContain('此操作不可撤销');
+    expect(options.description).toContain('永久移除');
+    expect(options.description).toContain('仅覆盖询价登记，不覆盖正式采购单历史');
+    expect(options.description).not.toContain('仍关联');
+    expect(deletePurchaseSupplierPermanently).not.toHaveBeenCalled();
+  });
+
+  it('有关联活动时在确认中显示数量，确认后永久删除并返回列表', async () => {
+    mockActivities = [{ id: 'activity-1' }, { id: 'activity-2' }];
+    mockConfirm.mockResolvedValue(true);
+    mockAccess.mockReturnValue({ ready: true, canRead: true, canWrite: true, userId: 'user-1' });
+    render(<PurchaseSupplierDetailPage supplierId="supplier-1" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '永久删除供应商' }));
+
+    await waitFor(() => expect(deletePurchaseSupplierPermanently).toHaveBeenCalledWith('supplier-1'));
+    expect(mockConfirm.mock.calls[0][0].description).toContain('仍关联 2 条采购登记记录');
+    expect(mockConfirm.mock.calls[0][0].description).toContain('供应商 ID 关联会失效');
+    expect(mockShowToast).toHaveBeenCalledWith('已删除', 'success');
+    expect(mockPush).toHaveBeenCalledWith('/purchase-supplier');
   });
 });

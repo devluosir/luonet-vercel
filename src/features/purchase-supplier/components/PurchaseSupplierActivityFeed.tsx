@@ -39,6 +39,7 @@ export function PurchaseSupplierActivityFeed({ supplier }: { supplier: PurchaseS
     () => derivePurchaseSupplierActivities(records, supplier.id),
     [records, supplier.id]
   );
+  const registrationHref = `/purchase-registration?purchaseSupplierId=${encodeURIComponent(supplier.id)}&supplierName=${encodeURIComponent(supplier.shortName || supplier.name)}`;
 
   return (
     <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
@@ -48,7 +49,7 @@ export function PurchaseSupplierActivityFeed({ supplier }: { supplier: PurchaseS
           <p className="mt-1 text-xs text-gray-500">按主数据 ID 自动关联采购部登记记录</p>
         </div>
         <Link
-          href="/purchase-registration"
+          href={registrationHref}
           className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
         >
           打开采购部登记<ArrowUpRight className="h-4 w-4" />

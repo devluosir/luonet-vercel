@@ -16,6 +16,26 @@ const supplier: PurchaseSupplier = {
 };
 
 describe('PurchaseSupplierInfoCard', () => {
+  it('可写模式显示并触发彼此独立的归档和永久删除按钮', () => {
+    const onArchive = jest.fn();
+    const onDelete = jest.fn();
+    render(
+      <PurchaseSupplierInfoCard
+        supplier={supplier}
+        canWrite
+        onSaveField={jest.fn()}
+        onArchive={onArchive}
+        onDelete={onDelete}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '归档供应商' }));
+    fireEvent.click(screen.getByRole('button', { name: '永久删除供应商' }));
+
+    expect(onArchive).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
   it('单字段保存失败时保留原资料，并不影响其它字段展示', async () => {
     const onSaveField = jest.fn().mockResolvedValue(false);
     render(
@@ -23,6 +43,8 @@ describe('PurchaseSupplierInfoCard', () => {
         supplier={supplier}
         canWrite
         onSaveField={onSaveField}
+        onArchive={jest.fn()}
+        onDelete={jest.fn()}
       />
     );
 
@@ -48,6 +70,8 @@ describe('PurchaseSupplierInfoCard', () => {
         supplier={supplier}
         canWrite={false}
         onSaveField={jest.fn()}
+        onArchive={jest.fn()}
+        onDelete={jest.fn()}
       />
     );
 
@@ -55,6 +79,8 @@ describe('PurchaseSupplierInfoCard', () => {
     expect(screen.queryByRole('button', { name: /编辑/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /保存/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /删除联系人/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '归档供应商' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '永久删除供应商' })).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 });

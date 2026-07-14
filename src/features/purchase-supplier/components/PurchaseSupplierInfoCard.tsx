@@ -26,6 +26,8 @@ interface PurchaseSupplierInfoCardProps {
   supplier: PurchaseSupplier;
   canWrite: boolean;
   onSaveField: (changes: PurchaseSupplierFieldChanges) => Promise<boolean>;
+  onArchive: () => void | Promise<void>;
+  onDelete: () => void | Promise<void>;
 }
 
 interface FieldDefinition {
@@ -97,6 +99,8 @@ export function PurchaseSupplierInfoCard({
   supplier,
   canWrite,
   onSaveField,
+  onArchive,
+  onDelete,
 }: PurchaseSupplierInfoCardProps) {
   const [editingField, setEditingField] = useState<EditField | null>(null);
   const [draftValue, setDraftValue] = useState('');
@@ -194,7 +198,29 @@ export function PurchaseSupplierInfoCard({
           </div>
           <p className="mt-1 text-sm text-gray-500">采购侧独立供应商主数据</p>
         </div>
-        {!canWrite && (
+        {canWrite ? (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => void onArchive()}
+              disabled={supplier.status === 'archived'}
+              className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400 dark:hover:bg-amber-950/30 dark:hover:text-amber-300"
+              aria-label="归档供应商"
+              title={supplier.status === 'archived' ? '该供应商已归档' : '归档供应商'}
+            >
+              <Archive className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => void onDelete()}
+              className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-700 dark:text-gray-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+              aria-label="永久删除供应商"
+              title="永久删除供应商"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
           <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
             只读
           </span>

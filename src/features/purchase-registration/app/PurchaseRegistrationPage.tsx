@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AppLayout } from '@/components/layout';
 import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { PermissionDenied } from '@/components/PermissionDenied';
@@ -20,7 +20,11 @@ import { usePurchaseSupplierAccess } from '@/features/purchase-supplier/hooks/us
 import { fetchPurchaseSuppliers } from '@/features/purchase-supplier/services/purchaseSupplierService';
 import type { PurchaseSupplier } from '@/features/purchase-supplier/types';
 
-function recordMatchesSupplier(record: InquiryRecord, supplier: string) {
+export function recordMatchesSupplier(record: InquiryRecord, supplier: string, supplierId = '') {
+  if (supplierId) {
+    return (record.purchaseSupplierStatuses ?? [])
+      .some((status) => status.purchaseSupplierId === supplierId);
+  }
   return !supplier
     || (record.purchaseSupplierStatuses ?? [])
       .some((status) => status.supplierShortName === supplier);
@@ -38,6 +42,9 @@ function recordMatchesSupplierLink(
 export function PurchaseRegistrationPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const deepLinkedSupplierId = searchParams.get('purchaseSupplierId')?.trim() || '';
+  const deepLinkedSupplierName = searchParams.get('supplierName')?.trim() || '';
   const { user, handleLogout } = useAppUser();
   const permissionUser = usePermissionStore((s) => s.user);
   const hasAccess = usePermissionStore((s) => s.hasPermission('purchaseRegistration'));
@@ -52,6 +59,7 @@ export function PurchaseRegistrationPage() {
 
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
   const [supplier, setSupplier] = useState('');
+  const [supplierId, setSupplierId] = useState('');
   const [supplierLinkFilter, setSupplierLinkFilter] = useState<'all' | 'unlinked'>('all');
   const [purchaseSuppliers, setPurchaseSuppliers] = useState<PurchaseSupplier[]>([]);
   const purchaseSupplierAccess = usePurchaseSupplierAccess();
@@ -103,6 +111,13 @@ export function PurchaseRegistrationPage() {
   const { filter, setFilter, filteredAndSorted, baseFiltered, activeCount, reset } =
     useInquiryFilter(filterableRecords);
 
+  useEffect(() => {
+    if (!deepLinkedSupplierId) return;
+    setSupplierId(deepLinkedSupplierId);
+    setSupplier(deepLinkedSupplierName);
+    setFilter((current) => ({ ...current, timeRange: 'all' }));
+  }, [deepLinkedSupplierId, deepLinkedSupplierName, setFilter]);
+
   // 采购部登记按"供应商"筛选（对应编辑弹窗里的采购部专属供应商列表），而不是询价人
   const supplierOptions = useMemo(
     () =>
@@ -131,8 +146,8 @@ export function PurchaseRegistrationPage() {
   // "待关联供应商"：采购部登记自己的供应商列表（purchaseSupplierStatuses）还没有任何一条，
   // 替代原本复用询报价登记"待关联客户"（record.customerId，那是销售侧概念，采购部登记用不上）
   const supplierFilteredBase = useMemo(
-    () => baseFiltered.filter((record) => recordMatchesSupplier(record, supplier)),
-    [baseFiltered, supplier]
+    () => baseFiltered.filter((record) => recordMatchesSupplier(record, supplier, supplierId)),
+    [baseFiltered, supplier, supplierId]
   );
 
   const linkFilteredBase = useMemo(
@@ -151,18 +166,19 @@ export function PurchaseRegistrationPage() {
     () =>
       restoreOriginalRecords(
         filteredAndSorted
-          .filter((record) => recordMatchesSupplier(record, supplier))
+          .filter((record) => recordMatchesSupplier(record, supplier, supplierId))
           .filter((record) => recordMatchesSupplierLink(record, supplierLinkFilter)),
         activeRecordsById
       ),
-    [filteredAndSorted, supplier, supplierLinkFilter, activeRecordsById]
+    [filteredAndSorted, supplier, supplierId, supplierLinkFilter, activeRecordsById]
   );
 
-  const totalActiveCount = activeCount + (supplier ? 1 : 0) + (supplierLinkFilter === 'unlinked' ? 1 : 0);
+  const totalActiveCount = activeCount + (supplier || supplierId ? 1 : 0) + (supplierLinkFilter === 'unlinked' ? 1 : 0);
 
   const handleReset = () => {
     reset();
     setSupplier('');
+    setSupplierId('');
     setSupplierLinkFilter('all');
   };
 
@@ -214,7 +230,10 @@ export function PurchaseRegistrationPage() {
               label: '供应商',
               value: supplier,
               options: supplierOptions,
-              onChange: setSupplier,
+              onChange: (value) => {
+                setSupplier(value);
+                setSupplierId('');
+              },
             }}
             linkFilter={{
               label: '待关联供应商',

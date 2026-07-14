@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { PermissionDenied } from '@/components/PermissionDenied';
 import { Button } from '@/components/ui/Button';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { useAppUser } from '@/hooks/useAppUser';
@@ -17,9 +19,12 @@ import {
 } from '../components/PurchaseSupplierInfoCard';
 import { usePurchaseSupplierAccess } from '../hooks/usePurchaseSupplierAccess';
 import {
+  archivePurchaseSupplier,
+  deletePurchaseSupplierPermanently,
   fetchPurchaseSupplierById,
   savePurchaseSupplier,
 } from '../services/purchaseSupplierService';
+import { derivePurchaseSupplierActivities } from '../services/purchaseSupplierActivity';
 import type { PurchaseSupplier, PurchaseSupplierInput } from '../types';
 
 function toSupplierInput(
@@ -45,12 +50,22 @@ interface PurchaseSupplierDetailPageProps {
 }
 
 export function PurchaseSupplierDetailPage({ supplierId }: PurchaseSupplierDetailPageProps) {
+  const router = useRouter();
+  const confirm = useConfirm();
   const { ready, canRead, canWrite, userId } = usePurchaseSupplierAccess();
   const { user, handleLogout } = useAppUser();
   const { showToast } = useToast();
   const [supplier, setSupplier] = useState<PurchaseSupplier | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const inquiryRecords = useInquiryStore((state) => state.records);
+  const currentSupplierId = supplier?.id;
+  const relatedActivityCount = useMemo(
+    () => currentSupplierId
+      ? derivePurchaseSupplierActivities(inquiryRecords, currentSupplierId).length
+      : 0,
+    [inquiryRecords, currentSupplierId]
+  );
 
   const loadSupplier = useCallback(async () => {
     if (!ready || !canRead) return;
@@ -100,6 +115,47 @@ export function PurchaseSupplierDetailPage({ supplierId }: PurchaseSupplierDetai
     }
   };
 
+  const handleArchive = async () => {
+    if (!supplier || supplier.status === 'archived' || !canWrite) return;
+    const confirmed = await confirm({
+      title: '归档采购供应商',
+      description: `确认归档“${supplier.shortName || supplier.name}”吗？历史单据快照不会受影响。`,
+      confirmLabel: '归档',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+
+    try {
+      await archivePurchaseSupplier(supplier.id);
+      showToast('已归档', 'success');
+      await loadSupplier();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '归档失败', 'error');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!supplier || !canWrite) return;
+    const relatedWarning = relatedActivityCount > 0
+      ? `\n\n该供应商仍关联 ${relatedActivityCount} 条采购登记记录。删除后这些记录只保留原始文本快照，供应商 ID 关联会失效。`
+      : '';
+    const confirmed = await confirm({
+      title: '永久删除采购供应商',
+      description: `此操作不可撤销，将永久移除“${supplier.shortName || supplier.name}”供应商主档及联系人。${relatedWarning}\n\n关联数量仅覆盖询价登记，不覆盖正式采购单历史。`,
+      confirmLabel: '永久删除',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+
+    try {
+      await deletePurchaseSupplierPermanently(supplier.id);
+      showToast('已删除', 'success');
+      router.push('/purchase-supplier');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '删除失败', 'error');
+    }
+  };
+
   if (!ready) return <FullScreenSpinner />;
   if (!canRead) return <PermissionDenied message="您没有采购供应商读取权限" />;
 
@@ -128,6 +184,8 @@ export function PurchaseSupplierDetailPage({ supplierId }: PurchaseSupplierDetai
                 supplier={supplier}
                 canWrite={canWrite}
                 onSaveField={handleSaveField}
+                onArchive={handleArchive}
+                onDelete={handleDelete}
               />
               <PurchaseSupplierActivityFeed supplier={supplier} />
             </>

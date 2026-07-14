@@ -98,8 +98,8 @@ export function PurchaseSupplierPage() {
         {stale && <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">网络不可用，当前显示此账号上次缓存的数据。</div>}
 
         <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-          <div className="hidden grid-cols-[1.1fr_1.6fr_1fr_1.3fr_auto] gap-4 border-b border-gray-100 px-5 py-3 text-xs font-medium text-gray-500 md:grid dark:border-gray-800">
-            <span>简称</span><span>全称</span><span>主联系人</span><span>供货范围</span><span aria-hidden="true" />
+          <div className="hidden grid-cols-[1.8fr_1fr_1.3fr_auto] gap-4 border-b border-gray-100 px-5 py-2.5 text-xs font-medium text-gray-500 md:grid dark:border-gray-800">
+            <span>供应商</span><span>主联系人</span><span>供货范围</span><span aria-hidden="true" />
           </div>
           {loading && items.length === 0 ? <div className="p-10 text-center text-sm text-gray-500">正在加载…</div> : items.length === 0 ? <div className="p-10 text-center text-sm text-gray-500">暂无采购供应商资料</div> : items.map((supplier) => {
             const contact = getPrimaryPurchaseSupplierContact(supplier);
@@ -116,10 +116,14 @@ export function PurchaseSupplierPage() {
                     router.push(`/purchase-supplier/detail?id=${encodeURIComponent(supplier.id)}`);
                   }
                 }}
-                className="grid cursor-pointer gap-2 border-b border-gray-50 px-5 py-4 transition-colors last:border-0 hover:bg-blue-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 md:grid-cols-[1.1fr_1.6fr_1fr_1.3fr_auto] md:items-center md:gap-4 dark:border-gray-800/70 dark:hover:bg-blue-950/20"
+                className="grid cursor-pointer gap-2 border-b border-gray-50 px-5 py-3 transition-colors last:border-0 hover:bg-blue-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 md:grid-cols-[1.8fr_1fr_1.3fr_auto] md:items-center md:gap-4 dark:border-gray-800/70 dark:hover:bg-blue-950/20"
               >
-                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{supplier.shortName || supplier.name}</div>
-                <div className="truncate text-sm text-gray-600 dark:text-gray-300">{supplier.name}</div>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{supplier.name}</div>
+                  {supplier.shortName && supplier.shortName !== supplier.name && (
+                    <div className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">{supplier.shortName}</div>
+                  )}
+                </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300">{contact?.name || '—'}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">{supplier.data.supplyScope || '—'}</div>
                 {canWrite && <div className="flex gap-1">
