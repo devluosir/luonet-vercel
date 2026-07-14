@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Archive, Pencil, Plus, RefreshCw, Search } from 'lucide-react';
+import { Archive, Plus, RefreshCw, Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { PermissionDenied } from '@/components/PermissionDenied';
 import { Button } from '@/components/ui/Button';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -14,6 +15,7 @@ import { AppLayout } from '@/components/layout';
 import { useAppUser } from '@/hooks/useAppUser';
 
 export function PurchaseSupplierPage() {
+  const router = useRouter();
   const { ready, canRead, canWrite, userId } = usePurchaseSupplierAccess();
   const { showToast } = useToast();
   const confirm = useConfirm();
@@ -22,7 +24,6 @@ export function PurchaseSupplierPage() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [stale, setStale] = useState(false);
-  const [editing, setEditing] = useState<PurchaseSupplier | undefined>();
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -54,7 +55,6 @@ export function PurchaseSupplierPage() {
       await savePurchaseSupplier(input);
       showToast(input.id ? '采购供应商已更新' : '采购供应商已创建', 'success');
       setShowForm(false);
-      setEditing(undefined);
       await load();
     } catch (error) {
       showToast(error instanceof Error ? error.message : '保存失败', 'error');
@@ -87,7 +87,7 @@ export function PurchaseSupplierPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">采购供应商</h1>
             <p className="mt-1 text-sm text-gray-500">采购侧独立主数据，不与销售侧客户管理中的供应商混用。</p>
           </div>
-          {canWrite && <Button onClick={() => { setEditing(undefined); setShowForm(true); }}><Plus className="h-4 w-4" />新增采购供应商</Button>}
+          {canWrite && <Button onClick={() => setShowForm(true)}><Plus className="h-4 w-4" />新增采购供应商</Button>}
         </div>
 
         <div className="mb-4 flex items-center gap-2 rounded-xl bg-white p-3 shadow-sm dark:bg-gray-900">
@@ -98,27 +98,50 @@ export function PurchaseSupplierPage() {
         {stale && <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">网络不可用，当前显示此账号上次缓存的数据。</div>}
 
         <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-          <div className="hidden grid-cols-[1.2fr_1.6fr_1fr_1fr_auto] gap-4 border-b border-gray-100 px-5 py-3 text-xs font-medium text-gray-500 md:grid dark:border-gray-800">
-            <span>简称 / 编码</span><span>供应商全称</span><span>主联系人</span><span>电话</span><span>操作</span>
+          <div className="hidden grid-cols-[1.1fr_1.6fr_1fr_1.3fr_auto] gap-4 border-b border-gray-100 px-5 py-3 text-xs font-medium text-gray-500 md:grid dark:border-gray-800">
+            <span>简称</span><span>全称</span><span>主联系人</span><span>供货范围</span><span aria-hidden="true" />
           </div>
           {loading && items.length === 0 ? <div className="p-10 text-center text-sm text-gray-500">正在加载…</div> : items.length === 0 ? <div className="p-10 text-center text-sm text-gray-500">暂无采购供应商资料</div> : items.map((supplier) => {
             const contact = getPrimaryPurchaseSupplierContact(supplier);
             return (
-              <div key={supplier.id} className="grid gap-2 border-b border-gray-50 px-5 py-4 last:border-0 md:grid-cols-[1.2fr_1.6fr_1fr_1fr_auto] md:items-center md:gap-4 dark:border-gray-800/70">
-                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{supplier.shortName || supplier.name}<div className="text-xs font-normal text-gray-400">{supplier.code || '未设编码'}</div></div>
+              <div
+                key={supplier.id}
+                role="link"
+                tabIndex={0}
+                aria-label={`查看采购供应商 ${supplier.shortName || supplier.name}`}
+                onClick={() => router.push(`/purchase-supplier/detail?id=${encodeURIComponent(supplier.id)}`)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    router.push(`/purchase-supplier/detail?id=${encodeURIComponent(supplier.id)}`);
+                  }
+                }}
+                className="grid cursor-pointer gap-2 border-b border-gray-50 px-5 py-4 transition-colors last:border-0 hover:bg-blue-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 md:grid-cols-[1.1fr_1.6fr_1fr_1.3fr_auto] md:items-center md:gap-4 dark:border-gray-800/70 dark:hover:bg-blue-950/20"
+              >
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{supplier.shortName || supplier.name}</div>
                 <div className="truncate text-sm text-gray-600 dark:text-gray-300">{supplier.name}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-300">{contact?.name || '—'}</div>
-                <div className="text-sm text-gray-500">{contact?.phone || '—'}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{supplier.data.supplyScope || '—'}</div>
                 {canWrite && <div className="flex gap-1">
-                  <button type="button" onClick={() => { setEditing(supplier); setShowForm(true); }} className="rounded p-2 text-gray-400 hover:bg-gray-100 hover:text-blue-600" aria-label="编辑"><Pencil className="h-4 w-4" /></button>
-                  <button type="button" onClick={() => handleArchive(supplier)} className="rounded p-2 text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label="归档"><Archive className="h-4 w-4" /></button>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleArchive(supplier);
+                    }}
+                    onKeyDown={(event) => event.stopPropagation()}
+                    className="rounded p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                    aria-label={`归档 ${supplier.shortName || supplier.name}`}
+                  >
+                    <Archive className="h-4 w-4" />
+                  </button>
                 </div>}
               </div>
             );
           })}
         </div>
       </div>
-      {showForm && <PurchaseSupplierFormModal supplier={editing} saving={saving} onClose={() => { setShowForm(false); setEditing(undefined); }} onSave={handleSave} />}
+      {showForm && <PurchaseSupplierFormModal saving={saving} onClose={() => setShowForm(false)} onSave={handleSave} />}
     </div>
     </AppLayout>
   );

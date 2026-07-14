@@ -171,6 +171,30 @@ export async function fetchPurchaseSuppliers(params: {
   }
 }
 
+export async function fetchPurchaseSupplierById(params: {
+  id: string;
+  userId: string;
+  canRead: boolean;
+}): Promise<PurchaseSupplier> {
+  if (!params.canRead || !params.userId.trim()) {
+    clearPurchaseSupplierLocalState(params.userId);
+    throw new PurchaseSupplierRequestError('没有采购供应商读取权限', 403);
+  }
+
+  try {
+    const result = await requestJson<{ supplier?: D1Supplier }>(
+      `/api/purchase-suppliers/${encodeURIComponent(params.id)}`
+    );
+    if (!result.supplier) throw new Error('服务端未返回采购供应商资料');
+    return normalizeSupplier(result.supplier);
+  } catch (error) {
+    if (error instanceof PurchaseSupplierRequestError && (error.status === 401 || error.status === 403)) {
+      clearPurchaseSupplierLocalState(params.userId);
+    }
+    throw error;
+  }
+}
+
 function buildPayload(input: PurchaseSupplierInput) {
   return {
     id: input.id,

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### 采购供应商详情页与自动活动列表（TASK-164）
+- `/purchase-supplier` 列表收敛为简称、全称、主联系人、供货范围四个业务列，移除行内编辑与电话/编码展示；点击行进入独立详情页，归档按钮保持独立操作。
+- 新增 `/purchase-supplier/detail?id=...`：支持公司资料、采购设置和联系人逐字段/分区保存；保存失败保留服务端最新展示，不影响其它字段；归档供应商仍可按 ID 查看。
+- 详情页活动列表从现有询价 store 按 `purchaseSupplierId` 精确派生，展示报价状态、报价日期及“已转订单”提示，只提供采购部登记跳转，不新增活动表或询价编辑入口。
+- 详情读取沿用 `purchaseSupplier` / `purchaseRegistration` / `purchase` 三权限 OR 规则；仅有读权限时完整展示资料和活动，但不渲染任何编辑、保存或联系人增删控件。
+
 #### 采购侧独立供应商主档（TASK-163）
 - 新增 `/purchase-supplier`、`purchaseSupplier` 权限、独立 D1 `PurchaseSupplier` / `PurchaseSupplierContact` 表及 Worker/Next API；供应商编码由大小写不敏感 partial unique index 保证并发唯一，删除改为归档。
 - 新增 `migrations/014_add_purchase_suppliers.sql`；2026-07-14 已在远端 `mluonet-users` 执行并部署对应 Worker，认证 GET smoke test 返回 200。

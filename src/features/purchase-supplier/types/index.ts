@@ -1,3 +1,5 @@
+import type { PurchaseSupplierQuoteStatus } from '@/features/inquiry/types';
+
 export interface PurchaseSupplierContact {
   id: string;
   name: string;
@@ -42,4 +44,14 @@ export interface PurchaseSupplierSelection {
   id?: string;
   name: string;
   supplier?: PurchaseSupplier;
+}
+
+export interface PurchaseSupplierActivityItem {
+  id: string;
+  inquiryNo: string;
+  customerNo: string;
+  inquiryDate: string;
+  updatedAt: string;
+  orderNo?: string;
+  quoteStatus: PurchaseSupplierQuoteStatus;
 }

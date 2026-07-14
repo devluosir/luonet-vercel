@@ -4296,6 +4296,46 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 - 不用主档实时数据渲染旧单据/PDF，不因主档修改批量回写历史快照。
 - 不顺手重写采购 PDF、采购 store 或已稳定的销售/采购状态同步规则。
 
+## TASK-164：采购供应商列表简化 + 详情页（信息编辑 + 自动活动列表）
+
+**状态：** 已完成（2026-07-14；TASK-163 已部署）
+
+**背景：** TASK-163 落地的 `/purchase-supplier`（`src/features/purchase-supplier/app/PurchaseSupplierPage.tsx`）目前是一张平铺列表（简称/编码、供应商全称、主联系人、电话、操作），编辑走 `PurchaseSupplierFormModal` 弹窗一次性提交整份表单，没有独立详情页。用户希望参照现有客户管理模块的详情页体验（`src/app/customer/detail/page.tsx` + `src/features/customer/app/CustomerDetailPage.tsx` + `CustomerInfoCard.tsx` 的逐字段编辑、`CustomerActivityFeed.tsx` 的活动列表）重做这块：列表页只保留四个核心字段，点进详情页做字段级编辑，并展示一个自动关联的活动列表。
+
+已跟用户确认："活动列表"指自动关联采购部登记表中的记录（不是手动时间线/备注），并在记录已转为正式订单时给出提示——不需要新增数据表，纯前端从现有 `useInquiryStore` 派生，模式对应 `CustomerActivityFeed.tsx` 对 `customer` 类型走的"询价记录派生 feed"（不是 supplier 类型现在那种一行"使用情况"文字，也不是手动 `CustomerEvent` 时间线）。
+
+**Files in scope：**
+- `src/features/purchase-supplier/app/PurchaseSupplierPage.tsx` — 表头/每行列改为 简称、全称、主联系人、供货范围（取 `supplier.data.supplyScope`，空值显示"—"）；去掉电话列；点击整行（除"归档"按钮外）跳转 `/purchase-supplier/detail?id=${supplier.id}`；行内"编辑"铅笔按钮移除（编辑收敛到详情页），"新增采购供应商"仍用现有 `PurchaseSupplierFormModal` 弹窗创建。
+- 新建 `src/app/purchase-supplier/detail/page.tsx` — 路由壳层，仿 `src/app/customer/detail/page.tsx`，从 `useSearchParams` 取 `id`，渲染下面的 Detail 组件。
+- 新建 `src/features/purchase-supplier/app/PurchaseSupplierDetailPage.tsx` — 仿 `CustomerDetailPage.tsx` 结构：`AppLayout` + 面包屑（首页 / 采购供应商 `/purchase-supplier` / 供应商名称）、加载态、未找到态、`usePurchaseSupplierAccess()` 权限门（无 `purchaseSupplier`/`purchaseRegistration`/`purchase` 任一权限时 `PermissionDenied`；只有 `canRead` 无 `canWrite` 时只读展示，不显示编辑控件）。
+- 新建 `src/features/purchase-supplier/components/PurchaseSupplierInfoCard.tsx` — 仿 `CustomerInfoCard.tsx` 的逐字段编辑体验（每个字段独立编辑/保存，不是整表单一次提交）：名称、简称、编码、地址、联系人列表（复用/参考现有 `PurchaseSupplierFormModal` 里的联系人管理 UI，包含主联系人标记）、`data` 里的供应产品/业务范围、供应商类型、默认付款条件、默认币种、备注。保存仍走 `savePurchaseSupplierService`（现有 `purchaseSupplierService.ts` 的 save 接口），只是从"一次提交整份表单"改成"每个字段区块各自触发保存"，保存失败要有单独的错误提示，不能因为一个字段保存失败影响其它已保存字段的展示状态。
+- 新建 `src/features/purchase-supplier/components/PurchaseSupplierActivityFeed.tsx` — 仿 `CustomerActivityFeed.tsx`：从 `useInquiryStore((s) => s.records)` 中筛选 `record.purchaseSupplierStatuses?.some(s => s.purchaseSupplierId === supplier.id)` 的记录，按 `inquiryDate`/`updatedAt` 倒序渲染列表；每条展示询价编号 `inquiryNo`、客户询价编号 `customerNo`、该记录里对应这个供应商的 `PurchaseSupplierQuoteStatus`（报价日期/状态，如有），以及当 `record.orderNo?.trim()` 非空时的"已转订单"徽章（复用 `getInquiryQuoteStatusBadge` 的徽章样式规则或就近抽一个同风格的最小 badge helper，不必强行复用整个 `inquiryTimelineService.ts`，因为那个文件的匹配逻辑是给"客户别名模糊匹配"设计的，采购供应商这里是精确 ID 匹配，没有别名问题）。列表本身只读展示 + 一个跳转到 `/purchase-registration`（或定位到该询价编号）的入口，不在这个页面里放编辑询价记录的弹窗——询价记录的编辑入口继续只在 `/purchase-registration`。
+- `src/features/purchase-supplier/types/index.ts` — 按需补充 activity item 的最小类型（如 `PurchaseSupplierActivityItem`）。
+- `src/features/purchase-supplier/services/purchaseSupplierService.ts` — 如果需要一个纯函数把 `InquiryRecord[]` + `supplierId` 转成 activity 列表，放在这或新建同 feature 下的 `services/purchaseSupplierActivity.ts`，保持是同步纯函数、不发新网络请求（数据来源仍是 inquiry store 已同步好的数据）。
+
+**验收标准：**
+- 列表页表头及每行只显示 简称、全称、主联系人、供货范围 四列；点击行体（归档按钮除外）跳转到详情页，URL 带对应 `id`。
+- 详情页字段可以逐项编辑并独立保存，不需要打开一次性大表单；联系人的主联系人规则、保存失败提示与 TASK-163 已有规则保持一致。
+- 详情页"活动列表"只包含 `purchaseSupplierStatuses` 里带有该供应商 id 的询价记录，按时间倒序；含 `orderNo` 的记录显示"已转订单"一类的醒目提示；不含 orderNo 的正常显示报价状态。
+- 活动列表为只读 + 跳转，不提供就地编辑询价记录的入口。
+- 只有读权限、没有写权限的账号可以打开详情页浏览四个核心字段和活动列表，但看不到任何编辑控件（输入框、保存按钮、联系人增删）。
+- 归档状态的供应商详情页仍可正常打开、正常显示历史活动列表；列表页新建候选/选择器不受本任务影响，沿用 TASK-163 已有的归档过滤规则。
+- 未选择任何供应商访问详情页路由（缺 `id` 或 id 不存在）时展示明确的"未找到"提示，不白屏。
+
+**Non-goals / 红线：**
+- 不新增任何数据库表（不做 `PurchaseSupplierEvent` 或类似手动时间线/备注表）；"活动列表"必须是从现有 `InquiryRecord` 派生的只读视图。
+- 不修改 `purchaseSupplierStatuses`/`purchaseSupplierId`/`purchaseOrderSupplierId` 字段结构、不改询价记录的同步/合并逻辑、不改 `restrictedView.ts` 白名单。
+- 不在采购供应商详情页里新增询价记录的编辑功能，编辑入口继续只在 `/purchase-registration`。
+- 不改动 TASK-163 已实现的 Worker/Next API/权限/缓存逻辑，本任务只涉及前端列表与详情页展示层。
+
+**测试与验证：**
+- `npx tsc --noEmit`、改动/新建文件定向 ESLint。
+- 新建组件的 Jest：活动列表按 supplierId 精确匹配（含多条命中、零命中、含 orderNo 的记录正确显示提示）、详情页权限门（无权限/只读/可写三种状态）、信息卡片单字段保存失败不影响其它字段展示。
+- `npm run build`（注意：沙箱里单次 build 曾在 45 秒内跑不完，只到 "Creating an optimized production build" 之前，建议本地或 CI 完整跑一次，不要只凭沙箱结果判断通过）。
+- 手动浏览器验证：列表四列展示、点击行跳转详情页、字段级编辑保存、活动列表正确关联并展示"已转订单"提示、只读账号看不到编辑控件。
+
+**Status:** completed（2026-07-14）
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

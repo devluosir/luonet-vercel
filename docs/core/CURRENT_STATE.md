@@ -51,7 +51,8 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 | `/history` | 单据历史 | 汇总本地历史，支持搜索、筛选、导入导出 |
 | `/customer` | 客户管理 | 客户/供应商/收货人统一资料库，支持分类、卡片/列表视图、详情 |
 | `/customer/detail` | 资料详情 | 客户/供应商/收货人详情；名称和地址支持行内编辑；客户详情显示联络人、统计、活动列表、跟进记录；收货人详情显示收货订单 |
-| `/purchase-supplier` | 采购供应商 | 采购侧独立主档，含公司资料、联系人、归档和服务端搜索；不与销售侧供应商同步 |
+| `/purchase-supplier` | 采购供应商 | 采购侧独立主档四列列表（简称/全称/主联系人/供货范围），支持新增、归档、服务端搜索和点击进入详情；不与销售侧供应商同步 |
+| `/purchase-supplier/detail` | 采购供应商详情 | 按 ID 加载（含归档资料），公司/采购设置逐字段保存、联系人分区保存；按 `purchaseSupplierId` 精确派生只读采购活动及已转订单提示 |
 | `/mail` | AI 邮件 | DeepSeek 邮件生成和回复 |
 | `/admin` | 管理后台 | 用户管理、账号状态、管理员状态、模块权限 |
 | `/clock` | 时区汇率 | 工具模块，受权限控制；包含时间轴城市联动和外币兑人民币换算 / 走势 |
@@ -91,7 +92,7 @@ rmb
 - `quotation` 控制外贸报价单和销售确认；`domesticQuotation` 独立控制内销报价与内销合同。报价页面守卫直接按 URL `tab` 选择对应权限模块，避免首次进入时受 store tab 异步初始化影响。
 - `inquiry` 控制完整询报价登记和订单状态表入口。
 - `purchaseRegistration` 控制采购部登记过滤视图；该视图不授予完整询报价登记权限。
-- `purchaseSupplier` 控制采购供应商管理页面和新增/编辑/归档；采购供应商候选读取另外允许 `purchaseRegistration` 或 `purchase`，但不授予维护权限。
+- `purchaseSupplier` 控制采购供应商新增、编辑和归档；采购供应商候选与详情读取另外允许 `purchaseRegistration` 或 `purchase`，但详情只读且不授予任何维护权限。
 - `purchaseOrderTable` 控制采购订单表过滤视图（询报价登记的已成单子集）；该视图不授予完整询报价登记权限。
 - `inquiry.batchEdit` 是询报价批量编辑 / 导入导出高级权限。
 - `order.financials` 是订单状态表金额、回款、到账金额高级权限。
