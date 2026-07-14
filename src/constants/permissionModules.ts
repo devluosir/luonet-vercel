@@ -44,6 +44,7 @@ export const PERMISSION_MODULES: PermissionModuleDef[] = [
   },
   { moduleId: 'history', label: '单据历史', icon: '📚', category: 'document' },
   { moduleId: 'customer', label: '客户管理', icon: '👥', category: 'management' },
+  { moduleId: 'purchaseSupplier', label: '采购供应商', icon: '🏭', category: 'management' },
   { moduleId: 'ai-email', label: 'AI 邮件', icon: '🤖', category: 'tool' },
   { moduleId: 'impa', label: 'IMPA 物料', icon: '🔎', category: 'tool' },
   { moduleId: 'clock', label: '时区汇率', icon: '🕐', category: 'tool' },

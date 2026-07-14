@@ -1,6 +1,6 @@
 # Current State
 
-最后更新：2026-07-13
+最后更新：2026-07-14
 当前分支：`main`
 当前提交：以 `git log -1 --oneline` 为准
 应用版本：`1.2.0`（`package.json`）
@@ -18,6 +18,7 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 - 主站：Vercel，香港 `hkg1` 区域。
 - Web App：根布局通过 `/static/manifest.json` 声明 PWA manifest，并提供多尺寸 favicon 与 Apple Touch Icon；manifest 图标路径、格式和尺寸与磁盘资源一致。
 - 用户和权限服务：Cloudflare Worker + D1，自定义域 `https://udb.luocompany.net`。
+- 采购供应商后端：D1 migration 014 已于 2026-07-14 应用，`PurchaseSupplier` / `PurchaseSupplierContact` 及唯一编码索引已上线；Worker 新 API 已部署。
 - AI 邮件：DeepSeek Chat API，通过 `/api/generate` 调用。
 - PDF/Excel：前端生成；字体、头图、印章、logo 图标资源由 `scripts/embed-resources.js` 在构建时嵌入到 `src/lib/embedded-resources.ts`（该文件仍不手工编辑，改 `public/` 源文件后重跑脚本）。
 - 全部 6 个 PDF 生成器（内销报价/合同、外贸报价单、销售确认、装箱单、发票、采购单）的表头已从整条横幅图片统一改为"logo 图标 + 矢量文字"排版，共享实现在 `src/utils/pdfHeaderBlock.ts`（`drawHeaderBlock()`），文字来自 `src/utils/companyLetterhead.ts` 的 `COMPANY_LETTERHEAD` 常量；单份文档体积减少约 80KB（双语表头场景）。`logoIcon`（`public/images/header-logo-icon.png`，237×246px，~13.8KB）不是简单的方形图标，而是直接从原横幅图裁出来的"菱形 LC 图标 + Luo & Company 文字"完整 lockup（96 色量化压缩），保留了原图标下方的蓝色 "Luo & Company" 小字——这行字是 logo 本身的一部分，不能用单纯的方形图标替代。绘制时按 237:246 的真实长宽比换算宽高，避免被拉伸变形。装箱单在横向 A4（显示 marks 列时）会触发文字居中宽度封顶（180mm）逻辑，避免 logo 和文字在宽页面上分得太开；其余 5 个纵向 A4 生成器不受影响，行为跟封顶前完全一致。原横幅图源文件 `public/images/header-bilingual.jpg`（~92KB）/`header-english.png`（~24KB）已删除，`embedded-resources.ts` 里对应的 `headerImage`/`headerEnglish` 资源项、`imageLoader.ts` 里的 `getHeaderImage()`/`getHeaderImageFormat()` 也已一并清理。
@@ -50,6 +51,7 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 | `/history` | 单据历史 | 汇总本地历史，支持搜索、筛选、导入导出 |
 | `/customer` | 客户管理 | 客户/供应商/收货人统一资料库，支持分类、卡片/列表视图、详情 |
 | `/customer/detail` | 资料详情 | 客户/供应商/收货人详情；名称和地址支持行内编辑；客户详情显示联络人、统计、活动列表、跟进记录；收货人详情显示收货订单 |
+| `/purchase-supplier` | 采购供应商 | 采购侧独立主档，含公司资料、联系人、归档和服务端搜索；不与销售侧供应商同步 |
 | `/mail` | AI 邮件 | DeepSeek 邮件生成和回复 |
 | `/admin` | 管理后台 | 用户管理、账号状态、管理员状态、模块权限 |
 | `/clock` | 时区汇率 | 工具模块，受权限控制；包含时间轴城市联动和外币兑人民币换算 / 走势 |
@@ -76,6 +78,7 @@ purchaseRegistration
 purchaseOrderTable
 history
 customer
+purchaseSupplier
 ai-email
 impa
 clock
@@ -88,6 +91,7 @@ rmb
 - `quotation` 控制外贸报价单和销售确认；`domesticQuotation` 独立控制内销报价与内销合同。报价页面守卫直接按 URL `tab` 选择对应权限模块，避免首次进入时受 store tab 异步初始化影响。
 - `inquiry` 控制完整询报价登记和订单状态表入口。
 - `purchaseRegistration` 控制采购部登记过滤视图；该视图不授予完整询报价登记权限。
+- `purchaseSupplier` 控制采购供应商管理页面和新增/编辑/归档；采购供应商候选读取另外允许 `purchaseRegistration` 或 `purchase`，但不授予维护权限。
 - `purchaseOrderTable` 控制采购订单表过滤视图（询报价登记的已成单子集）；该视图不授予完整询报价登记权限。
 - `inquiry.batchEdit` 是询报价批量编辑 / 导入导出高级权限。
 - `order.financials` 是订单状态表金额、回款、到账金额高级权限。

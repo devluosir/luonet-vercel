@@ -4099,6 +4099,203 @@ jsdom 26 不支持 `PointerEvent` 构造函数，组件级集成测试改用 `ne
 - 验证：TASK-162 相关 6 个 Jest 套件 38 例通过；四张登记表此前相关回归 17 个套件 218 例通过；`npx tsc --noEmit`、改动文件 ESLint、`npm run build`、`git diff --check` 通过。浏览器登录态下四张登记表均正常加载、交互；本次自愈修复后 dex 的询价人和客户编号列已正常显示。
 - 全量 Jest 当前仍有与本任务无关的既有失败：客户时间轴缺少 ToastProvider、报价 store 日志断言、增强解析映射断言，以及 Jest 误收集 Playwright E2E；TASK-162 改动覆盖的套件全部通过。Vercel Function Invocations / Fluid Active CPU 的 2–3 个工作日观察留作部署后运维验收。
 
+## TASK-163：新建采购侧供应商管理主档，并关联采购登记 / 采购订单表 / 正式采购单
+
+**状态：** 已完成代码实现与后端基础设施部署（P1，2026-07-14；D1 migration 014、Worker 已上线；待 GitHub/Vercel 发布、真实采购账号及新旧采购单 PDF 人工验收）
+
+### 背景
+
+现有 `/customer` 下的“客户 / 供应商 / 收货人”属于销售侧资料库，三者共用 D1 `Customer` / `Contact`，访问权限统一是 `customer`。采购侧目前没有供应商主档，而是存在三套互不关联的自由文本：
+
+- 采购部登记：`InquiryRecord.purchaseSupplierStatuses[].supplierShortName`
+- 采购订单表：`InquiryRecord.purchaseOrderSupplier`
+- 正式采购单 `/purchase`：`PurchaseOrderData.attn`，当前自动完成实际从 `purchase_history` 反推，而不是读取供应商主档
+
+这导致同一家采购供应商在不同入口重复输入、别名无法合并、使用情况无法可靠统计，也无法由采购权限独立维护。
+
+### 架构决策
+
+1. 新建独立采购供应商模块，不在现有 `/customer` 增加 tab，不扩展 `Customer.type`：
+   - 页面：`/purchase-supplier`
+   - feature：`src/features/purchase-supplier/`
+   - Next API：`/api/purchase-suppliers`
+   - 权限 moduleId：`purchaseSupplier`
+   - D1：新增 `PurchaseSupplier`、`PurchaseSupplierContact`
+2. 采购供应商是公司级共享主数据，不按 `created_by` 隔离；`created_by` / `updated_by` 只用于审计。
+3. 采购业务采用“主档 ID + 单据文本快照”双存储：主档用于选择、关联和统计，历史页面/PDF继续读取创建单据时保存的名称、地址、联系人等快照。修改或归档主档不得改变旧单据与旧 PDF 内容。
+4. 现有销售侧 `Customer.type='supplier'`、销售询报价 `supplierStatuses` 及其候选来源保持不变；允许提供显式“复制为采购供应商”操作，但禁止自动复制或双向同步两套主档。
+
+### D1 模型
+
+`PurchaseSupplier` 最小字段：
+
+```text
+id, code, name, short_name, address,
+data, status(active/archived),
+created_by, updated_by, created_at, updated_at
+```
+
+`PurchaseSupplierContact` 最小字段：
+
+```text
+id, supplier_id, name, short_name, email, phone,
+is_primary, sort_order, status(active/archived),
+created_at, updated_at
+```
+
+- `code` 写入前统一 `trim`，空字符串存为 `NULL`；非空 code 的唯一性以数据库约束为最终事实来源，不能只做应用层“先查后插”。`schema.sql` 必须增加大小写不敏感的 partial unique index，例如：
+
+  ```sql
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_purchase_supplier_code_unique
+  ON PurchaseSupplier(code COLLATE NOCASE)
+  WHERE code IS NOT NULL AND code != '';
+  ```
+
+  应用层可以先查并给出友好提示，但仍要捕获并发写入触发的 D1 unique constraint，统一返回 HTTP 409；名称只做重复提示，不加唯一约束，避免误伤同名分公司。
+- `data` 第一期只承载采购侧扩展字段：供应产品/业务范围、供应商类型、默认付款条件、默认币种、备注。银行税务、评级、证书、附件不在本任务首期范围。
+- 删除使用归档，不做硬删除；归档后不出现在新建候选中，历史关联仍可读取。
+- 基础资料与联络人应通过一个服务端保存入口校验并批量写入，避免出现“公司已保存、联络人保存失败”的半成功状态。
+
+### 类型与关联字段
+
+不得复用 `SupplierQuoteStatus.id` 作为供应商主档 ID；该字段当前是状态条目 ID。新增独立字段：
+
+```ts
+type PurchaseSupplierQuoteStatus = SupplierQuoteStatus & {
+  purchaseSupplierId?: string;
+};
+
+// InquiryRecord.purchaseSupplierStatuses 改用上面的采购专属类型
+purchaseOrderSupplierId?: string;
+purchaseOrderSupplier?: string; // 保留名称快照
+
+// PurchaseOrderData
+purchaseSupplierId?: string;
+supplierName?: string;           // 标准名称快照
+attn: string;                    // 继续保留完整打印快照，兼容现有 PDF
+```
+
+所有新 ID 字段必须可选；旧记录只有文本时仍能读取、搜索、编辑、导出和生成 PDF。
+
+`purchaseOrderSupplierId` 是 `InquiryRecord` 顶层字段，必须同步加入采购受限视图的显式白名单：
+
+- `PURCHASE_ORDER_TABLE_WRITE_FIELDS`：PUT 允许写入，否则采购订单表保存时会被静默丢弃。
+- `sanitizeRestrictedRecord(... allowPurchaseOrderTable)`：GET 返回该字段，否则同步拉取后本地关联 ID 会消失。
+- `restrictedView.ts` 对应测试同时覆盖“允许读”“允许写”“其它未知字段仍被丢弃”。
+
+`purchaseSupplierStatuses[].purchaseSupplierId` 嵌套在已整体放行的 `purchaseSupplierStatuses` 内，不需要再加顶层白名单，但必须补嵌套数据保留的回归断言。
+
+### 权限规则
+
+- 在 `PERMISSION_MODULES` 新增顶级管理模块 `purchaseSupplier`，桌面端和移动端都放入“管理”分组，导航名称“采购供应商”。
+- `/purchase-supplier` 页面和主档新增/编辑/归档：要求 `purchaseSupplier`。
+- 读取采购供应商候选：拥有 `purchaseSupplier`、`purchaseRegistration`、`purchase` 任一权限即可；写请求只能由 `purchaseSupplier` 放行。
+- OR 权限逻辑统一落在新的 Next API 代理层：在不依赖 `next/server` 的窄 helper（如 `src/app/api/purchase-suppliers/access.ts`）中由 session permissions 计算 `{ canRead, canWrite }`，模式参考 `restrictedView.ts` 的显式 flags，便于纯函数测试；不要直接复用 `RestrictedViewFlags`，因为它只描述 Inquiry 字段裁剪。GET 要求 `canRead`，POST/PUT/DELETE 要求 `canWrite`；Worker 只负责 Bearer、字段校验和 D1 操作。
+- 本地离线缓存使用 `purchase_supplier_cache_v1:<normalizedUserId>` 这类按当前登录用户命名空间隔离的 key，禁止复用现有 `supplier_cache_v2`。缓存 service 在无有效 session 或 `canRead=false` 时禁止读取缓存兜底。
+- 新增 `clearPurchaseSupplierLocalState(userId?)`：`useAppUser.handleLogout` 必须在清空 permission user 之前用当前 user id 调用；另在 `Providers` 挂载一个窄的 cache access guard，权限初始化完成后如果当前账号从“任一可读权限”变为全部不可读，清除该账号缓存。权限刷新后的页面 reload 不能成为遗漏清理的理由；重新启动页面时 guard 也必须补清。
+
+### 三个采购入口接入
+
+#### 1. 采购部登记 `/purchase-registration`
+
+- 供应商新增/编辑改为从采购供应商主档选择，保存 `purchaseSupplierId + supplierShortName` 快照。
+- 候选来源改为“有效采购供应商主档 + 历史未关联文本兜底”，不能继续只从 `purchaseSupplierStatuses` 历史去重。
+- 第一阶段保留自由输入；未选择主档的记录显示“未关联”，并提供“待关联供应商”筛选。
+- 不改变销售侧 `supplierStatuses` / `quotedStatuses` 与“飞罗”同步规则。
+
+#### 2. 采购订单表 `/purchase-order-table`
+
+- 行内编辑和 `PurchaseOrderEditModal` 都接入同一个采购供应商选择器。
+- 保存 `purchaseOrderSupplierId + purchaseOrderSupplier` 名称快照。
+- 筛选仍按订单上的名称快照统计，避免主档改名后历史筛选结果突变；可增加“待关联供应商”筛选。
+- 同时修复该弹窗现有的冻结快照/整表覆盖风险，不能把新字段接到旧保存模式上：
+  1. `PurchaseOrderTable` 只保存 `editingRecordId`，弹窗按 id 从完整 `useInquiryStore.records` 解析最新记录，不能从当前筛选后的 `records` props 保存打开瞬间的对象快照；后台同步或记录离开当前筛选时，弹窗也不能因此悄然改用旧对象或错误覆盖。
+  2. 表单每次打开一条新 id 时初始化一次，避免后台刷新吞掉用户正在输入的内容；同时保存初始 draft/baseline 或维护逐字段 dirty 状态。
+  3. `handleSave` 只提交相对初始值真正变化的字段，未操作字段不得进入 patch。`purchaseOrderSupplierId + purchaseOrderSupplier` 是一个原子字段组：从主档选择时一起写，自由修改名称时清空旧 ID，清空供应商时两者一起清空。
+  4. 增加回归测试：弹窗打开后 store 后台更新一个未操作字段，用户只修改供应商并保存，后台的新值必须保留；反向只修改其它字段时，后台更新后的供应商 ID/名称也不得被旧本地状态覆盖。
+
+#### 3. 正式采购单 `/purchase`
+
+- 必须修改当前真实渲染的 `PurchaseBaseInfo` / `SupplierField` 链路；仓库中的 `components/sections/SupplierSection.tsx` 当前未被 `PurchaseForm` 使用，不能只修改该死代码路径。
+- 选择主档后写入 `purchaseSupplierId`、`supplierName`，并把名称、主联络人、电话、邮箱、地址格式化进现有 `attn` 打印快照。
+- 当前 `purchaseHistory.ts` 直接把完整 `data.attn` 写入 `supplierName`，仓库里没有“取第一行”的现成实现。新增并集中测试一个纯函数（如 `resolvePurchaseSupplierSnapshotName`）：显式 `data.supplierName.trim()` 优先；否则对 legacy `attn` 统一换行符、取第一条非空行并 trim；如果没有换行就返回整段 trim 后文本；全部为空才返回空值/未命名兜底。禁止在多个页面各写一份切分规则。
+- `purchaseHistory.supplierName` 新记录使用标准 `supplierName`，旧记录经上述 helper 做显示/搜索 fallback；D1 `Document.customer_name` 旧记录仍可能是完整 attn、新记录是标准名称，这是允许的兼容状态，不批量重写旧值。
+- 本地历史搜索、历史页、Dashboard 最近单据、导入导出和 D1 pull 后的搜索必须对新旧记录保持一致：至少按“标准 supplierName + legacy 顶层 supplierName + data.attn”组成兼容搜索文本，保证同一个公司名能同时命中新旧记录。不能假设 legacy attn 一定有规范换行，也不能仅凭第一行自动关联主档。
+- PDF 生成器第一期不改数据来源，继续读取单据快照；必须手动生成采购单 PDF 验证排版。
+
+### 历史数据整理
+
+1. 提供只读扫描脚本或管理端候选报告，汇总并标准化以下来源：
+   - `purchaseSupplierStatuses[].supplierShortName`
+   - `purchaseOrderSupplier`
+   - `purchase_history[].data.attn` / `supplierName`
+2. 采购人员人工确认重复项、别名和主档，不允许根据模糊名称自动建档或自动合并。
+3. 仅对标准化后唯一、明确匹配的记录回填 ID；不确定项保留文本并标记未关联。
+4. 回填只新增关联 ID，不改旧名称、地址、联系人和 PDF 快照。
+
+### Files in scope
+
+- `schema.sql`
+- `src/worker.ts`
+- 新建 `src/app/api/purchase-suppliers/[[...path]]/route.ts`
+- 新建 `src/app/api/purchase-suppliers/access.ts`（或同职责的纯权限 helper）及测试
+- `src/app/api/inquiry/[[...path]]/restrictedView.ts`
+- `src/app/api/inquiry/[[...path]]/__tests__/route.test.ts`
+- 新建 `src/features/purchase-supplier/`（types/services/app/components/tests）
+- `src/constants/permissionModules.ts`
+- `src/components/layout/AppSidebar.tsx`
+- `src/components/layout/MobileBottomTab.tsx`
+- `src/utils/mapPermissions.ts` 及相关权限测试
+- `src/hooks/useAppUser.ts`
+- `src/app/providers.tsx`（挂载采购供应商 cache access guard）
+- `src/features/inquiry/types/index.ts`
+- `src/features/inquiry/components/InquiryQuoteStatus.tsx`（只做可复用选项结构所需的最小改动，销售侧行为不变）
+- `src/features/purchase-registration/`
+- `src/features/purchase-order-registration/`
+- `src/types/purchase.ts`
+- `src/features/purchase/components/PurchaseBaseInfo.tsx`
+- `src/utils/purchaseHistory.ts`
+- `src/utils/d1Pull.ts`
+- `src/features/history/services/history.service.ts`
+- `src/utils/historyImportExport.ts`
+- `src/components/dashboard/RecentDocumentsList.tsx`
+- 对应模块文档；完成后更新 `docs/core/CURRENT_STATE.md` 与 `docs/core/CHANGELOG.md`
+
+### 验收标准
+
+- 没有 `customer` 权限、但有采购权限的用户可以读取采购供应商候选；没有 `purchaseSupplier` 时不能新增、编辑或归档主档。
+- `purchaseSupplier` / `purchaseRegistration` / `purchase` 三种单独持权账号都能 GET；三者全无时 GET 为 403；只有 `purchaseSupplier` 能执行写请求。
+- 销售侧客户管理和询报价供应商候选中不会出现采购供应商。
+- 三个采购入口选择同一主档后均保存正确 ID，同时保留各自文本快照。
+- 仅有 `purchaseRegistration` 的受限视图账号保存并重新拉取采购订单后，`purchaseOrderSupplierId` 不会被 PUT 白名单或 GET 清洗丢弃；嵌套的 `purchaseSupplierStatuses[].purchaseSupplierId` 同样保留。
+- 主档改名、修改地址或归档后，旧采购登记、采购订单表、正式采购单和历史 PDF 内容不变。
+- 历史纯文本记录无需迁移即可正常读取；精确回填 ID 后不改变原文本。
+- 同一个供应商名搜索时，legacy 完整 attn 记录、新标准名称记录、本地记录和 D1 pull 回来的混合记录都能被命中；导出后重新导入仍保留可搜索名称与原始 attn 快照。
+- 归档供应商不出现在新建候选中，但历史详情和使用统计仍可访问。
+- 多账号切换和权限撤销后不会通过 localStorage 读取无权限缓存。
+- 两个并发请求创建大小写不同但语义相同的非空 code 时，数据库只允许一个成功，另一个返回明确的 409；空 code 可存在多条。
+- 采购订单编辑弹窗只提交用户实际修改的字段，后台同步对未操作字段的更新不会被弹窗保存回滚。
+- 新增/编辑联络人时主联络人规则稳定；保存失败不能留下半完成主档。
+- 采购供应商超过 500 条时仍可通过服务端搜索/分页使用，选择器不得依赖一次性全量拉取。
+
+### 测试与验证
+
+- Worker/API：Bearer、GET OR 权限/写权限矩阵、字段校验、分页搜索、归档、联络人批量保存、并发重复 code 返回 409。
+- Inquiry 受限视图：`purchaseOrderSupplierId` GET/PUT 白名单、嵌套 `purchaseSupplierId` 保留、未知字段继续裁剪。
+- Service/组件：按账号缓存隔离、登出清理、权限撤销/reload 后清理、无权限禁止 cache fallback、主联络人、选择器搜索、未关联自由文本兜底。
+- 采购登记/采购订单表：ID + 快照保存、销售字段不被覆盖、旧记录回归；`PurchaseOrderEditModal` 用 store 最新记录且只提交 dirty/diff patch 的并发回归测试。
+- 正式采购单：新建、编辑、复制、草稿、历史保存/D1 双写、CRLF/LF/前导空行/无换行/空 attn fallback，以及新旧记录混合搜索与导入导出。
+- 定向 Jest + `npx tsc --noEmit` + 目标文件 ESLint + `npm run check:selectors` + `npm run build`。
+- 手动用采购用户和销售用户分别验证权限与候选隔离；至少生成一次新采购单 PDF 和一次旧采购单 PDF 做视觉对比。
+
+### Non-goals / 红线
+
+- 不把现有 `Customer/Contact` 重构成通用 BusinessParty，也不修改 `Customer.type` CHECK。
+- 不自动复制、合并或同步销售供应商与采购供应商。
+- 不强制旧记录立即关联主档，不因缺少 ID 阻塞现有采购流程。
+- 不用主档实时数据渲染旧单据/PDF，不因主档修改批量回写历史快照。
+- 不顺手重写采购 PDF、采购 store 或已稳定的销售/采购状态同步规则。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

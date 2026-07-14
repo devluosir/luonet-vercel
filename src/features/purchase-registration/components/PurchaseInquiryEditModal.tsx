@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { InquiryQuoteStatus } from '@/features/inquiry/components/InquiryQuoteStatus';
 import { stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
-import type { CustomerQuoteStatus, InquiryRecord, SupplierQuoteStatus } from '@/features/inquiry/types';
+import type { CustomerQuoteStatus, InquiryRecord, PurchaseSupplierQuoteStatus } from '@/features/inquiry/types';
 import {
   computeSelfSupplierPatch,
   countOtherQuotedSuppliers,
@@ -21,7 +21,7 @@ interface PurchaseInquiryEditModalProps {
   onClose: () => void;
   onSave: (id: string, patch: Partial<InquiryRecord>) => void;
   /** 采购部登记自己已用过的供应商简称列表（来自 purchaseSupplierStatuses），与询报价登记的客户管理供应商库分开 */
-  supplierOptions?: string[];
+  supplierOptions?: Array<string | { id: string; name: string }>;
 }
 
 export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, supplierOptions }: PurchaseInquiryEditModalProps) {
@@ -33,7 +33,7 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
   );
   const record = storeRecord ?? recordProp;
 
-  const [localSuppliers, setLocalSuppliers] = useState<SupplierQuoteStatus[]>([]);
+  const [localSuppliers, setLocalSuppliers] = useState<PurchaseSupplierQuoteStatus[]>([]);
   const [localQuoted, setLocalQuoted] = useState<CustomerQuoteStatus[]>([]);
   const [localDescription, setLocalDescription] = useState('');
 
@@ -155,12 +155,13 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
             </p>
             <InquiryQuoteStatus
               record={shimRecord}
-              onSuppliersChange={setLocalSuppliers}
+              onSuppliersChange={(suppliers) => setLocalSuppliers(suppliers as PurchaseSupplierQuoteStatus[])}
               onQuotedChange={setLocalQuoted}
               supplierOptions={supplierOptions ?? []}
               unavailableLabel="我司无法报价"
               showClosedControl={false}
               extraNeedInfo={!!selfSupplierNeedInfoEntry}
+              showPurchaseSupplierLinkStatus
               quotedTrailingContent={
                 othersQuotedCount > 0 ? (
                   <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600 dark:bg-blue-950/30 dark:text-blue-400">

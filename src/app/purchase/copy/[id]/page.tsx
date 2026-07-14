@@ -21,6 +21,8 @@ export default function CopyPurchasePage({ params }: { params: { id: string } })
           // 转换为 PurchaseOrderData 格式
           const cloned: Partial<PurchaseOrderData> = {
             attn: source.attn || '',
+            purchaseSupplierId: source.purchaseSupplierId,
+            supplierName: source.supplierName,
             ourRef: source.ourRef || '',
             yourRef: source.yourRef || '',
             orderNo: '', // 清空订单号，让用户重新填写
@@ -51,4 +53,4 @@ export default function CopyPurchasePage({ params }: { params: { id: string } })
   }, [params.id, init, setPageMode]);
 
   return <PurchasePage />;
-} 
+}

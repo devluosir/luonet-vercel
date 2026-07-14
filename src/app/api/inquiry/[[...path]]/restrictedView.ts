@@ -25,6 +25,7 @@ export const PURCHASE_REGISTRATION_WRITE_FIELDS = [
 export const PURCHASE_ORDER_TABLE_WRITE_FIELDS = [
   'purchaseOrderNo',
   'purchaseOrderSupplier',
+  'purchaseOrderSupplierId',
   'purchaseOrderAmount',
   'orderDeliveryDate',
   'orderDeliveryStatus',
@@ -72,6 +73,7 @@ export function sanitizeRestrictedRecord(
     result.orderFollowupCompleted = record.orderFollowupCompleted;
     result.purchaseOrderNo = record.purchaseOrderNo;
     result.purchaseOrderSupplier = record.purchaseOrderSupplier;
+    result.purchaseOrderSupplierId = record.purchaseOrderSupplierId;
     result.purchaseOrderAmount = record.purchaseOrderAmount;
     result.orderDeliveryDate = record.orderDeliveryDate;
     result.orderConfirmDate = record.orderConfirmDate;

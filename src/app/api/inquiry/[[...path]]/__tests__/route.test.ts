@@ -3,6 +3,7 @@
 // 模块加载失败，从 route.ts re-export 出来的同名函数在这里 import 会绕不开这个问题。
 import {
   PURCHASE_REGISTRATION_WRITE_FIELDS,
+  PURCHASE_ORDER_TABLE_WRITE_FIELDS,
   pickRestrictedPatch,
   sanitizeRestrictedRecord,
 } from '../restrictedView';
@@ -47,7 +48,7 @@ describe('sanitizeRestrictedRecord：采购部只读响应携带完整 quotedSta
     quotedStatuses: [
       { id: 'q1', type: 'closed', quoteDate: '[6.2]', supplierShortName: '', version: '' },
     ],
-    purchaseSupplierStatuses: [],
+    purchaseSupplierStatuses: [{ id: 'ps1', purchaseSupplierId: 'master-1', supplierShortName: '采购供应商A' }],
     purchaseQuotedStatuses: [],
     createdAt: '2026-07-13T00:00:00.000Z',
     updatedAt: '2026-07-13T00:00:00.000Z',
@@ -78,5 +79,35 @@ describe('sanitizeRestrictedRecord：采购部只读响应携带完整 quotedSta
     );
     expect(result.orderSubStatus).toBe('followup');
     expect(result.orderFollowupCompleted).toBe(true);
+  });
+
+  it('采购受限视图保留主档 ID，并继续丢弃未知字段', () => {
+    const registration = sanitizeRestrictedRecord({ ...fullRecord, secret: 'no' }, {
+      allowPurchaseRegistration: true,
+      allowPurchaseOrderTable: false,
+    });
+    expect(registration.purchaseSupplierStatuses).toEqual(fullRecord.purchaseSupplierStatuses);
+    expect(registration).not.toHaveProperty('secret');
+
+    const order = sanitizeRestrictedRecord({
+      ...fullRecord,
+      purchaseOrderSupplier: '采购供应商A',
+      purchaseOrderSupplierId: 'master-1',
+      secret: 'no',
+    }, { allowPurchaseRegistration: false, allowPurchaseOrderTable: true });
+    expect(order.purchaseOrderSupplierId).toBe('master-1');
+    expect(order).not.toHaveProperty('secret');
+  });
+
+  it('采购订单表 PUT 白名单允许供应商 ID/快照原子写入', () => {
+    const patch = pickRestrictedPatch({
+      purchaseOrderSupplier: '采购供应商A',
+      purchaseOrderSupplierId: 'master-1',
+      secret: 'no',
+    }, new Set<string>(PURCHASE_ORDER_TABLE_WRITE_FIELDS));
+    expect(patch).toEqual({
+      purchaseOrderSupplier: '采购供应商A',
+      purchaseOrderSupplierId: 'master-1',
+    });
   });
 });

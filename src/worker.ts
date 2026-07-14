@@ -240,6 +240,34 @@ type ContactRow = {
   updated_at: string;
 };
 
+type PurchaseSupplierRow = {
+  id: string;
+  code: string | null;
+  name: string;
+  short_name: string | null;
+  address: string | null;
+  data: string;
+  status: string;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type PurchaseSupplierContactRow = {
+  id: string;
+  supplier_id: string;
+  name: string;
+  short_name: string | null;
+  email: string | null;
+  phone: string | null;
+  is_primary: number;
+  sort_order: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
 function serializeContact(row: ContactRow) {
   return {
     id: row.id,
@@ -261,6 +289,33 @@ function serializeCustomer(row: CustomerRow, contacts: ContactRow[] = []) {
     ...row,
     data: parseJsonData<Record<string, unknown>>(row.data, {}),
     contacts: contacts.map(serializeContact),
+  };
+}
+
+function serializePurchaseSupplierContact(row: PurchaseSupplierContactRow) {
+  return {
+    id: row.id,
+    supplier_id: row.supplier_id,
+    name: row.name,
+    short_name: row.short_name,
+    email: row.email,
+    phone: row.phone,
+    is_primary: Boolean(row.is_primary),
+    sort_order: row.sort_order,
+    status: row.status,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function serializePurchaseSupplier(
+  row: PurchaseSupplierRow,
+  contacts: PurchaseSupplierContactRow[] = []
+) {
+  return {
+    ...row,
+    data: parseJsonData<Record<string, unknown>>(row.data, {}),
+    contacts: contacts.map(serializePurchaseSupplierContact),
   };
 }
 
@@ -335,6 +390,27 @@ const worker = {
 
     if (path.startsWith('/api/customers/') && path.split('/').length === 4 && request.method === 'DELETE') {
       return handleDeleteCustomer(request, env);
+    }
+
+    // 处理采购侧供应商主档 API（与销售侧 Customer/Contact 独立）
+    if (path === '/api/purchase-suppliers' && request.method === 'GET') {
+      return handleListPurchaseSuppliers(request, env);
+    }
+
+    if (path === '/api/purchase-suppliers' && request.method === 'POST') {
+      return handleCreatePurchaseSupplier(request, env);
+    }
+
+    if (path.startsWith('/api/purchase-suppliers/') && path.split('/').length === 4 && request.method === 'GET') {
+      return handleGetPurchaseSupplier(request, env);
+    }
+
+    if (path.startsWith('/api/purchase-suppliers/') && path.split('/').length === 4 && request.method === 'PUT') {
+      return handleUpdatePurchaseSupplier(request, env);
+    }
+
+    if (path.startsWith('/api/purchase-suppliers/') && path.split('/').length === 4 && request.method === 'DELETE') {
+      return handleArchivePurchaseSupplier(request, env);
     }
 
     // 处理用户管理
@@ -2062,6 +2138,271 @@ async function handleReplaceCustomerContacts(request: Request, env: Env): Promis
     `).bind(customerId).all<ContactRow>();
 
     return jsonResponse({ success: true, contacts: updatedContacts.results.map(serializeContact) });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+function normalizeOptionalText(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /unique constraint/i.test(message) || /idx_purchase_supplier_code_unique/i.test(message);
+}
+
+function normalizePurchaseSupplierContacts(value: unknown): ContactPayload[] {
+  if (!Array.isArray(value)) return [];
+  const contacts = value.filter(isContactPayload).map((contact) => ({
+    ...contact,
+    name: contact.name.trim(),
+  }));
+  if (contacts.length === 0) return [];
+
+  const primaryIndex = contacts.findIndex((contact) => contact.is_primary === true || contact.isPrimary === true);
+  const resolvedPrimaryIndex = primaryIndex >= 0 ? primaryIndex : 0;
+  return contacts.map((contact, index) => ({
+    ...contact,
+    is_primary: index === resolvedPrimaryIndex,
+    isPrimary: index === resolvedPrimaryIndex,
+  }));
+}
+
+function buildPurchaseSupplierContactStatements(
+  env: Env,
+  supplierId: string,
+  contacts: ContactPayload[]
+): D1PreparedStatement[] {
+  return contacts.map((contact, index) => env.USERS_DB.prepare(`
+    INSERT INTO PurchaseSupplierContact (
+      id, supplier_id, name, short_name, email, phone, is_primary, sort_order, status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
+  `).bind(
+    contact.id || crypto.randomUUID(),
+    supplierId,
+    contact.name,
+    normalizeOptionalText(contact.short_name ?? contact.shortName),
+    normalizeOptionalText(contact.email),
+    normalizeOptionalText(contact.phone),
+    contact.is_primary || contact.isPrimary ? 1 : 0,
+    Number.isFinite(Number(contact.sort_order ?? contact.sortOrder))
+      ? Number(contact.sort_order ?? contact.sortOrder)
+      : index
+  ));
+}
+
+async function readPurchaseSupplier(
+  env: Env,
+  supplierId: string
+): Promise<{ supplier: PurchaseSupplierRow; contacts: PurchaseSupplierContactRow[] } | null> {
+  const supplier = await env.USERS_DB.prepare(`
+    SELECT * FROM PurchaseSupplier WHERE id = ? LIMIT 1
+  `).bind(supplierId).first<PurchaseSupplierRow>();
+  if (!supplier) return null;
+
+  const contacts = await env.USERS_DB.prepare(`
+    SELECT * FROM PurchaseSupplierContact
+    WHERE supplier_id = ? AND status = 'active'
+    ORDER BY sort_order, created_at
+  `).bind(supplierId).all<PurchaseSupplierContactRow>();
+  return { supplier, contacts: contacts.results };
+}
+
+async function handleListPurchaseSuppliers(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status') || 'active';
+    const search = url.searchParams.get('search')?.trim();
+    const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 100, 1), 500);
+    const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
+    const conditions: string[] = [];
+    const values: Array<string | number> = [];
+
+    if (status !== 'all') {
+      conditions.push('status = ?');
+      values.push(status);
+    }
+    if (search) {
+      conditions.push(`(
+        name LIKE ? OR short_name LIKE ? OR code LIKE ? OR address LIKE ? OR EXISTS (
+          SELECT 1 FROM PurchaseSupplierContact contact
+          WHERE contact.supplier_id = PurchaseSupplier.id AND contact.status = 'active'
+            AND (contact.name LIKE ? OR contact.short_name LIKE ? OR contact.email LIKE ? OR contact.phone LIKE ?)
+        )
+      )`);
+      const pattern = `%${search}%`;
+      values.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    values.push(limit, offset);
+    const suppliers = await env.USERS_DB.prepare(`
+      SELECT * FROM PurchaseSupplier
+      ${whereClause}
+      ORDER BY updated_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(...values).all<PurchaseSupplierRow>();
+
+    let contactsBySupplier = new Map<string, PurchaseSupplierContactRow[]>();
+    if (suppliers.results.length > 0) {
+      const ids = suppliers.results.map((supplier) => supplier.id);
+      const placeholders = ids.map(() => '?').join(', ');
+      const contacts = await env.USERS_DB.prepare(`
+        SELECT * FROM PurchaseSupplierContact
+        WHERE status = 'active' AND supplier_id IN (${placeholders})
+        ORDER BY supplier_id, sort_order, created_at
+      `).bind(...ids).all<PurchaseSupplierContactRow>();
+      contactsBySupplier = contacts.results.reduce((map, contact) => {
+        const list = map.get(contact.supplier_id) ?? [];
+        list.push(contact);
+        map.set(contact.supplier_id, list);
+        return map;
+      }, new Map<string, PurchaseSupplierContactRow[]>());
+    }
+
+    return jsonResponse({
+      suppliers: suppliers.results.map((supplier) =>
+        serializePurchaseSupplier(supplier, contactsBySupplier.get(supplier.id) ?? [])
+      ),
+      pagination: { limit, offset, count: suppliers.results.length },
+    });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleGetPurchaseSupplier(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+    const supplierId = decodeURIComponent(new URL(request.url).pathname.split('/')[3] || '');
+    const result = await readPurchaseSupplier(env, supplierId);
+    if (!result) return jsonResponse({ error: '采购供应商不存在' }, 404);
+    return jsonResponse({ supplier: serializePurchaseSupplier(result.supplier, result.contacts) });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleCreatePurchaseSupplier(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+    const body = await request.json() as Record<string, unknown>;
+    const name = normalizeOptionalText(body.name);
+    if (!name) return jsonResponse({ error: '供应商名称不能为空' }, 400);
+
+    const id = normalizeOptionalText(body.id) || crypto.randomUUID();
+    const code = normalizeOptionalText(body.code);
+    const data = isRecord(body.data) ? JSON.stringify(body.data) : '{}';
+    const contacts = normalizePurchaseSupplierContacts(body.contacts);
+    const statements: D1PreparedStatement[] = [
+      env.USERS_DB.prepare(`
+        INSERT INTO PurchaseSupplier (
+          id, code, name, short_name, address, data, status, created_by, updated_by
+        ) VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?)
+      `).bind(
+        id,
+        code,
+        name,
+        normalizeOptionalText(body.short_name ?? body.shortName),
+        normalizeOptionalText(body.address),
+        data,
+        normalizeOptionalText(body.created_by),
+        normalizeOptionalText(body.updated_by ?? body.created_by)
+      ),
+      ...buildPurchaseSupplierContactStatements(env, id, contacts),
+    ];
+    await env.USERS_DB.batch(statements);
+
+    const created = await readPurchaseSupplier(env, id);
+    return jsonResponse({
+      success: true,
+      supplier: created ? serializePurchaseSupplier(created.supplier, created.contacts) : null,
+    }, 201);
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return jsonResponse({ error: '供应商编号已存在' }, 409);
+    }
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleUpdatePurchaseSupplier(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+    const supplierId = decodeURIComponent(new URL(request.url).pathname.split('/')[3] || '');
+    const existing = await readPurchaseSupplier(env, supplierId);
+    if (!existing) return jsonResponse({ error: '采购供应商不存在' }, 404);
+
+    const body = await request.json() as Record<string, unknown>;
+    const name = normalizeOptionalText(body.name);
+    if (!name) return jsonResponse({ error: '供应商名称不能为空' }, 400);
+    if (!Array.isArray(body.contacts)) return jsonResponse({ error: 'contacts 必须是数组' }, 400);
+
+    const contacts = normalizePurchaseSupplierContacts(body.contacts);
+    const data = isRecord(body.data) ? JSON.stringify(body.data) : '{}';
+    const statements: D1PreparedStatement[] = [
+      env.USERS_DB.prepare(`
+        UPDATE PurchaseSupplier
+        SET code = ?, name = ?, short_name = ?, address = ?, data = ?, updated_by = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(
+        normalizeOptionalText(body.code),
+        name,
+        normalizeOptionalText(body.short_name ?? body.shortName),
+        normalizeOptionalText(body.address),
+        data,
+        normalizeOptionalText(body.updated_by),
+        supplierId
+      ),
+      env.USERS_DB.prepare('DELETE FROM PurchaseSupplierContact WHERE supplier_id = ?').bind(supplierId),
+      ...buildPurchaseSupplierContactStatements(env, supplierId, contacts),
+    ];
+    await env.USERS_DB.batch(statements);
+
+    const updated = await readPurchaseSupplier(env, supplierId);
+    return jsonResponse({
+      success: true,
+      supplier: updated ? serializePurchaseSupplier(updated.supplier, updated.contacts) : null,
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return jsonResponse({ error: '供应商编号已存在' }, 409);
+    }
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleArchivePurchaseSupplier(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+    const supplierId = decodeURIComponent(new URL(request.url).pathname.split('/')[3] || '');
+    const updatedBy = normalizeOptionalText(new URL(request.url).searchParams.get('updated_by'));
+    const result = await env.USERS_DB.prepare(`
+      UPDATE PurchaseSupplier
+      SET status = 'archived', updated_by = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND status != 'archived'
+    `).bind(updatedBy, supplierId).run();
+    if (result.meta.changes === 0) return jsonResponse({ error: '采购供应商不存在' }, 404);
+    return jsonResponse({ success: true });
   } catch (error) {
     return jsonResponse({
       error: '服务器错误',

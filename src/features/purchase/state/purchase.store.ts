@@ -47,6 +47,8 @@ function getDefaultData(): PurchaseOrderData {
 
   return {
     attn: '',
+    purchaseSupplierId: undefined,
+    supplierName: '',
     ourRef: '',
     yourRef: '',
     orderNo: '',
@@ -168,6 +170,8 @@ function convertToDraft(data: PurchaseOrderData): PurchaseDraft {
 function _convertToOrderData(draft: PurchaseDraft): PurchaseOrderData {
   return {
     attn: draft.supplier?.attn || draft.supplier?.name || '',
+    purchaseSupplierId: undefined,
+    supplierName: draft.supplier?.name || '',
     ourRef: '',
     yourRef: '',
     orderNo: draft.settings?.poNo || '',

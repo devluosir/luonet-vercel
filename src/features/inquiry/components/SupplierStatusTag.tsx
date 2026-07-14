@@ -8,9 +8,10 @@ interface Props {
   supplier: SupplierQuoteStatus;
   onEdit: (supplierId: string) => void;
   onDelete: (supplierId: string) => void;
+  unlinked?: boolean;
 }
 
-export function SupplierStatusTag({ supplier, onEdit, onDelete }: Props) {
+export function SupplierStatusTag({ supplier, onEdit, onDelete, unlinked = false }: Props) {
   const colorClass = getSupplierStatusClass(supplier);
   const label = supplier.quoteDate
     ? `${supplier.supplierShortName}${roundDateBrackets(supplier.quoteDate)}`
@@ -24,7 +25,7 @@ export function SupplierStatusTag({ supplier, onEdit, onDelete }: Props) {
         className={`max-w-[180px] truncate rounded-l-full px-2.5 py-1 text-xs font-medium hover:opacity-70 ${colorClass}`}
         title="编辑供应商状态"
       >
-        {label}
+        {label}{unlinked ? ' · 未关联' : ''}
       </button>
       <button
         type="button"

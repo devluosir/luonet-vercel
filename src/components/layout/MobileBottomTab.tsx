@@ -23,6 +23,7 @@ import {
   ShoppingCart,
   User,
   Users,
+  Factory,
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
@@ -93,6 +94,7 @@ const REGISTER_LINKS: MobileMenuLink[] = [
 const MANAGE_LINKS: MobileMenuLink[] = [
   { id: 'history', label: '单据历史', path: '/history', icon: Archive, moduleId: 'history' },
   { id: 'customer', label: '客户管理', path: '/customer', icon: Users, moduleId: 'customer' },
+  { id: 'purchase-supplier', label: '采购供应商', path: '/purchase-supplier', icon: Factory, moduleId: 'purchaseSupplier' },
 ];
 
 const TOOLS_LINKS: MobileMenuLink[] = [

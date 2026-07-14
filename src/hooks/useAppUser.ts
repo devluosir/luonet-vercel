@@ -7,6 +7,7 @@ import { usePermissionStore } from '@/lib/permissions';
 import { useLogoutTransitionStore } from './useLogoutTransition';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
 import { useToast } from '@/components/ui/Toast';
+import { clearPurchaseSupplierLocalState } from '@/features/purchase-supplier/services/purchaseSupplierService';
 
 export const LOGOUT_TIMEOUT_MS = 8_000;
 
@@ -33,6 +34,8 @@ export function useAppUser() {
     }, LOGOUT_TIMEOUT_MS);
 
     try {
+      const purchaseSupplierCacheUserId = permUser?.id || session?.user?.id || session?.user?.username;
+      clearPurchaseSupplierLocalState(purchaseSupplierCacheUserId);
       usePermissionStore.getState().clearUser();
       if (typeof window !== 'undefined') {
         localStorage.removeItem('userCache');
@@ -48,7 +51,7 @@ export function useAppUser() {
       setLogoutError(message);
       showToast(message, 'error');
     }
-  }, [router, showToast]);
+  }, [permUser?.id, router, session?.user?.id, session?.user?.username, showToast]);
 
   return { user, handleLogout, logoutError };
 }

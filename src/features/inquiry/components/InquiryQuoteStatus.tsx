@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Save, X } from 'lucide-react';
-import type { CustomerQuoteStatus, InquiryRecord, SupplierQuoteStatus, SupplierStatus } from '../types';
+import type { CustomerQuoteStatus, InquiryRecord, PurchaseSupplierQuoteStatus, SupplierQuoteStatus, SupplierStatus } from '../types';
 import {
   createId,
   formatShortDate,
@@ -33,7 +33,7 @@ interface InquiryQuoteStatusProps {
    * 采购部登记场景范围不同，应传入采购部自己已用过的供应商简称列表（见 PurchaseRegistrationPage），
    * 传入后不再去拉客户管理供应商库，两边候选来源要分开，不互相混用。
    */
-  supplierOptions?: string[];
+  supplierOptions?: Array<string | { id: string; name: string }>;
   /**
    * "无法报价" checkbox 文案。默认"已回复客户无法报价"（询报价登记场景行为不变）；
    * 采购部登记场景传入"我司无法报价"，仅影响文案，不影响 type: 'unavailable' 的存储结构。
@@ -56,6 +56,8 @@ interface InquiryQuoteStatusProps {
    * 采购部自己的 purchaseSupplierStatuses 里，但采购部同样需要能勾选"已补充信息"确认已处理。
    */
   extraNeedInfo?: boolean;
+  /** 采购部登记场景显示没有主档 ID 的历史/自由文本状态。 */
+  showPurchaseSupplierLinkStatus?: boolean;
 }
 
 type ActiveForm =
@@ -66,6 +68,7 @@ type ActiveForm =
   | null;
 
 interface SupplierFormState {
+  purchaseSupplierId?: string;
   supplierShortName: string;
   quoteDate: string;
   status: SupplierStatus;
@@ -99,6 +102,7 @@ export function InquiryQuoteStatus({
   quotedTrailingContent,
   showClosedControl = true,
   extraNeedInfo = false,
+  showPurchaseSupplierLinkStatus = false,
 }: InquiryQuoteStatusProps) {
   const confirm = useConfirm();
   const [activeForm, setActiveForm] = useState<ActiveForm>(null);
@@ -137,6 +141,9 @@ export function InquiryQuoteStatus({
   }, [supplierOptionsProp]);
 
   const supplierOptions = supplierOptionsProp ?? customerSupplierOptions;
+  const normalizedSupplierOptions = supplierOptions.map((option) =>
+    typeof option === 'string' ? { id: undefined, name: option } : option
+  );
 
   // 防御性兜底：受限视图/异常数据可能缺失 quotedStatuses/supplierStatuses 字段
   const quotedStatuses = record.quotedStatuses ?? [];
@@ -159,7 +166,7 @@ export function InquiryQuoteStatus({
 
   // ── 供应商 CRUD ──────────────────────────────────────
   const openAddSupplier = () => {
-    setSupplierForm({ supplierShortName: '', quoteDate: '', status: 'pending' });
+    setSupplierForm({ purchaseSupplierId: undefined, supplierShortName: '', quoteDate: '', status: 'pending' });
     setActiveForm({ kind: 'supplier-add' });
   };
 
@@ -167,6 +174,7 @@ export function InquiryQuoteStatus({
     const s = supplierStatuses.find((item) => item.id === supplierId);
     if (!s) return;
     setSupplierForm({
+      purchaseSupplierId: (s as PurchaseSupplierQuoteStatus).purchaseSupplierId,
       supplierShortName: s.supplierShortName,
       quoteDate: stripDateBrackets(s.quoteDate ?? ''),
       status: s.status ?? 'pending',
@@ -177,7 +185,8 @@ export function InquiryQuoteStatus({
   // 注意：不再是 FormEvent handler，改为普通函数，由按钮 onClick / Enter 键触发
   const submitSupplier = () => {
     const quoteDate = normalizeShortDateInput(supplierForm.quoteDate);
-    const payload: Omit<SupplierQuoteStatus, 'id'> = {
+    const payload: Omit<PurchaseSupplierQuoteStatus, 'id'> = {
+      purchaseSupplierId: supplierForm.purchaseSupplierId,
       supplierShortName: supplierForm.supplierShortName.trim(),
       quoteDate: quoteDate || undefined,
       status: supplierForm.status,
@@ -362,6 +371,7 @@ export function InquiryQuoteStatus({
               supplier={supplier}
               onEdit={openEditSupplier}
               onDelete={handleRemoveSupplier}
+              unlinked={showPurchaseSupplierLinkStatus && !(supplier as PurchaseSupplierQuoteStatus).purchaseSupplierId}
             />
           ))}
           <button
@@ -382,15 +392,19 @@ export function InquiryQuoteStatus({
             autoFocus
             list={`supplier-options-${record.id}`}
             value={supplierForm.supplierShortName}
-            onChange={(e) => setSupplierForm((p) => ({ ...p, supplierShortName: e.target.value }))}
+            onChange={(e) => {
+              const supplierShortName = e.target.value;
+              const match = normalizedSupplierOptions.find((option) => option.name === supplierShortName);
+              setSupplierForm((p) => ({ ...p, supplierShortName, purchaseSupplierId: match?.id }));
+            }}
             onKeyDown={onKeySupplier}
             className={`${INPUT_CLS} w-20`}
             placeholder="供应商"
             autoComplete="off"
           />
           <datalist id={`supplier-options-${record.id}`}>
-            {supplierOptions.map((name) => (
-              <option key={name} value={name} />
+            {normalizedSupplierOptions.map((option) => (
+              <option key={option.id || option.name} value={option.name} />
             ))}
           </datalist>
           <input

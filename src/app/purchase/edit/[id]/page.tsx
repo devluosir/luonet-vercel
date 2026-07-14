@@ -21,6 +21,8 @@ export default function EditPurchasePage({ params }: { params: { id: string } })
           // 转换为 PurchaseOrderData 格式
           const converted: Partial<PurchaseOrderData> = {
             attn: data.attn || '',
+            purchaseSupplierId: data.purchaseSupplierId,
+            supplierName: data.supplierName,
             ourRef: data.ourRef || '',
             yourRef: data.yourRef || '',
             orderNo: data.orderNo || '',
@@ -51,4 +53,4 @@ export default function EditPurchasePage({ params }: { params: { id: string } })
   }, [params.id, init, setPageMode]);
 
   return <PurchasePage />;
-} 
+}

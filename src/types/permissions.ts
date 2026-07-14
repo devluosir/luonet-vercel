@@ -25,6 +25,7 @@ export interface PermissionMap {
     purchase: boolean;
     history: boolean;
     customer: boolean;
+    purchaseSupplier: boolean;
     'ai-email': boolean;
     impa: boolean;
     inquiry: boolean;

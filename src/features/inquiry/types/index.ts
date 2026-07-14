@@ -11,6 +11,11 @@ export interface SupplierQuoteStatus {
   status?: SupplierStatus;
 }
 
+/** 采购部登记使用的供应商状态；ID 指向独立的 PurchaseSupplier 主数据。 */
+export interface PurchaseSupplierQuoteStatus extends SupplierQuoteStatus {
+  purchaseSupplierId?: string;
+}
+
 /** 'quoted'=已报价（默认）；'unavailable'=已回复客户无法报价；'supplemented'=已补充信息给供应商；'closed'=询价已关闭 */
 export type CustomerQuoteType = 'quoted' | 'unavailable' | 'supplemented' | 'closed';
 
@@ -61,7 +66,7 @@ export interface InquiryRecord {
   supplierStatuses: SupplierQuoteStatus[];
   quotedStatuses: CustomerQuoteStatus[];
   /** 采购部登记专属供应商报价状态；结构与 supplierStatuses 相同，但数据独立存储，不影响询报价登记的销售视图 */
-  purchaseSupplierStatuses?: SupplierQuoteStatus[];
+  purchaseSupplierStatuses?: PurchaseSupplierQuoteStatus[];
   /** 采购部登记专属已报价状态；结构与 quotedStatuses 相同，数据独立存储 */
   purchaseQuotedStatuses?: CustomerQuoteStatus[];
 
@@ -70,6 +75,8 @@ export interface InquiryRecord {
   purchaseOrderNo?: string;
   /** 供应商（采购订单表专属，与询报价登记的 supplierStatuses/purchaseSupplierStatuses 无关） */
   purchaseOrderSupplier?: string;
+  /** 采购订单表选中的采购供应商主数据 ID；自由输入名称时必须清空。 */
+  purchaseOrderSupplierId?: string;
   /** 采购金额（需要 purchaseRegistration.financials 权限），含币种符号自由录入，如 ¥120000 / $15000 / €1000 */
   purchaseOrderAmount?: string;
   // 交货日期(orderDeliveryDate)、执行情况(orderDeliveryStatus/orderDeliveryConsignee) 与订单状态表双向共享，直接复用上面的字段；

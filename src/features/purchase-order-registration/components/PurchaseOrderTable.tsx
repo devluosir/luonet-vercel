@@ -44,6 +44,7 @@ interface PurchaseOrderTableProps {
   records: InquiryRecord[];
   canViewFinancials: boolean;
   consigneeOptions: string[];
+  supplierOptions: Array<{ id: string; name: string }>;
   onUpdate: (id: string, patch: Partial<InquiryRecord>) => void;
 }
 
@@ -63,7 +64,7 @@ function useBreakpoint(): PurchaseOrderTableBreakpoint {
   return bp;
 }
 
-export function PurchaseOrderTable({ records, canViewFinancials, consigneeOptions, onUpdate }: PurchaseOrderTableProps) {
+export function PurchaseOrderTable({ records, canViewFinancials, consigneeOptions, supplierOptions, onUpdate }: PurchaseOrderTableProps) {
   const bp = useBreakpoint();
   const purchaseOrderNoCol = showPurchaseOrderNoCol(bp);
   const confirmDateCol = showConfirmDateCol(bp);
@@ -85,7 +86,7 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
   const resizableColumns = visibleResizableIds.map((id) => RESIZABLE_COLUMN_DEFS[id]);
   const { widths, startResize, resetColumn } = useResizableColumns('purchaseOrderTable.tableColWidths', resizableColumns);
 
-  const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
 
   if (records.length === 0) {
     return (
@@ -184,8 +185,9 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
               bp={bp}
               canViewFinancials={canViewFinancials}
               consigneeOptions={consigneeOptions}
+              supplierOptions={supplierOptions}
               onUpdate={(patch) => onUpdate(record.id, patch)}
-              onOpenEdit={setEditingRecord}
+              onOpenEdit={(record) => setEditingRecordId(record.id)}
             />
           ))}
         </tbody>
@@ -193,11 +195,11 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
       </div>
     </div>
     <PurchaseOrderEditModal
-      isOpen={editingRecord !== null}
-      record={editingRecord}
+      isOpen={editingRecordId !== null}
+      recordId={editingRecordId}
       canViewFinancials={canViewFinancials}
       consigneeOptions={consigneeOptions}
-      onClose={() => setEditingRecord(null)}
+      onClose={() => setEditingRecordId(null)}
       onSave={(id, patch) => onUpdate(id, patch)}
     />
     </>

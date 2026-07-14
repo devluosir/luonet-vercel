@@ -19,6 +19,7 @@ type DocumentFieldData = {
   orderNo?: string;
   customerName?: string;
   supplierName?: string;
+  attn?: string;
   consigneeName?: string;
 };
 
@@ -155,7 +156,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
     // 尝试从不同字段获取名称
     if (doc.type === 'purchase') {
-      name = firstString(doc.supplierName, data.supplierName) || '未命名供应商';
+      name = firstString(doc.supplierName, data.supplierName, data.attn) || '未命名供应商';
     } else if (doc.type === 'packing') {
       name = firstString(doc.consigneeName, data.consigneeName) || '未命名收货人';
     } else {
@@ -211,7 +212,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
           // 扩展搜索范围，包括data字段中的信息
           const customerName = firstString(doc.customerName, data.customerName);
-          const supplierName = firstString(doc.supplierName, data.supplierName);
+          const supplierName = [doc.supplierName, data.supplierName, data.attn].filter((value) => typeof value === 'string').join(' ');
           const consigneeName = firstString(doc.consigneeName, data.consigneeName);
 
           const searchText = `${documentNumber} ${documentName} ${customerName} ${supplierName} ${consigneeName}`.toLowerCase();

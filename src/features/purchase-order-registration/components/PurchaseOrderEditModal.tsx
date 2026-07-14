@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/Button';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { normalizeShortDateInput, stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
 import { STATUS_PRESETS } from '@/features/order/components/DeliveryStatusCell';
+import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
+import { PurchaseSupplierPicker } from '@/features/purchase-supplier/components/PurchaseSupplierPicker';
+import { buildPurchaseOrderDirtyPatch } from '../utils/purchaseOrderPatch';
 
 /**
  * 采购订单表——"编辑采购订单"弹窗（2026-07-10 新增，参考订单状态表的 OrderEditModal.tsx 同款模式）
@@ -82,7 +85,7 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
 
 interface PurchaseOrderEditModalProps {
   isOpen: boolean;
-  record: InquiryRecord | null;
+  recordId: string | null;
   canViewFinancials: boolean;
   consigneeOptions: string[];
   onClose: () => void;
@@ -90,27 +93,42 @@ interface PurchaseOrderEditModalProps {
 }
 
 export function PurchaseOrderEditModal({
-  isOpen, record, canViewFinancials, consigneeOptions, onClose, onSave,
+  isOpen, recordId, canViewFinancials, consigneeOptions, onClose, onSave,
 }: PurchaseOrderEditModalProps) {
+  const record = useInquiryStore((state) => recordId ? state.records.find((item) => item.id === recordId) : undefined);
   const [purchaseOrderNo, setPurchaseOrderNo] = useState('');
   const [purchaseOrderSupplier, setPurchaseOrderSupplier] = useState('');
+  const [purchaseOrderSupplierId, setPurchaseOrderSupplierId] = useState<string | undefined>();
   const [amountCurrency, setAmountCurrency] = useState<PurchaseCurrency>('¥');
   const [amountNumStr, setAmountNumStr] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [deliveryStatus, setDeliveryStatus] = useState('');
   const [deliveryConsignee, setDeliveryConsignee] = useState('');
+  const initialValuesRef = useRef<Partial<InquiryRecord>>({});
 
   useEffect(() => {
     if (!isOpen || !record) return;
     setPurchaseOrderNo(record.purchaseOrderNo ?? '');
     setPurchaseOrderSupplier(record.purchaseOrderSupplier ?? '');
+    setPurchaseOrderSupplierId(record.purchaseOrderSupplierId);
     const amount = parsePurchaseAmount(record.purchaseOrderAmount);
     setAmountCurrency(amount.currency);
     setAmountNumStr(amount.numStr);
     setDeliveryDate(record.orderDeliveryDate ? stripDateBrackets(record.orderDeliveryDate) : '');
     setDeliveryStatus(record.orderDeliveryStatus ?? '');
     setDeliveryConsignee(record.orderDeliveryConsignee ?? '');
-  }, [isOpen, record]);
+    initialValuesRef.current = {
+      purchaseOrderNo: record.purchaseOrderNo,
+      purchaseOrderSupplier: record.purchaseOrderSupplier,
+      purchaseOrderSupplierId: record.purchaseOrderSupplierId,
+      ...(canViewFinancials ? { purchaseOrderAmount: record.purchaseOrderAmount } : {}),
+      orderDeliveryDate: record.orderDeliveryDate,
+      orderDeliveryStatus: record.orderDeliveryStatus,
+      orderDeliveryConsignee: record.orderDeliveryConsignee,
+    };
+    // 同一记录后台刷新时不重置用户输入；只有打开另一条记录才重新初始化。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, recordId]);
 
   if (!isOpen || !record) return null;
 
@@ -129,16 +147,18 @@ export function PurchaseOrderEditModal({
     const trimmedAmount = amountNumStr.trim();
     const amountN = parseFloat(trimmedAmount);
 
-    onSave(record.id, {
+    const nextValues: Partial<InquiryRecord> = {
       purchaseOrderNo: purchaseOrderNo.trim() || undefined,
       purchaseOrderSupplier: purchaseOrderSupplier.trim() || undefined,
-      ...(canViewFinancials
-        ? { purchaseOrderAmount: !isNaN(amountN) && trimmedAmount ? `${amountCurrency}${amountN.toFixed(2)}` : undefined }
-        : {}),
+      purchaseOrderSupplierId,
+      ...(canViewFinancials ? { purchaseOrderAmount: !isNaN(amountN) && trimmedAmount ? `${amountCurrency}${amountN.toFixed(2)}` : undefined } : {}),
       orderDeliveryDate: deliveryDate.trim() ? normalizeShortDateInput(deliveryDate.trim()) : undefined,
       orderDeliveryStatus: deliveryStatus.trim() || undefined,
       orderDeliveryConsignee: deliveryConsignee.trim() || undefined,
-    });
+    };
+    const initialValues = initialValuesRef.current;
+    const patch = buildPurchaseOrderDirtyPatch(initialValues, nextValues);
+    if (Object.keys(patch).length > 0) onSave(record.id, patch);
     onClose();
   };
 
@@ -237,10 +257,13 @@ export function PurchaseOrderEditModal({
               </div>
               <div className="space-y-1">
                 <label className={LABEL_CLS}>供应商</label>
-                <input
+                <PurchaseSupplierPicker
+                  selectedId={purchaseOrderSupplierId}
                   value={purchaseOrderSupplier}
-                  onChange={(e) => setPurchaseOrderSupplier(e.target.value)}
-                  className={FIELD_CLS}
+                  onChange={(selection) => {
+                    setPurchaseOrderSupplier(selection.name);
+                    setPurchaseOrderSupplierId(selection.id);
+                  }}
                   placeholder="供应商"
                 />
               </div>

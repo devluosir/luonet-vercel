@@ -48,6 +48,7 @@ export default withAuth(
       '/packing',
       '/invoice',
       '/purchase',
+      '/purchase-supplier',
       '/inquiry',
       '/history',
       '/customer',

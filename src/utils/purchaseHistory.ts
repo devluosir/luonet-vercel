@@ -2,6 +2,7 @@ import { PurchaseOrderData } from '@/types/purchase';
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 import { persistHistoryToStorage } from '@/utils/storageQuotaManager';
 import { d1SyncDocument } from './d1Sync';
+import { getPurchaseSupplierSearchText, resolvePurchaseSupplierSnapshotName } from './purchaseSupplierSnapshot';
 
 export interface PurchaseHistory {
   id: string;
@@ -41,7 +42,7 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
           id: existingId,
           createdAt: originalCreatedAt,
           updatedAt: new Date().toISOString(),
-          supplierName: data.attn,
+          supplierName: resolvePurchaseSupplierSnapshotName(data),
           orderNo: data.orderNo,
           totalAmount,
           currency: data.currency,
@@ -76,7 +77,7 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
       id: newId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      supplierName: data.attn,
+      supplierName: resolvePurchaseSupplierSnapshotName(data),
       orderNo: data.orderNo,
       totalAmount,
       currency: data.currency,
@@ -112,14 +113,14 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
 // 获取所有历史记录
 export const getPurchaseHistory = (filters?: PurchaseHistoryFilters): PurchaseHistory[] => {
   try {
-    let history = getLocalStorageJSON(STORAGE_KEY, []);
+    let history = getLocalStorageJSON<PurchaseHistory[]>(STORAGE_KEY, []);
 
     if (filters) {
       // 搜索
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         history = history.filter((item: PurchaseHistory) =>
-          item.supplierName.toLowerCase().includes(searchLower) ||
+          getPurchaseSupplierSearchText(item.data, item.supplierName).includes(searchLower) ||
           item.orderNo.toLowerCase().includes(searchLower)
         );
       }

@@ -76,6 +76,18 @@ describe('13. 询报价登记页面（默认 props）保留原有文案和可编
 });
 
 describe('采购部登记场景（传入窄配置 props）', () => {
+  it('选择结构化采购供应商时保存独立主档 ID 和名称快照', () => {
+    const { onSuppliersChange } = renderStatus({
+      supplierOptions: [{ id: 'master-1', name: '采购供应商A' }],
+    });
+    fireEvent.click(screen.getByRole('button', { name: '供应商' }));
+    fireEvent.change(screen.getByPlaceholderText('供应商'), { target: { value: '采购供应商A' } });
+    fireEvent.click(screen.getByRole('button', { name: '确认' }));
+    expect(onSuppliersChange).toHaveBeenCalledWith([
+      expect.objectContaining({ purchaseSupplierId: 'master-1', supplierShortName: '采购供应商A' }),
+    ]);
+  });
+
   it('unavailableLabel 覆盖默认文案', () => {
     renderStatus({ unavailableLabel: '我司无法报价' });
     expect(screen.getByText('我司无法报价')).toBeInTheDocument();

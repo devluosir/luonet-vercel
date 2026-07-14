@@ -1,6 +1,10 @@
 export interface PurchaseOrderData {
   // 基本信息
   attn: string;
+  /** 独立采购供应商主档关联；旧记录可为空。 */
+  purchaseSupplierId?: string;
+  /** 单据创建时的标准名称快照。 */
+  supplierName?: string;
   ourRef: string;
   yourRef: string;
   orderNo: string;
@@ -35,4 +39,4 @@ export interface CustomWindow extends Window {
   __PURCHASE_DATA__?: PurchaseOrderData | null;
   __EDIT_MODE__?: boolean;
   __EDIT_ID__?: string;
-} 
+}

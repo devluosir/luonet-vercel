@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2026-07-13
+## [Unreleased] - 2026-07-14
+
+### Added
+
+#### 采购侧独立供应商主档（TASK-163）
+- 新增 `/purchase-supplier`、`purchaseSupplier` 权限、独立 D1 `PurchaseSupplier` / `PurchaseSupplierContact` 表及 Worker/Next API；供应商编码由大小写不敏感 partial unique index 保证并发唯一，删除改为归档。
+- 新增 `migrations/014_add_purchase_suppliers.sql`；2026-07-14 已在远端 `mluonet-users` 执行并部署对应 Worker，认证 GET smoke test 返回 200。
+- 采购供应商候选 GET 支持 `purchaseSupplier` / `purchaseRegistration` / `purchase` 三权限 OR 读取，写操作仅允许 `purchaseSupplier`；离线缓存按账号隔离，并在登出、失去读取权限或 session 失效时清理。
+- 采购部登记、采购订单表和正式采购单统一接入采购供应商选择器，分别保存主档 ID 与名称/打印快照；销售侧客户管理供应商保持完全独立。
+- 采购订单编辑弹窗改为按 ID 读取最新 store，并仅提交相对打开时 baseline 的实际改动；供应商 ID/名称原子提交，避免后台同步字段被旧快照覆盖。
+- 正式采购单新增标准名称 fallback 与新旧混合搜索规则，兼容 CRLF、前导空行、无换行 legacy `attn`；新增只读候选扫描脚本，禁止自动建档或模糊合并。
 
 ### Changed
 

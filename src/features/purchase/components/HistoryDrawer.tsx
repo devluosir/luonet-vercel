@@ -36,7 +36,8 @@ export default function HistoryDrawer() {
     return list.filter(it =>
       String(it.title || it.id).toLowerCase().includes(k) ||
       String(it.poNo || '').toLowerCase().includes(k) ||
-      String(it.supplierName || '').toLowerCase().includes(k)
+      String(it.supplierName || '').toLowerCase().includes(k) ||
+      it.searchText.includes(k)
     );
   }, [list, q]);
 
@@ -47,6 +48,8 @@ export default function HistoryDrawer() {
         // 转换为 PurchaseOrderData 格式
         const converted: Partial<PurchaseOrderData> = {
           attn: data.attn || '',
+          purchaseSupplierId: data.purchaseSupplierId,
+          supplierName: data.supplierName,
           ourRef: data.ourRef || '',
           yourRef: data.yourRef || '',
           orderNo: data.orderNo || '',

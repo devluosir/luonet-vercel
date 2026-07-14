@@ -16,6 +16,7 @@ import {
   deletePackingHistory
 } from '@/utils/packingHistory';
 import { isQuotationUpgraded, getDomesticDocSubtype } from '@/utils/dashboardUtils';
+import { getPurchaseSupplierSearchText } from '@/utils/purchaseSupplierSnapshot';
 
 const getStringField = (item: HistoryItem, key: string): string => {
   const value = (item as unknown as Record<string, unknown>)[key];
@@ -137,7 +138,7 @@ export class HistoryService {
                  getStringField(item, 'invoiceNo').toLowerCase().includes(searchLower);
         }
         if ('supplierName' in item) {
-          return item.supplierName.toLowerCase().includes(searchLower) ||
+          return getPurchaseSupplierSearchText(item.data, item.supplierName).includes(searchLower) ||
                  item.orderNo.toLowerCase().includes(searchLower);
         }
         if ('consigneeName' in item) {

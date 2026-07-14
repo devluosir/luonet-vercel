@@ -51,16 +51,20 @@ interface EditableTextProps {
   onActivate: () => void;
   onSave: (value: string | undefined) => void;
   onCancel: () => void;
+  options?: string[];
+  listId?: string;
 }
 
-function EditableText({ editing, value, placeholder, textClassName, onActivate, onSave, onCancel }: EditableTextProps) {
+function EditableText({ editing, value, placeholder, textClassName, onActivate, onSave, onCancel, options, listId }: EditableTextProps) {
   const display = value?.trim() || '';
 
   if (editing) {
     return (
+      <>
       <input
         autoFocus
         type="text"
+        list={options?.length ? listId : undefined}
         defaultValue={display}
         placeholder={placeholder}
         onBlur={(e) => onSave(e.target.value.trim() || undefined)}
@@ -70,6 +74,8 @@ function EditableText({ editing, value, placeholder, textClassName, onActivate, 
         }}
         className="w-full rounded border border-blue-300 bg-white px-1.5 py-0.5 text-xs outline-none focus:ring-1 focus:ring-blue-200 dark:border-blue-600 dark:bg-gray-900 dark:text-gray-100"
       />
+      {options?.length ? <datalist id={listId}>{options.map((option) => <option key={option} value={option} />)}</datalist> : null}
+      </>
     );
   }
 
@@ -281,11 +287,12 @@ interface PurchaseOrderRowProps {
   bp: PurchaseOrderTableBreakpoint;
   canViewFinancials: boolean;
   consigneeOptions: string[];
+  supplierOptions: Array<{ id: string; name: string }>;
   onUpdate: (patch: Partial<InquiryRecord>) => void;
   onOpenEdit?: (record: InquiryRecord) => void;
 }
 
-export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptions, onUpdate, onOpenEdit }: PurchaseOrderRowProps) {
+export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptions, supplierOptions, onUpdate, onOpenEdit }: PurchaseOrderRowProps) {
   const [activeField, setActiveField] = useState<EditField>(null);
   const activate = (f: EditField) => setActiveField(f);
   const cancel = () => setActiveField(null);
@@ -347,7 +354,13 @@ export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptio
           placeholder="供应商"
           textClassName={rowTextClass}
           onActivate={() => activate('purchaseOrderSupplier')}
-          onSave={(val) => { setActiveField(null); onUpdate({ purchaseOrderSupplier: val }); }}
+          options={supplierOptions.map((option) => option.name)}
+          listId={`purchase-order-suppliers-${record.id}`}
+          onSave={(val) => {
+            const match = supplierOptions.find((option) => option.name === val);
+            setActiveField(null);
+            onUpdate({ purchaseOrderSupplier: val, purchaseOrderSupplierId: match?.id });
+          }}
           onCancel={cancel}
         />
       </td>

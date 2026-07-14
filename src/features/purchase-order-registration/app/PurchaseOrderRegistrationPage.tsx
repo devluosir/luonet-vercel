@@ -20,6 +20,9 @@ import {
   type PurchaseOrderStatusFilter,
 } from '../components/PurchaseOrderFilterBar';
 import { PurchaseOrderTable } from '../components/PurchaseOrderTable';
+import { usePurchaseSupplierAccess } from '@/features/purchase-supplier/hooks/usePurchaseSupplierAccess';
+import { fetchPurchaseSuppliers } from '@/features/purchase-supplier/services/purchaseSupplierService';
+import type { PurchaseSupplier } from '@/features/purchase-supplier/types';
 
 /** 采购订单表只展示"已成单"的记录（orderNo 有值），与订单状态表的过滤条件一致 */
 function hasOrder(record: InquiryRecord): boolean {
@@ -89,6 +92,8 @@ export function PurchaseOrderRegistrationPage() {
   const [orderStatusFilter, setOrderStatusFilter] = useState<PurchaseOrderStatusFilter>('inProgress');
   const [supplierFilter, setSupplierFilter] = useState('');
   const [consigneeOptions, setConsigneeOptions] = useState<string[]>([]);
+  const [purchaseSuppliers, setPurchaseSuppliers] = useState<PurchaseSupplier[]>([]);
+  const purchaseSupplierAccess = usePurchaseSupplierAccess();
 
   const now = useMemo(() => new Date(), []);
 
@@ -100,6 +105,15 @@ export function PurchaseOrderRegistrationPage() {
   useEffect(() => {
     useInquiryStore.getState().init();
   }, []);
+
+  useEffect(() => {
+    if (!purchaseSupplierAccess.canRead || !purchaseSupplierAccess.userId) return;
+    let cancelled = false;
+    fetchPurchaseSuppliers({ userId: purchaseSupplierAccess.userId, canRead: purchaseSupplierAccess.canRead, limit: 200 })
+      .then(({ items }) => { if (!cancelled) setPurchaseSuppliers(items); })
+      .catch(() => { /* 保留历史自由文本编辑能力 */ });
+    return () => { cancelled = true; };
+  }, [purchaseSupplierAccess.canRead, purchaseSupplierAccess.userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +146,10 @@ export function PurchaseOrderRegistrationPage() {
         .sort((a, b) => a.localeCompare(b, 'zh-CN')),
     [orderRecords]
   );
+  const purchaseSupplierOptions = useMemo(() => purchaseSuppliers.map((item) => ({
+    id: item.id,
+    name: item.shortName || item.name,
+  })), [purchaseSuppliers]);
 
   const timeFiltered = useMemo(
     () => orderRecords.filter((record) => matchesTimeRange(record, timeRange, now)),
@@ -241,6 +259,7 @@ export function PurchaseOrderRegistrationPage() {
           records={filteredRecords}
           canViewFinancials={canViewFinancials}
           consigneeOptions={consigneeOptions}
+          supplierOptions={purchaseSupplierOptions}
           onUpdate={(id, patch) => patchRecordForView(id, patch)}
         />
       </div>

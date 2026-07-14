@@ -16,6 +16,9 @@ import type { InquiryRecord } from '@/features/inquiry/types';
 import { PurchaseRegistrationTable } from '../components/PurchaseRegistrationTable';
 import { PurchaseInquiryEditModal } from '../components/PurchaseInquiryEditModal';
 import { restoreOriginalRecords } from '../utils/purchaseInquiryStatus';
+import { usePurchaseSupplierAccess } from '@/features/purchase-supplier/hooks/usePurchaseSupplierAccess';
+import { fetchPurchaseSuppliers } from '@/features/purchase-supplier/services/purchaseSupplierService';
+import type { PurchaseSupplier } from '@/features/purchase-supplier/types';
 
 function recordMatchesSupplier(record: InquiryRecord, supplier: string) {
   return !supplier
@@ -28,7 +31,8 @@ function recordMatchesSupplierLink(
   supplierLinkFilter: 'all' | 'unlinked'
 ) {
   return supplierLinkFilter !== 'unlinked'
-    || (record.purchaseSupplierStatuses ?? []).length === 0;
+    || (record.purchaseSupplierStatuses ?? []).length === 0
+    || (record.purchaseSupplierStatuses ?? []).some((status) => !status.purchaseSupplierId);
 }
 
 export function PurchaseRegistrationPage() {
@@ -49,6 +53,8 @@ export function PurchaseRegistrationPage() {
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
   const [supplier, setSupplier] = useState('');
   const [supplierLinkFilter, setSupplierLinkFilter] = useState<'all' | 'unlinked'>('all');
+  const [purchaseSuppliers, setPurchaseSuppliers] = useState<PurchaseSupplier[]>([]);
+  const purchaseSupplierAccess = usePurchaseSupplierAccess();
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -58,6 +64,15 @@ export function PurchaseRegistrationPage() {
   useEffect(() => {
     useInquiryStore.getState().init();
   }, []);
+
+  useEffect(() => {
+    if (!purchaseSupplierAccess.canRead || !purchaseSupplierAccess.userId) return;
+    let cancelled = false;
+    fetchPurchaseSuppliers({ userId: purchaseSupplierAccess.userId, canRead: purchaseSupplierAccess.canRead, limit: 200 })
+      .then(({ items }) => { if (!cancelled) setPurchaseSuppliers(items); })
+      .catch(() => { /* 主数据不可用时仍可编辑历史自由文本 */ });
+    return () => { cancelled = true; };
+  }, [purchaseSupplierAccess.canRead, purchaseSupplierAccess.userId]);
 
   const activeRecords = useMemo(
     () => records.filter((record) => record.status !== 'deleted'),
@@ -101,6 +116,18 @@ export function PurchaseRegistrationPage() {
     [activeRecords]
   );
 
+  const purchaseSupplierOptions = useMemo(() => {
+    const masterOptions = purchaseSuppliers.map((item) => ({
+      id: item.id,
+      name: item.shortName || item.name,
+    }));
+    const masterNames = new Set(masterOptions.map((item) => item.name));
+    return [
+      ...masterOptions,
+      ...supplierOptions.filter((name) => !masterNames.has(name)),
+    ];
+  }, [purchaseSuppliers, supplierOptions]);
+
   // "待关联供应商"：采购部登记自己的供应商列表（purchaseSupplierStatuses）还没有任何一条，
   // 替代原本复用询报价登记"待关联客户"（record.customerId，那是销售侧概念，采购部登记用不上）
   const supplierFilteredBase = useMemo(
@@ -116,8 +143,8 @@ export function PurchaseRegistrationPage() {
   );
 
   const unlinkedSupplierCount = useMemo(
-    () => linkFilteredBase.filter((record) => (record.purchaseSupplierStatuses ?? []).length === 0).length,
-    [linkFilteredBase]
+    () => supplierFilteredBase.filter((record) => recordMatchesSupplierLink(record, 'unlinked')).length,
+    [supplierFilteredBase]
   );
 
   const finalRecords = useMemo(
@@ -208,7 +235,7 @@ export function PurchaseRegistrationPage() {
         record={editingRecord}
         onClose={() => setEditingRecord(null)}
         onSave={(id, patch) => patchRecordForView(id, patch)}
-        supplierOptions={supplierOptions}
+        supplierOptions={purchaseSupplierOptions}
       />
     </AppLayout>
   );

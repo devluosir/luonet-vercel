@@ -10,6 +10,7 @@ import { DesktopSidebarHost } from '@/components/layout/DesktopSidebarHost';
 import { LogoutTransitionOverlay } from '@/components/layout/LogoutTransitionOverlay';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { usePermissionChangeWatcher } from '@/hooks/usePermissionChangeWatcher';
+import { usePurchaseSupplierCacheGuard } from '@/features/purchase-supplier/hooks/usePurchaseSupplierCacheGuard';
 
 export const SESSION_REFETCH_INTERVAL_SECONDS = 24 * 60 * 60;
 
@@ -21,6 +22,7 @@ function PermissionInitializer() {
 
 function PermissionChangeWatcher() {
   usePermissionChangeWatcher();
+  usePurchaseSupplierCacheGuard();
   return null;
 }
 

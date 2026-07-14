@@ -15,6 +15,8 @@ export function usePurchaseAutosave(wait = 300) {
         try {
           const slim = {
             attn: data.attn,
+            purchaseSupplierId: data.purchaseSupplierId,
+            supplierName: data.supplierName,
             orderNo: data.orderNo,
             contractAmount: data.contractAmount
           };

@@ -43,6 +43,8 @@ export default function PurchaseForm() {
   const handleBaseInfoChange = useCallback((value: Partial<PurchaseOrderData>) => {
     updateData({
       attn: value.attn,
+      purchaseSupplierId: value.purchaseSupplierId,
+      supplierName: value.supplierName,
       yourRef: value.yourRef,
       supplierQuoteDate: value.supplierQuoteDate,
       orderNo: value.orderNo,
@@ -92,6 +94,8 @@ export default function PurchaseForm() {
         <PurchaseBaseInfo
           value={{
             attn: data.attn,
+            purchaseSupplierId: data.purchaseSupplierId,
+            supplierName: data.supplierName,
             yourRef: data.yourRef,
             supplierQuoteDate: data.supplierQuoteDate,
             orderNo: data.orderNo,

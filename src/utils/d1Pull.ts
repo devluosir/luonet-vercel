@@ -22,6 +22,7 @@ import {
   type D1DocType,
 } from '@/utils/d1Sync';
 import { persistHistoryToStorage } from '@/utils/storageQuotaManager';
+import { resolvePurchaseSupplierSnapshotName } from '@/utils/purchaseSupplierSnapshot';
 
 type D1Doc = {
   id: string;
@@ -383,7 +384,7 @@ function docToPackingHistory(doc: D1Doc) {
 function docToPurchaseHistory(doc: D1Doc) {
   return {
     id: doc.id,
-    supplierName: doc.customer_name || '',
+    supplierName: resolvePurchaseSupplierSnapshotName(doc.data, doc.customer_name || ''),
     orderNo: doc.doc_no || '',
     totalAmount: doc.total_amount || 0,
     currency: doc.currency || 'USD',
