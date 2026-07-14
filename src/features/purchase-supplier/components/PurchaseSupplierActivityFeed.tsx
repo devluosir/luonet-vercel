@@ -64,33 +64,43 @@ export function PurchaseSupplierActivityFeed({ supplier }: { supplier: PurchaseS
         <div className="divide-y divide-gray-100 dark:divide-gray-800">
           {activities.map((activity) => {
             const status = activity.quoteStatus.status || 'pending';
+            const orderNo = activity.orderNo?.trim();
             return (
-              <article key={activity.id} className="px-5 py-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-sm font-semibold text-blue-700 dark:text-blue-300">
-                        {activity.inquiryNo || '未设询价编号'}
+              <article key={activity.id} className="px-5 py-3">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-2 md:flex-nowrap md:gap-x-3">
+                  <span className="shrink-0 font-mono text-sm font-semibold text-blue-700 dark:text-blue-300">
+                    {activity.inquiryNo || '未设询价编号'}
+                  </span>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_CLASSES[status]}`}>
+                    {STATUS_LABELS[status]}
+                  </span>
+                  {orderNo && (
+                    <span className="shrink-0 rounded-full bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white">
+                      已转订单
+                    </span>
+                  )}
+                  <span aria-hidden="true" className="hidden shrink-0 text-gray-300 md:inline dark:text-gray-600">·</span>
+                  <span
+                    className="min-w-0 text-sm text-gray-600 md:max-w-56 md:truncate dark:text-gray-300"
+                    title={`客户询价编号：${activity.customerNo || '—'}`}
+                  >
+                    客户询价编号：{activity.customerNo || '—'}
+                  </span>
+                  <span aria-hidden="true" className="hidden shrink-0 text-gray-300 md:inline dark:text-gray-600">·</span>
+                  <span className="shrink-0 text-xs text-gray-500">
+                    报价日期：{activity.quoteStatus.quoteDate || '—'}
+                  </span>
+                  {orderNo && (
+                    <>
+                      <span aria-hidden="true" className="hidden shrink-0 text-gray-300 md:inline dark:text-gray-600">·</span>
+                      <span className="min-w-0 text-xs text-gray-500 md:max-w-48 md:truncate" title={`订单号：${orderNo}`}>
+                        订单号：{orderNo}
                       </span>
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_CLASSES[status]}`}>
-                        {STATUS_LABELS[status]}
-                      </span>
-                      {activity.orderNo?.trim() && (
-                        <span className="rounded-full bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white">
-                          已转订单
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                      客户询价编号：{activity.customerNo || '—'}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      报价日期：{activity.quoteStatus.quoteDate || '—'}
-                      {activity.orderNo?.trim() ? ` · 订单号：${activity.orderNo.trim()}` : ''}
-                    </p>
-                  </div>
-                  <time className="text-xs text-gray-400" dateTime={activity.inquiryDate || activity.updatedAt}>
-                    {formatDate(activity.inquiryDate || activity.updatedAt)}
+                    </>
+                  )}
+                  <span aria-hidden="true" className="hidden shrink-0 text-gray-300 md:ml-auto md:inline dark:text-gray-600">·</span>
+                  <time className="shrink-0 text-xs text-gray-400" dateTime={activity.inquiryDate || activity.updatedAt}>
+                    时间：{formatDate(activity.inquiryDate || activity.updatedAt)}
                   </time>
                 </div>
               </article>

@@ -203,15 +203,15 @@ export function PurchaseSupplierInfoCard({
 
       <div className="divide-y divide-gray-100 dark:divide-gray-800">
         {FIELD_GROUPS.map((group) => (
-          <div key={group.title} className="px-5 py-4">
-            <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100">{group.title}</h2>
-            <dl className="grid gap-x-8 gap-y-1 md:grid-cols-2">
+          <div key={group.title} className="px-5 py-3">
+            <h2 className="mb-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100">{group.title}</h2>
+            <dl className="grid gap-x-8 md:grid-cols-2">
               {group.fields.map((field) => {
                 const value = getFieldValue(supplier, field.key);
                 const isEditing = editingField === field.key;
                 return (
-                  <div key={field.key} className={`group py-2 ${field.multiline ? 'md:col-span-2' : ''}`}>
-                    <dt className="mb-1 text-xs font-medium text-gray-500">{field.label}</dt>
+                  <div key={field.key} className={`group py-1.5 ${field.multiline ? 'md:col-span-2' : ''}`}>
+                    <dt className="mb-0.5 text-xs font-medium text-gray-500">{field.label}</dt>
                     <dd>
                       {isEditing ? (
                         <div>
@@ -250,7 +250,7 @@ export function PurchaseSupplierInfoCard({
                           </div>
                         </div>
                       ) : (
-                        <div className="flex min-h-7 items-start justify-between gap-3">
+                        <div className="flex min-h-6 items-start justify-between gap-3">
                           <span className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">{value || '—'}</span>
                           {canWrite && (
                             <button
