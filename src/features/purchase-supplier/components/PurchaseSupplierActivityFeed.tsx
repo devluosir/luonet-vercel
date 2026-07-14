@@ -83,9 +83,9 @@ export function PurchaseSupplierActivityFeed({ supplier }: { supplier: PurchaseS
                   <span aria-hidden="true" className="hidden shrink-0 text-gray-300 md:inline dark:text-gray-600">·</span>
                   <span
                     className="min-w-0 text-sm text-gray-600 md:max-w-56 md:truncate dark:text-gray-300"
-                    title={`客户询价编号：${activity.customerNo || '—'}`}
+                    title={`内容描述：${activity.description || '—'}`}
                   >
-                    客户询价编号：{activity.customerNo || '—'}
+                    内容：{activity.description || '—'}
                   </span>
                   <span aria-hidden="true" className="hidden shrink-0 text-gray-300 md:inline dark:text-gray-600">·</span>
                   <span className="shrink-0 text-xs text-gray-500">

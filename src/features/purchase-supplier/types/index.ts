@@ -49,7 +49,7 @@ export interface PurchaseSupplierSelection {
 export interface PurchaseSupplierActivityItem {
   id: string;
   inquiryNo: string;
-  customerNo: string;
+  description: string;
   inquiryDate: string;
   updatedAt: string;
   orderNo?: string;

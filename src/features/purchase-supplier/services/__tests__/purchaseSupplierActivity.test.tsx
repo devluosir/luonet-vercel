@@ -115,6 +115,7 @@ describe('采购供应商活动派生与展示', () => {
         id: 'ordered',
         inquiryNo: 'INQ-ORDERED',
         customerNo: 'CN-001',
+        description: '船用阀门 2 件',
         orderNo: 'PO-1001',
         purchaseSupplierStatuses: [{
           id: 'status-ordered',
@@ -130,7 +131,9 @@ describe('采购供应商活动派生与展示', () => {
 
     expect(screen.getByText('INQ-ORDERED')).toBeInTheDocument();
     expect(screen.getByText('已转订单')).toBeInTheDocument();
-    expect(screen.getByText('客户询价编号：CN-001')).toBeInTheDocument();
+    expect(screen.getByText('内容：船用阀门 2 件')).toBeInTheDocument();
+    expect(screen.queryByText(/客户询价编号/)).not.toBeInTheDocument();
+    expect(screen.queryByText('CN-001')).not.toBeInTheDocument();
     expect(screen.getByText('报价日期：[7.12]')).toBeInTheDocument();
     expect(screen.getByText(/PO-1001/)).toBeInTheDocument();
     expect(screen.getByText(/时间：/)).toBeInTheDocument();
@@ -143,6 +146,27 @@ describe('采购供应商活动派生与展示', () => {
       'href',
       '/purchase-registration?purchaseSupplierId=supplier-target&supplierName=%E7%9B%AE%E6%A0%87'
     );
+  });
+
+  it('内容描述为空时显示占位符，不回退到客户询价编号', () => {
+    act(() => useInquiryStore.setState({
+      records: [record({
+        id: 'empty-description',
+        customerNo: 'SHOULD-NOT-SHOW',
+        description: '',
+        purchaseSupplierStatuses: [{
+          id: 'status-empty-description',
+          purchaseSupplierId: supplier.id,
+          supplierShortName: '目标',
+          status: 'pending',
+        }],
+      })],
+    }));
+
+    render(<PurchaseSupplierActivityFeed supplier={supplier} />);
+
+    expect(screen.getByText('内容：—')).toBeInTheDocument();
+    expect(screen.queryByText(/客户询价编号|SHOULD-NOT-SHOW/)).not.toBeInTheDocument();
   });
 
   it('零命中时显示明确空状态', () => {

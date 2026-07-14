@@ -227,16 +227,16 @@ export function PurchaseSupplierInfoCard({
         )}
       </div>
 
-      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+      <div className="grid grid-cols-1 divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0 dark:divide-gray-800">
         {FIELD_GROUPS.map((group) => (
           <div key={group.title} className="px-5 py-3">
             <h2 className="mb-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100">{group.title}</h2>
-            <dl className="grid gap-x-8 md:grid-cols-2">
+            <dl className="grid">
               {group.fields.map((field) => {
                 const value = getFieldValue(supplier, field.key);
                 const isEditing = editingField === field.key;
                 return (
-                  <div key={field.key} className={`group py-1.5 ${field.multiline ? 'md:col-span-2' : ''}`}>
+                  <div key={field.key} className="group py-1.5">
                     <dt className="mb-0.5 text-xs font-medium text-gray-500">{field.label}</dt>
                     <dd>
                       {isEditing ? (
@@ -297,8 +297,9 @@ export function PurchaseSupplierInfoCard({
             </dl>
           </div>
         ))}
+      </div>
 
-        <div className="px-5 py-4">
+      <div className="border-t border-gray-100 px-5 py-4 dark:border-gray-800">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">联系人</h2>
             {canWrite && editingField !== 'contacts' && (
@@ -376,7 +377,6 @@ export function PurchaseSupplierInfoCard({
           ) : (
             <p className="text-sm text-gray-500">暂无联系人</p>
           )}
-        </div>
       </div>
     </section>
   );

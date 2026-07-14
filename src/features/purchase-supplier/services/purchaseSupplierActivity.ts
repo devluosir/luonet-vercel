@@ -24,7 +24,7 @@ export function derivePurchaseSupplierActivities(
       return [{
         id: record.id,
         inquiryNo: record.inquiryNo,
-        customerNo: record.customerNo,
+        description: record.description,
         inquiryDate: record.inquiryDate,
         updatedAt: record.updatedAt,
         orderNo: record.orderNo,

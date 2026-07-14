@@ -4411,6 +4411,72 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **Status:** completed（2026-07-14）
 
+## TASK-167：采购活动列表字段纠正——去掉客户询价编号，改显示内容描述
+
+**状态：** 已完成（2026-07-14）
+
+**背景：** `PurchaseSupplierActivityFeed.tsx` 里"采购活动"每条记录当前显示"客户询价编号：{activity.customerNo}"。用户反馈：客户询价编号是销售侧字段，不应该出现在采购供应商详情页这个采购侧视图里；这里应该显示的是采购部登记表里对应记录的"内容描述"（`InquiryRecord.description`，也是 `PurchaseOrderEditModal.tsx` 只读区域"内容描述"用的同一个字段，采购权限本来就可读写这个字段，`PURCHASE_REGISTRATION_WRITE_FIELDS` 里已经包含 `description`）。
+
+**Files in scope：**
+
+- `src/features/purchase-supplier/types/index.ts` — `PurchaseSupplierActivityItem`（第 49-57 行）把 `customerNo: string` 字段改成 `description: string`。
+- `src/features/purchase-supplier/services/purchaseSupplierActivity.ts` — `derivePurchaseSupplierActivities` 里（第 24-32 行）把 `customerNo: record.customerNo` 改成 `description: record.description`。
+- `src/features/purchase-supplier/components/PurchaseSupplierActivityFeed.tsx` — 第 84-89 行的"客户询价编号：{activity.customerNo || '—'}"（含 `title` 属性里的同一段文案）改成展示 `activity.description || '—'`，标签文案自行判断是否需要保留前缀（如"内容："）还是像询价编号一样直接展示，保持这一行其余字段（报价状态、已转订单、报价日期、订单号、时间）的展示逻辑不变。
+- 同步更新 `src/features/purchase-supplier/services/__tests__/purchaseSupplierActivity.test.tsx` 里依赖 `customerNo`/"客户询价编号：xxx" 的测试断言和测试数据构造。
+
+**验收标准：**
+
+- "采购活动"列表不再出现"客户询价编号"字样或对应数据。
+- 每条记录改为显示这条询价记录在采购部登记表里的"内容描述"（`record.description`），为空时显示"—"。
+- 其余字段（询价编号、报价状态徽章、已转订单徽章、报价日期、订单号、时间）展示不变；单行布局、精确匹配、排序、空状态等 TASK-165/166 已实现的行为不变。
+
+**Non-goals / 红线：**
+
+- 不改变 `derivePurchaseSupplierActivities` 的匹配/排序逻辑，只改它返回的字段内容。
+- 不改动询价记录本身的数据结构、权限或同步逻辑，`description` 字段的读写权限已经存在，这里只是换一个展示字段。
+- 不涉及列表页、Worker 硬删除、采购部登记深链接等 TASK-166 已完成的其它能力。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`、改动文件 ESLint。
+- `purchaseSupplierActivity.test.tsx` 更新后继续通过，覆盖 description 为空和有值两种情况。
+- 手动打开一个有采购活动记录的供应商详情页，确认展示的是内容描述而不是客户询价编号。
+
+**Status:** completed（2026-07-14）
+
+## TASK-168：详情页信息卡片——"基本信息"与"采购设置"改成并排两栏
+
+**状态：** 已完成（2026-07-14）
+
+**背景：** `PurchaseSupplierInfoCard.tsx` 当前把"基本信息"和"采购设置"两个 `FIELD_GROUPS` 渲染成上下堆叠的两块（外层 `divide-y` 包裹，每块 `px-5 py-3` 各占整行宽度，见第 230-299 行）。用户希望这两块在桌面宽度下改成左右并排的两个区域，而不是上下堆叠。
+
+**Files in scope：**
+
+- `src/features/purchase-supplier/components/PurchaseSupplierInfoCard.tsx` — 把当前包裹 `FIELD_GROUPS.map(...)` 的容器从纵向 `divide-y` 堆叠改成桌面宽度下左右并排的两栏（例如外层用 `grid grid-cols-1 md:grid-cols-2` 之类的布局，两栏之间加一条竖直分隔线或每栏各自加边框，替代原来靠 `divide-y` 横线分隔的视觉效果）；窄屏/移动端保持原来的上下堆叠，不强求并排。
+  - 因为并排后每个区域的可用宽度大约减半，各区域内部 `dl` 目前用的 `md:grid-cols-2`（组内两个字段并排，比如"供应商全称"和"简称"）在这个新宽度下容易显得拥挤，需要相应调整（比如组内字段改成单列纵向排列，或者把两字段并排的断点从 `md` 上调到 `lg`），不要出现桌面宽度下四列挤在一起、字段被压得很窄的情况。
+  - "联系人"区域（第 301 行往下）不受影响，继续在两栏区域下方占满整行宽度。
+
+**验收标准：**
+
+- 桌面宽度下"基本信息"和"采购设置"是左右并排的两个区域，视觉上能分清是两个独立分区（边框或分隔线，不是简单挤在一起）。
+- 窄屏/移动端下两个区域仍然按原来的方式上下堆叠，不强行并排导致字段挤压。
+- 并排后组内字段不会因为宽度变窄而挤压变形；"供应商全称"这类多字符字段在变窄的列宽下依然可读。
+- 编辑/保存/取消交互、字段值展示、联系人区域功能均不受影响。
+
+**Non-goals / 红线：**
+
+- 不改变字段清单、数据结构、保存逻辑、权限门。
+- 不改动"联系人"区域和详情页头部（归档/删除按钮、只读徽章）的布局。
+- 不涉及列表页、活动列表、采购部登记跳转等其它已完成任务的范围。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`、改动文件 ESLint。
+- 现有 `PurchaseSupplierInfoCard.test.tsx` 继续通过；如果测试里有依赖具体 DOM 结构/class 的断言因为布局调整失效，同步更新断言，不要为了迁就旧断言退回堆叠布局。
+- 手动对比桌面宽度和窄屏宽度下的实际效果。
+
+**Status:** completed（2026-07-14）
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

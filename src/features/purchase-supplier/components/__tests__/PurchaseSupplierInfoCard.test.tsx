@@ -16,6 +16,28 @@ const supplier: PurchaseSupplier = {
 };
 
 describe('PurchaseSupplierInfoCard', () => {
+  it('基本信息和采购设置使用桌面双栏容器，联系人保持在容器下方独占整行', () => {
+    render(
+      <PurchaseSupplierInfoCard
+        supplier={supplier}
+        canWrite={false}
+        onSaveField={jest.fn()}
+        onArchive={jest.fn()}
+        onDelete={jest.fn()}
+      />
+    );
+
+    const basicSection = screen.getByRole('heading', { name: '基本信息' }).parentElement;
+    const settingsSection = screen.getByRole('heading', { name: '采购设置' }).parentElement;
+    const groupsContainer = basicSection?.parentElement;
+    const contactsHeading = screen.getByRole('heading', { name: '联系人' });
+
+    expect(groupsContainer).toHaveClass('grid', 'grid-cols-1', 'md:grid-cols-2', 'md:divide-x');
+    expect(groupsContainer).toContainElement(settingsSection);
+    expect(groupsContainer).not.toContainElement(contactsHeading);
+    expect(contactsHeading.parentElement?.parentElement).toHaveClass('border-t');
+  });
+
   it('可写模式显示并触发彼此独立的归档和永久删除按钮', () => {
     const onArchive = jest.fn();
     const onDelete = jest.fn();
