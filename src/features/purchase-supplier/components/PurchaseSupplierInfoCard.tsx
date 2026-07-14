@@ -36,24 +36,28 @@ interface FieldDefinition {
   multiline?: boolean;
 }
 
-const FIELD_GROUPS: Array<{ title: string; fields: FieldDefinition[] }> = [
+const FIELD_GROUPS: Array<{ title: string; rows: FieldDefinition[][] }> = [
   {
     title: '基本信息',
-    fields: [
-      { key: 'name', label: '供应商全称' },
-      { key: 'shortName', label: '简称' },
-      { key: 'code', label: '供应商编码' },
-      { key: 'address', label: '地址', multiline: true },
+    rows: [
+      [{ key: 'name', label: '供应商全称' }],
+      [{ key: 'shortName', label: '简称' }],
+      [{ key: 'code', label: '供应商编码' }],
+      [{ key: 'address', label: '地址', multiline: true }],
     ],
   },
   {
     title: '采购设置',
-    fields: [
-      { key: 'data.supplyScope', label: '供应产品 / 业务范围', multiline: true },
-      { key: 'data.supplierType', label: '供应商类型' },
-      { key: 'data.paymentTerms', label: '默认付款条件' },
-      { key: 'data.defaultCurrency', label: '默认币种' },
-      { key: 'data.remark', label: '备注', multiline: true },
+    rows: [
+      [
+        { key: 'data.supplyScope', label: '供应产品 / 业务范围', multiline: true },
+        { key: 'data.supplierType', label: '供应商类型' },
+      ],
+      [
+        { key: 'data.paymentTerms', label: '默认付款条件' },
+        { key: 'data.defaultCurrency', label: '默认币种' },
+      ],
+      [{ key: 'data.remark', label: '备注', multiline: true }],
     ],
   },
 ];
@@ -231,12 +235,15 @@ export function PurchaseSupplierInfoCard({
         {FIELD_GROUPS.map((group) => (
           <div key={group.title} className="px-5 py-3">
             <h2 className="mb-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100">{group.title}</h2>
-            <dl className="grid">
-              {group.fields.map((field) => {
+            <dl className="grid grid-cols-2 gap-x-4">
+              {group.rows.flatMap((row) => row.map((field) => {
                 const value = getFieldValue(supplier, field.key);
                 const isEditing = editingField === field.key;
                 return (
-                  <div key={field.key} className="group py-1.5">
+                  <div
+                    key={field.key}
+                    className={`group py-1.5 ${row.length === 1 ? 'col-span-2' : ''}`}
+                  >
                     <dt className="mb-0.5 text-xs font-medium text-gray-500">{field.label}</dt>
                     <dd>
                       {isEditing ? (
@@ -293,7 +300,7 @@ export function PurchaseSupplierInfoCard({
                     </dd>
                   </div>
                 );
-              })}
+              }))}
             </dl>
           </div>
         ))}

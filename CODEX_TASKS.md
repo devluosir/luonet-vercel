@@ -4522,6 +4522,37 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **Status:** completed（2026-07-14）
 
+## TASK-170：采购供应商详情页"采购设置"字段两两并排
+
+**状态：** 已完成（2026-07-14）
+
+**背景：** TASK-168 把"基本信息"和"采购设置"改成左右并排两栏后，为了避免并排后字段拥挤，把两个组内部的字段都改成了纵向单列（`PurchaseSupplierInfoCard.tsx` 第 230-234 行，`<dl className="grid">` 没有列定义，`FieldDefinition` 的 `multiline` 也不再影响布局）。用户对照截图反馈"采购设置"这一栏里希望"供应产品/业务范围"和"供应商类型"同一行，"默认付款条件"和"默认币种"同一行；"基本信息"这一栏和"备注"字段不用动。
+
+**Files in scope：**
+
+- `src/features/purchase-supplier/components/PurchaseSupplierInfoCard.tsx` — 把 `FIELD_GROUPS`（第 39-59 行）的数据结构从"一个组一份扁平 `fields` 数组"改成"一个组是若干行，每行 1-2 个字段"（比如 `rows: FieldDefinition[][]`），明确指定："采购设置"组的行是 `[data.supplyScope, data.supplierType]`、`[data.paymentTerms, data.defaultCurrency]`、`[data.remark]`（备注单独一行）；"基本信息"组维持现状，每行仍是单个字段（`[name]`、`[shortName]`、`[code]`、`[address]`），不要顺带把"供应商全称"和"简称"也拼到一行——这次反馈只针对"采购设置"。渲染逻辑相应调整：一行两个字段时用 `grid grid-cols-2 gap-x-4`（或类似），一行一个字段时保持现在的整行宽度；`multiline` 的字段（`supplyScope`/`address`/`remark`）编辑态仍然渲染成 `textarea`，只是现在可能只占半行宽度（`supplyScope` 和 `supplierType` 并排时），不需要再靠 `multiline` 自动撑满整行——这个横向宽度和是否用 `textarea` 是两回事，不要因为改了并排布局就误把 `supplyScope` 的编辑框也改成单行 `input`。
+
+**验收标准：**
+
+- "采购设置"栏里"供应产品 / 业务范围"和"供应商类型"在同一行；"默认付款条件"和"默认币种"在同一行；"备注"单独占一行。
+- "基本信息"栏的字段布局和现在完全一样（每个字段各占一行），不受本次改动影响。
+- "供应产品 / 业务范围"编辑态仍然是多行 `textarea`（不是单行 `input`），即使现在和"供应商类型"并排、宽度变窄。
+- 只读展示、编辑/保存/取消交互、字段校验（比如全称不能为空）均不受影响。
+
+**Non-goals / 红线：**
+
+- 不改动"基本信息"栏的字段顺序或布局。
+- 不改字段清单、数据结构（`PurchaseSupplierData` 的字段名）、保存逻辑、权限门。
+- 不涉及联系人区域、详情页头部按钮、活动列表等其它已完成任务的范围。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`、改动文件 ESLint。
+- 现有 `PurchaseSupplierInfoCard.test.tsx` 继续通过；如果有依赖具体字段顺序/DOM 结构的断言因为改成"行"数据结构而失效，同步更新，不要因此改回单列布局。
+- 手动对照本次反馈截图（供应商"上海比泽尔"），确认两组配对和"基本信息"不受影响。
+
+**Status:** completed（2026-07-14）
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

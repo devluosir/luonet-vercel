@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { PurchaseSupplierInfoCard } from '../PurchaseSupplierInfoCard';
 import type { PurchaseSupplier } from '../../types';
 
@@ -9,7 +9,13 @@ const supplier: PurchaseSupplier = {
   code: 'PS-001',
   address: '上海市',
   contacts: [{ id: 'contact-1', name: '张三', isPrimary: true }],
-  data: { supplyScope: '阀门', paymentTerms: '月结 30 天' },
+  data: {
+    supplyScope: '阀门',
+    supplierType: '生产商',
+    paymentTerms: '月结 30 天',
+    defaultCurrency: 'CNY',
+    remark: '优先供应商',
+  },
   status: 'active',
   createdAt: '2026-07-01T00:00:00.000Z',
   updatedAt: '2026-07-01T00:00:00.000Z',
@@ -36,6 +42,52 @@ describe('PurchaseSupplierInfoCard', () => {
     expect(groupsContainer).toContainElement(settingsSection);
     expect(groupsContainer).not.toContainElement(contactsHeading);
     expect(contactsHeading.parentElement?.parentElement).toHaveClass('border-t');
+  });
+
+  it('采购设置按指定字段两两并排，备注独占整行，基本信息仍逐项独占整行', () => {
+    render(
+      <PurchaseSupplierInfoCard
+        supplier={supplier}
+        canWrite={false}
+        onSaveField={jest.fn()}
+        onArchive={jest.fn()}
+        onDelete={jest.fn()}
+      />
+    );
+
+    const basicSection = screen.getByRole('heading', { name: '基本信息' }).parentElement;
+    const settingsSection = screen.getByRole('heading', { name: '采购设置' }).parentElement;
+    const basicFields = within(basicSection as HTMLElement);
+    const settingFields = within(settingsSection as HTMLElement);
+
+    expect(basicSection?.querySelector('dl')).toHaveClass('grid-cols-2', 'gap-x-4');
+    ['供应商全称', '简称', '供应商编码', '地址'].forEach((label) => {
+      expect(basicFields.getByText(label).parentElement).toHaveClass('col-span-2');
+    });
+
+    expect(settingsSection?.querySelector('dl')).toHaveClass('grid-cols-2', 'gap-x-4');
+    ['供应产品 / 业务范围', '供应商类型', '默认付款条件', '默认币种'].forEach((label) => {
+      expect(settingFields.getByText(label).parentElement).not.toHaveClass('col-span-2');
+    });
+    expect(settingFields.getByText('备注').parentElement).toHaveClass('col-span-2');
+  });
+
+  it('供应产品与供应商类型并排后，供应产品编辑控件仍为多行 textarea', () => {
+    render(
+      <PurchaseSupplierInfoCard
+        supplier={supplier}
+        canWrite
+        onSaveField={jest.fn()}
+        onArchive={jest.fn()}
+        onDelete={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '编辑供应产品 / 业务范围' }));
+
+    const editor = screen.getByRole('textbox', { name: '供应产品 / 业务范围' });
+    expect(editor.tagName).toBe('TEXTAREA');
+    expect(editor).toHaveAttribute('rows', '3');
   });
 
   it('可写模式显示并触发彼此独立的归档和永久删除按钮', () => {
