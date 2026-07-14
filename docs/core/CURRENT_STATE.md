@@ -41,7 +41,7 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 | `/dashboard` | 首页 | 快速创建（外贸报价/外贸合同/内销报价/内销合同各自独立入口+双维度图标）、今日新增/本月累计询价与订单统计、可切换粒度的询价/订单趋势图（`recharts`，仅 `inquiry` 权限可见）、最近文档、权限过滤入口 |
 | `/quotation` | 外贸报价合同（报价单 / 销售确认） | 已合并为同一入口，页面顶部不再有 tab 按钮，改在设置面板内用 "Type: Quotation / Sales Confirmation" 切换；本地历史为主，支持 PDF/Excel、复制、编辑 |
 | `/quotation?tab=domestic` | 内销报价合同 | 独立侧边栏入口，复用报价单页面与 `quotation_history` 存储 key，默认 CNY，中文录入表单和中文合同式 PDF，历史记录使用独立 `type='domestic'`，避免混入外贸报价单 |
-| `/inquiry` | 询报价登记 | 已接入 D1 `Document`，支持客户/联络人关联、批量关联、筛选；与另外三张登记表共用按用户/视图组隔离的跨标签自适应同步 |
+| `/inquiry` | 询报价登记 | 已接入 D1 `Document`，支持客户/联络人关联、批量关联和筛选；列表点击行编辑，编辑弹窗可永久删除，批量删除仍为软删除；与另外三张登记表共用跨标签自适应同步 |
 | `/order` | 订单状态表 | 复用询报价记录，支持订单状态、金额权限和进行中筛选 |
 | `/purchase-registration` | 采购部登记 | 复用询报价 D1 JSON 记录，只开放内容描述（与询报价登记共享 description）和采购部专属供应商/报价状态字段；不含备货/交货/发票 |
 | `/purchase-order-table` | 采购订单表 | 询报价登记的过滤视图（与订单状态表之于询报价登记关系相同），只展示 orderNo 有值的记录，不能新增/删除；交货日期/执行情况与订单状态表双向共享，确认日期/客户订单号只读来自订单状态表 |
@@ -216,6 +216,7 @@ theme-config
 ## 询报价与订单状态现状
 
 - 询报价记录已支持 `customerId`、`contactId` 结构化关联。
+- 询报价登记表不再显示独立“操作”列，点击资料行打开编辑弹窗；仅该页面的编辑弹窗显示永久删除入口，走同步 `hard-delete` 请求并在 Worker 物理删除 `Document` 行，失败不移除本地数据。客户详情复用的询价弹窗不显示该入口；批量选择工具栏删除继续走 30 天可同步感知的软删除。
 - 采购部登记复用 `InquiryRecord` 的 `description` 字段读写内容描述（与询报价登记共享同一份数据）；新增 `purchaseSupplierStatuses` 与 `purchaseQuotedStatuses` 两个采购部专用字段，结构与询报价登记的 `supplierStatuses` / `quotedStatuses` 相同，但数据独立存储，通过点击整行弹出的"编辑询价"弹窗编辑；不展示/不读写 `orderDeliveryStatus` / `orderDeliveryConsignee`（那是订单状态表 `/order` 和采购订单表 `/purchase-order-table` 共同维护的共享字段，两边编辑的是同一份数据）。
 - 询价成单后支持 `orderSubStatus` 标记：`cancelled`（辙销C）、`suspended`（悬挂P）、`followup`（善后S）；状态标记和 `orderSubStatusRemark` 情况备注统一在订单状态表的“编辑订单”弹窗维护。善后S 可另外标记 `orderFollowupCompleted`（“善后完成” checkbox，仅在善后S 选中时可见）：完成后订单归入“正常”筛选/统计、字母标记从红色“S”变为红色“S”+绿色“-OK”、行背景恢复正常，但“善后”细分筛选依然能筛出这些记录（判断仍是 `orderSubStatus === 'followup'`，与是否完成无关）。`isNormalOrder`/`isInProgressOrder`/`getOrderRowBgClass`/`getOrderSubStatusLetter` 统一收敛在 `orderStatus.ts`，避免此前 `isInProgressOrder`/行背景色/字母标记组件在订单状态表与采购订单表两处重复实现导致的漂移风险（TASK-158）。
 - “编辑订单”弹窗按记录 ID 读取 store 刷新后的最新对象；后台同步不会重置用户正在编辑的普通订单字段，且保存时只在用户明确操作过 C/P/S 状态区后才提交状态字段，避免编辑执行情况时用旧快照覆盖其它标签页刚更新的状态（TASK-151）。

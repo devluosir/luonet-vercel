@@ -1,13 +1,14 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, UserRound, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2, UserRound, X } from 'lucide-react';
 import {
   buildCustomerContactLabel,
   CustomerContactPicker,
   type CustomerContactOption,
 } from '@/features/customer/components/CustomerContactPicker';
 import { Button } from '@/components/ui/Button';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import type { Contact, Customer } from '@/features/customer/types';
 import { customerService, getPrimaryContact } from '@/features/customer/services/customerService';
 import type {
@@ -79,6 +80,56 @@ interface InquiryFormModalProps {
   existingRecords: InquiryRecord[];
   onClose: () => void;
   onSubmit: (values: InquiryBasicInput, suppliers: SupplierQuoteStatus[], quoted: CustomerQuoteStatus[]) => void;
+  onDelete?: (recordId: string) => void | Promise<void>;
+}
+
+function InquiryHardDeleteButton({
+  record,
+  onDelete,
+  onDeleted,
+}: {
+  record: InquiryRecord;
+  onDelete: (recordId: string) => void | Promise<void>;
+  onDeleted: () => void;
+}) {
+  const confirm = useConfirm();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    const orderNo = record.orderNo?.trim();
+    const confirmed = await confirm({
+      title: '永久删除询报价记录',
+      description: `此操作会物理删除该询报价记录，且不可撤销。${
+        orderNo ? `\n\n该记录已生成订单号 ${orderNo}，删除前请确认。` : ''
+      }`,
+      confirmLabel: '确认永久删除',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      await onDelete(record.id);
+      onDeleted();
+    } catch {
+      // 调用方负责展示具体错误；失败时保留弹窗和本地记录，允许用户重试。
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleDelete()}
+      disabled={deleting}
+      className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+      aria-label="永久删除询报价记录"
+      title="永久删除询报价记录"
+    >
+      <Trash2 className="h-4 w-4" />
+    </button>
+  );
 }
 
 export function InquiryFormModal({
@@ -88,6 +139,7 @@ export function InquiryFormModal({
   existingRecords,
   onClose,
   onSubmit,
+  onDelete,
 }: InquiryFormModalProps) {
   // ── 基本信息字段 ──────────────────────────────────────
   const [dateInput, setDateInput] = useState(getTodayDateInputValue());
@@ -578,20 +630,31 @@ export function InquiryFormModal({
           </div>
 
           {/* 操作按钮 */}
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-            >
-              取消
-            </button>
-            <Button
-              type="submit"
-              className="px-5"
-            >
-              {mode === 'edit' ? '保存修改' : '新增询价'}
-            </Button>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              {mode === 'edit' && record && onDelete ? (
+                <InquiryHardDeleteButton
+                  record={record}
+                  onDelete={onDelete}
+                  onDeleted={onClose}
+                />
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                取消
+              </button>
+              <Button
+                type="submit"
+                className="px-5"
+              >
+                {mode === 'edit' ? '保存修改' : '新增询价'}
+              </Button>
+            </div>
           </div>
         </form>
       </div>

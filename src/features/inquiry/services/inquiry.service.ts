@@ -240,6 +240,30 @@ export const inquiryService = {
     return records;
   },
 
+  async hardDelete(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/${encodeURIComponent(id)}/hard-delete`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const raw = await response.text().catch(() => '');
+      let detail = raw;
+      try {
+        const parsed = raw ? JSON.parse(raw) as { error?: unknown; details?: unknown } : {};
+        detail = String(parsed.error || parsed.details || raw);
+      } catch {
+        // 非 JSON 错误响应沿用原始文本。
+      }
+      throw new Error(`永久删除失败：HTTP ${response.status}${detail ? ` - ${detail.slice(0, 200)}` : ''}`);
+    }
+
+    // 只有服务端确认物理删除成功后，才同步清理本地记录、旧软删除墓碑和可能重建该记录的待同步操作。
+    this.save(this.getAll().filter((record) => record.id !== id));
+    const deleted = getLocalStorageJSON<DeletedMap>(DELETED_KEY, {});
+    delete deleted[id];
+    setLocalStorage(DELETED_KEY, deleted);
+    savePendingQueue(loadPendingQueue().filter((item) => item.recordId !== id));
+  },
+
   /**
    * TASK-128：since 传入上次已知的服务端水位（meta.maxUpdatedAt），只拉这之后变化过的记录，
    * 用于增量同步。不传 since 时行为不变，仍是整表拉取。

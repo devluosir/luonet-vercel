@@ -5,7 +5,6 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import {
   headerCellCenterClass,
   headerCellClass,
-  headerCellRightClass,
   headerRowClass,
 } from '@/components/table/tableHeaderStyles';
 import { ResizeHandle } from '@/components/table/ResizeHandle';
@@ -13,14 +12,13 @@ import { type ResizableColumnDef, useResizableColumns } from '@/components/table
 import type { InquiryRecord } from '../types';
 import { InquiryRow } from './InquiryRow';
 
-// 全选/操作两列宽度固定、不参与拖拽调宽（避免用户把勾选框/操作按钮拖没了）
+// 全选列宽度固定、不参与拖拽调宽（避免用户把勾选框拖没了）
 const CHECK_COL_PX = 40;
-const DEL_COL_PX = 56;
 
 // 询报价登记表（销售侧）：只在 lg 断点（客户编号列可见，即全列展示）启用拖拽调宽，
 // 其余断点（md/sm）继续用原有百分比响应式布局，不受影响。
 //
-// "询报价状态"列（可拖拽列里排在最后一个，操作列 del 之前）故意不在这个数组里、不给拖拽手柄：
+// "询报价状态"列（也是表格最后一列）故意不在这个数组里、不给拖拽手柄：
 // 它是唯一没有显式像素宽度的列，table-layout:fixed 会把 table 宽度（w-full）减去其它列显式宽度后
 // 的剩余空间全分给它，表格才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白。
 // 这个"吸收剩余空间"的列必须放在可拖拽列里的最后一个——之前误放在中间的"内容简述"上，导致拖动它
@@ -55,7 +53,6 @@ interface InquiryTableProps {
   sortDir: 'asc' | 'desc';
   onSortToggle: () => void;
   onEditRecord: (record: InquiryRecord) => void;
-  onDeleteRecord: (recordId: string) => void;
   emptyMessage?: string;
   emptySubMessage?: string;
   canBatchEdit?: boolean;
@@ -69,7 +66,6 @@ export function InquiryTable({
   sortDir,
   onSortToggle,
   onEditRecord,
-  onDeleteRecord,
   emptyMessage = '暂无询报价记录',
   emptySubMessage = '点击"新增询价"后，会在这里登记供应商询价和客户报价状态。',
   canBatchEdit = false,
@@ -93,8 +89,7 @@ export function InquiryTable({
         inquirer: bp === 'lg' ? '11%' : '12%',
         custno:   '22%',
         desc:     bp === 'lg' ? '21%' : bp === 'md' ? '21%' : '33%',
-        status:   bp === 'lg' ? '30%' : bp === 'md' ? '45%' : '31%',
-        del:      bp === 'lg' ? '4%'  : bp === 'md' ? '7%'  : '8%',
+        status:   bp === 'lg' ? '30%' : bp === 'md' ? '52%' : '39%',
       }
     : {
         check:    '0%',
@@ -102,8 +97,7 @@ export function InquiryTable({
         inquirer: bp === 'lg' ? '12%' : '13%',
         custno:   '24%',
         desc:     bp === 'lg' ? '22%' : bp === 'md' ? '22%' : '33%',
-        status:   bp === 'lg' ? '28%' : bp === 'md' ? '43%' : '33%',
-        del:      bp === 'lg' ? '4%'  : bp === 'md' ? '7%'  : '8%',
+        status:   bp === 'lg' ? '28%' : bp === 'md' ? '50%' : '41%',
       };
 
   if (records.length === 0) {
@@ -171,9 +165,6 @@ export function InquiryTable({
               <th style={resizable ? undefined : { width: W.status }} className={headerCellClass}>
                 <span className="block truncate">询报价状态</span>
               </th>
-              <th style={{ width: resizable ? DEL_COL_PX : W.del }} className={headerCellRightClass}>
-                <span className="hidden md:inline">操作</span>
-              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -182,7 +173,6 @@ export function InquiryTable({
                 key={record.id}
                 record={record}
                 onEdit={onEditRecord}
-                onDelete={onDeleteRecord}
                 canBatchEdit={canBatchEdit}
                 selected={selectedIds.has(record.id)}
                 onToggleSelect={onToggleSelect}

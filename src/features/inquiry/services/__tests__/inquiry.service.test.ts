@@ -3,6 +3,7 @@ import type { InquiryRecord } from '../../types';
 
 const PENDING_SYNC_KEY = 'inquiry_pending_syncs';
 const STORAGE_KEY = 'inquiry_records';
+const DELETED_KEY = 'inquiry_deleted_ids';
 const SYNC_WATERMARK_KEY_FULL = 'inquiry_sync_watermark_full';
 const SYNC_WATERMARK_KEY_RESTRICTED = 'inquiry_sync_watermark_restricted';
 const LAST_FULL_SYNC_AT_KEY_FULL = 'inquiry_last_full_sync_at_full';
@@ -145,6 +146,60 @@ describe('inquiryService D1 sync queue', () => {
       '/api/inquiry',
       expect.objectContaining({ method: 'POST' })
     );
+  });
+});
+
+describe('inquiryService hardDelete', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    jest.clearAllMocks();
+  });
+
+  test('同步等待独立硬删除接口成功后，才清理本地记录、墓碑和同记录待同步操作', async () => {
+    const target = mockRecord();
+    const retained = mockRecord({ id: 'inquiry-2', inquiryNo: 'C260708G' });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([target, retained]));
+    localStorage.setItem(DELETED_KEY, JSON.stringify({
+      [target.id]: '2026-07-14T00:00:00.000Z',
+      [retained.id]: '2026-07-14T00:00:00.000Z',
+    }));
+    localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify([
+      { opId: 'target-update', action: 'update', recordId: target.id, createdAt: '', attempts: 0 },
+      { opId: 'retained-update', action: 'update', recordId: retained.id, createdAt: '', attempts: 0 },
+    ]));
+    global.fetch = jest.fn().mockResolvedValue(okResponse()) as jest.Mock;
+
+    await inquiryService.hardDelete(target.id);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/inquiry/inquiry-1/hard-delete',
+      { method: 'DELETE' }
+    );
+    expect(inquiryService.getAll().map((record) => record.id)).toEqual(['inquiry-2']);
+    expect(JSON.parse(localStorage.getItem(DELETED_KEY) || '{}')).toEqual({
+      'inquiry-2': '2026-07-14T00:00:00.000Z',
+    });
+    expect(pendingQueue()).toEqual([
+      expect.objectContaining({ recordId: 'inquiry-2' }),
+    ]);
+  });
+
+  test('接口失败时明确报错，且本地记录、墓碑和待同步操作完全不变', async () => {
+    const target = mockRecord();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([target]));
+    localStorage.setItem(DELETED_KEY, JSON.stringify({ [target.id]: '2026-07-14T00:00:00.000Z' }));
+    localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify([
+      { opId: 'target-update', action: 'update', recordId: target.id, createdAt: '', attempts: 0 },
+    ]));
+    global.fetch = jest.fn().mockResolvedValue(failedResponse()) as jest.Mock;
+
+    await expect(inquiryService.hardDelete(target.id)).rejects.toThrow(
+      '永久删除失败：HTTP 502 - bad gateway'
+    );
+
+    expect(inquiryService.getAll()).toEqual([target]);
+    expect(JSON.parse(localStorage.getItem(DELETED_KEY) || '{}')).toHaveProperty(target.id);
+    expect(pendingQueue()).toHaveLength(1);
   });
 });
 

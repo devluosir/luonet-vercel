@@ -32,13 +32,15 @@ describe('InquiryTable 可拖拽列宽（只在 lg 断点启用，其余断点�
     window.localStorage.clear();
   });
 
-  it('lg 断点（全列展示）下，询价编号/询价人/客户编号/内容简述 4 列各有一个拖拽手柄；checkbox/操作/询报价状态没有', () => {
+  it('lg 断点（全列展示）下，4 个资料列有拖拽手柄，checkbox/询报价状态没有，且不再渲染操作列', () => {
     setViewportWidth(1280);
     render(
-      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} onDeleteRecord={jest.fn()} canBatchEdit />
+      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} canBatchEdit />
     );
     expect(screen.getAllByRole('separator')).toHaveLength(4);
-    // "询报价状态"是可拖拽列里排在最后一个（操作列 del 之前）、唯一不设显式宽度的撑满列，没有手柄——
+    expect(screen.queryByRole('columnheader', { name: '操作' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /删除 C260713F/ })).not.toBeInTheDocument();
+    // "询报价状态"是表格最后一列、唯一不设显式宽度的撑满列，没有手柄——
     // 必须是最后一个，否则拖动它前面的列会导致视觉上"往左扩展"而不是"往右扩展"（曾经的真实 bug）
     expect(screen.queryByLabelText('调整"询报价状态"列宽')).not.toBeInTheDocument();
   });
@@ -46,7 +48,7 @@ describe('InquiryTable 可拖拽列宽（只在 lg 断点启用，其余断点�
   it('lg 断点下表格始终 w-full 撑满容器，不会在列宽总和小于容器宽度时留白', () => {
     setViewportWidth(1280);
     const { container } = render(
-      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} onDeleteRecord={jest.fn()} />
+      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} />
     );
     expect(container.querySelector('table')).toHaveClass('w-full');
   });
@@ -54,7 +56,7 @@ describe('InquiryTable 可拖拽列宽（只在 lg 断点启用，其余断点�
   it('md/sm 断点下不渲染任何拖拽手柄，沿用原有响应式百分比布局', () => {
     setViewportWidth(500);
     render(
-      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} onDeleteRecord={jest.fn()} />
+      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} />
     );
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
   });
@@ -62,7 +64,7 @@ describe('InquiryTable 可拖拽列宽（只在 lg 断点启用，其余断点�
   it('lg 断点下拖拽"内容简述"列手柄会增大该列宽度并持久化', () => {
     setViewportWidth(1280);
     render(
-      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} onDeleteRecord={jest.fn()} />
+      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} />
     );
     const handle = screen.getByLabelText('调整"内容简述"列宽');
 
@@ -86,7 +88,7 @@ describe('InquiryTable 可拖拽列宽（只在 lg 断点启用，其余断点�
   it('回归：拖拽"内容简述"手柄只改变它自己的宽度，不影响它左边"客户编号"列的宽度', () => {
     setViewportWidth(1280);
     render(
-      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} onDeleteRecord={jest.fn()} />
+      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={jest.fn()} />
     );
     const custnoWidthBefore = screen.getByLabelText('调整"客户编号"列宽').closest('th')?.style.width;
 
@@ -105,5 +107,16 @@ describe('InquiryTable 可拖拽列宽（只在 lg 断点启用，其余断点�
 
     const custnoWidthAfter = screen.getByLabelText('调整"客户编号"列宽').closest('th')?.style.width;
     expect(custnoWidthAfter).toBe(custnoWidthBefore); // "客户编号" 不受影响
+  });
+
+  it('点击资料行仍打开编辑，不依赖已移除的操作列', () => {
+    const onEditRecord = jest.fn();
+    render(
+      <InquiryTable records={[baseRecord()]} sortDir="desc" onSortToggle={jest.fn()} onEditRecord={onEditRecord} />
+    );
+
+    fireEvent.click(screen.getByText('C260713F'));
+
+    expect(onEditRecord).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }));
   });
 });

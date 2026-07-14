@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### 询报价编辑弹窗永久删除（TASK-169）
+- 询报价编辑弹窗左下角新增独立永久删除入口，明确提示物理删除且不可撤销；已有订单号时追加订单警告。该入口只由询报价登记页传入，客户详情复用弹窗不显示。
+- 新增同步 `DELETE /api/inquiry/:id/hard-delete` 链路：完整 `inquiry` 权限方可代理，Worker 真正删除 `Document` 行；服务端成功前不清理本地数据，成功后同步清理本地记录、旧墓碑和该记录待同步队列，避免幽灵重建。
+
 #### 采购供应商永久删除与采购登记精确跳转（TASK-166）
 - 采购供应商详情新增相互独立的“归档”和“永久删除”操作；永久删除使用专用 `DELETE /api/purchase-suppliers/:id/hard-delete` 路由，在同一 D1 batch 中显式删除联系人和主档，原归档路由仍只更新状态。
 - 永久删除前显示不可撤销警告；有关联采购登记时展示精确活动数量、文本快照保留与 ID 关联失效提示，并明确统计不覆盖浏览器本地的正式采购单历史。
@@ -29,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 正式采购单新增标准名称 fallback 与新旧混合搜索规则，兼容 CRLF、前导空行、无换行 legacy `attn`；新增只读候选扫描脚本，禁止自动建档或模糊合并。
 
 ### Changed
+
+#### 询报价登记移除操作列（TASK-169）
+- 列表删除“操作”表头和行内软删除按钮，点击资料行继续打开编辑弹窗；批量选择工具栏的删除保持原有软删除语义和 `inquiry.batchEdit` 权限门。
 
 #### 采购供应商详情字段与双栏布局（TASK-167/168）
 - 采购活动移除销售侧“客户询价编号”，改为显示采购部登记共享的“内容描述”；空描述显示占位符，其余状态、订单和时间信息不变。

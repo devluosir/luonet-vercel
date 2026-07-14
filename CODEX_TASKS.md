@@ -4477,6 +4477,51 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **Status:** completed（2026-07-14）
 
+## TASK-169：询报价登记表去掉"操作"列，编辑弹窗左下角加真删除入口
+
+**状态：** 已完成（2026-07-14）
+
+**背景：** 上一轮对话确认了询报价登记的删除现状——本地 `inquiry.service.ts` 的 `remove()` 只是把记录从 localStorage 过滤掉（另记一份"墓碑" `inquiry_deleted_ids` 防止被同步拉回），服务端 `src/worker.ts` 第 1738-1748 行的 DELETE 分支也只是 `UPDATE Document SET status='deleted'`，从不真正删行（注释里写的"之后可由定时任务清理"这个清理任务从未实现）。当时讨论了两条路：一次性手动清库，或者做成正式功能。用户选择了后者，这次给出具体交互：
+
+1. `InquiryTable.tsx`（表头第 175 行"操作"）+ `InquiryRow.tsx`（第 98-108 行，`Trash2` 图标调用 `onDelete`，即现有的软删除入口）——把这一列整个去掉。行本身已经有 `onClick={() => onEdit(record)}`（第 37 行）打开编辑弹窗，去掉操作列不影响进入编辑的入口。
+2. `InquiryFormModal.tsx`（编辑询价窗口，第 580-595 行是当前"取消/保存修改"按钮行，`flex items-center justify-end gap-2`）——左下角新增一个硬删除图标按钮，和右侧的取消/保存变成同一行两端对齐（`justify-between`）。这里的"删除"是真正的物理删除，不是现有 `removeRecord` 那种软删除。
+
+**Files in scope：**
+
+- `src/features/inquiry/components/InquiryTable.tsx` — 去掉表头"操作"列（第 175 行一带）；`onDeleteRecord` prop 及相关列宽/拖拽豁免逻辑（第 16、58、72 行提到的"操作列"注释）一并清理，不要留下指向已删除列的死配置。
+- `src/features/inquiry/components/InquiryRow.tsx` — 去掉最后一个 `<td>`（第 98-108 行的删除按钮单元格）和不再使用的 `onDelete` prop、`Trash2` import。
+- `src/features/inquiry/components/InquiryFormModal.tsx` — `InquiryFormModalProps`（第 75-82 行）新增可选 `onDelete?: (recordId: string) => void`；只在 `mode === 'edit'` 且 `record` 存在且外部传了 `onDelete` 时，在第 580-595 行的按钮行左侧渲染一个 `Trash2` 图标按钮（`justify-between` 布局，左边删除图标，右边保持"取消/保存修改"）。点击后二次确认（文案强调"物理删除、不可撤销"，如果 `record.orderNo` 有值要额外提示"该记录已生成订单号 {orderNo}，删除前请确认"），确认后调用 `onDelete(record.id)` 并关闭弹窗。**这个 prop 必须是可选的**——`src/features/customer/components/CustomerActivityFeed.tsx` 也在用同一个 `InquiryFormModal` 编辑询价记录，这次只在 `InquiryPage.tsx` 这个调用点传 `onDelete`，`CustomerActivityFeed.tsx` 那个调用点不传，不显示删除图标，不要连带在客户详情页也加上这个入口。
+- `src/features/inquiry/app/InquiryPage.tsx` — 现有 `handleDeleteRecord`（第 282 行起）和"操作"列的软删除是同一套，这次要保留它给批量删除（`handleBatchDelete`，第 250 行起，走勾选框+工具栏，需要 `inquiry.batchEdit` 权限）继续用，不要动；新增一个单独的硬删除处理函数，传给 `InquiryFormModal` 的新 `onDelete` prop，二次确认后调用下面新增的服务函数。
+- `src/features/inquiry/services/inquiry.service.ts` — 新增 `hardDelete(id: string): Promise<void>`（区别于现有 `remove()`/`deleteFromD1()`），需要：a) 调用新 Worker 硬删除路由并等待响应（不要用现有 `enqueueAndTry` 那种 fire-and-forget 重试队列模式——那套异步重试机制正是历史上"幽灵记录"[[bug_inquiry_sync_phantom_records]]的根因，物理删除这种不可逆操作必须同步等结果、失败要能在 UI 上明确提示，不能静默重试或静默失败）；b) 成功后把本地 `inquiry_records`/`inquiry_deleted_ids` 也同步清理掉这条记录，本地状态和服务端保持一致。
+- `src/worker.ts` — 在 `handleInquiryRequest` 里新增一个和现有软删除 `DELETE /api/inquiry/:id`（第 1738 行 `itemMatch` 分支）**路径不同**的真删除分支，例如新增正则匹配 `/^\/api\/inquiry\/([^/]+)\/hard-delete$/`，执行真正的 `DELETE FROM Document WHERE id = ? AND type = 'inquiry'`（不是 `UPDATE ... SET status`）。`verifyBearerToken` 已经在函数顶部（第 1599 行）统一检查，不需要重复加。
+- `src/app/api/inquiry/[[...path]]/route.ts` — 经核实这层是通用路径转发（第 67-70 行把 `pathSegments` 原样拼给 Worker），且现有逻辑已经把 DELETE 方法限定为只有完整 `inquiry` 权限（非受限视图）才能发起（第 54-56 行），新的 `.../hard-delete` 子路径会自动复用这个权限门槛，**不需要改这个文件**——除非实现时发现还有别的地方专门按路径段数硬编码校验（比如别处对 `/api/inquiry/:id` 做了严格的"只能两段"校验），如果有，需要相应放行三段路径。
+
+**验收标准：**
+
+- 询报价登记表不再有"操作"列，行点击依然能打开编辑询价弹窗。
+- 编辑询价弹窗左下角有删除图标（仅编辑模式，且只在 `InquiryPage.tsx` 这条路径出现，客户详情页的询价编辑弹窗不受影响）；点击后二次确认，确认后这条记录在 D1 里被真正 `DELETE`，之后同 ID `GET` 查不到（哪怕带 30 天软删除宽限期的查询也查不到，因为行已经不存在，不是状态变化）。
+- 已生成订单号的记录删除前，确认弹窗要有针对性的额外提示。
+- 现有批量删除（勾选框+工具栏，`inquiry.batchEdit` 权限）行为完全不变，继续走软删除。
+- 硬删除调用失败时（网络错误、权限不足等）要有清晰的错误提示，本地数据不能在服务端确认成功之前就被移除；不能复用现有的 fire-and-forget 重试队列。
+
+**Non-goals / 红线：**
+
+- 不改动批量删除功能的软删除语义。
+- 不在客户详情页的询价编辑弹窗（`CustomerActivityFeed.tsx` 的调用点）加删除入口。
+- 不新增/修改询报价相关的权限模块，沿用现有 `inquiry` 权限门槛。
+- 不处理已存在的历史软删除数据清理（这是另一件事，上次讨论过，如果之后需要可以单独立项）。
+- 不改动询报价的同步/合并逻辑（`mergeFromD1`/`mergeFieldsOnly`），只新增一个独立的硬删除调用路径。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`、改动文件 ESLint。
+- Worker：新硬删除路由 Bearer 校验、真删除后 `GET` 查不到、对现有软删除路由无影响的回归测试。
+- 前端：`InquiryFormModal.tsx` 删除图标仅在 `mode==='edit'` 且传了 `onDelete` 时出现的组件测试；确认弹窗文案（含/不含订单号两种情况）；`InquiryPage.tsx` 硬删除失败时不移除本地数据的测试；`InquiryTable.tsx`/`InquiryRow.tsx` 去掉操作列后行点击仍正常打开编辑的回归测试；批量删除路径不受影响的回归测试。
+- `npm run build`（沙箱可能跑不满 45 秒，建议本地/CI 补一次完整验证）。
+- 手动验证：真实创建一条测试询价记录，用新删除入口删掉，确认数据库里彻底查不到；确认客户详情页的询价编辑弹窗没有出现删除图标。
+
+**Status:** completed（2026-07-14）
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

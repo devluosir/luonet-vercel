@@ -1690,6 +1690,19 @@ async function handleInquiryRequest(
       return jsonResponse({ success: true, id }, 201);
     }
 
+    const hardDeleteMatch = path.match(/^\/api\/inquiry\/([^/]+)\/hard-delete$/);
+
+    if (request.method === 'DELETE' && hardDeleteMatch) {
+      const id = decodeURIComponent(hardDeleteMatch[1]);
+      const result = await env.USERS_DB.prepare(
+        `DELETE FROM Document WHERE id = ? AND type = 'inquiry'`
+      ).bind(id).run();
+      if (result.meta.changes === 0) {
+        return jsonResponse({ error: '询报价记录不存在' }, 404);
+      }
+      return jsonResponse({ success: true });
+    }
+
     const itemMatch = path.match(/^\/api\/inquiry\/([^/]+)$/);
 
     if (request.method === 'PUT' && itemMatch) {

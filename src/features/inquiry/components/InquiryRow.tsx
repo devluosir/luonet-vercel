@@ -1,6 +1,5 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
 import type { InquiryRecord } from '../types';
 import { getRecordColorState, stripDateBrackets } from '../utils/inquiryUtils';
 import { getOrderSubStatusLetter, isFollowupCompleted } from '../utils/orderStatus';
@@ -9,7 +8,6 @@ import { InquiryQuoteStatusDisplay } from './InquiryQuoteStatusDisplay';
 interface InquiryRowProps {
   record: InquiryRecord;
   onEdit: (record: InquiryRecord) => void;
-  onDelete: (recordId: string) => void;
   canBatchEdit?: boolean;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
@@ -18,7 +16,6 @@ interface InquiryRowProps {
 export function InquiryRow({
   record,
   onEdit,
-  onDelete,
   canBatchEdit = false,
   selected = false,
   onToggleSelect,
@@ -94,17 +91,6 @@ export function InquiryRow({
       </td>
       <td className="overflow-hidden px-2 py-2 md:px-3">
         <InquiryQuoteStatusDisplay record={record} />
-      </td>
-      <td className="overflow-hidden whitespace-nowrap px-1 py-2 text-right md:px-3">
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onDelete(record.id); }}
-          className="rounded-md p-1 text-gray-300 opacity-0 hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 dark:hover:bg-red-950/30 dark:hover:text-red-400"
-          aria-label={`删除 ${record.inquiryNo}`}
-          title="删除"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
       </td>
     </tr>
   );

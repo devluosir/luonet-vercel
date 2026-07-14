@@ -260,6 +260,22 @@ export function InquiryPage() {
     setSelectedIds(new Set());
   }, [selectedIds, removeRecord, confirm]);
 
+  const handleHardDeleteRecord = useCallback(async (recordId: string) => {
+    try {
+      await inquiryService.hardDelete(recordId);
+      useInquiryStore.setState({ records: inquiryService.getAll() });
+      setSelectedIds((current) => {
+        const next = new Set(current);
+        next.delete(recordId);
+        return next;
+      });
+      showToast('询报价记录已永久删除', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '永久删除失败', 'error');
+      throw error;
+    }
+  }, [showToast]);
+
   const handleBatchLinkCustomer = useCallback((customerId: string, contactId: string, inquirer: string) => {
     const ids = Array.from(selectedIds);
     ids.forEach((id) => updateRecord(id, { customerId, contactId, inquirer }));
@@ -278,23 +294,6 @@ export function InquiryPage() {
     });
     router.replace('/inquiry');
   }, [filter, router, setFilter]);
-
-  const handleDeleteRecord = async (recordId: string) => {
-    const confirmed = await confirm({
-      title: '删除询报价记录',
-      description: '确定删除这条询报价记录吗？',
-      confirmLabel: '删除',
-      variant: 'danger',
-    });
-    if (!confirmed) return;
-
-    removeRecord(recordId);
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(recordId);
-      return next;
-    });
-  };
 
   // ── 导出（Excel） ────────────────────────────────────
   const handleExport = useCallback(() => {
@@ -504,7 +503,6 @@ export function InquiryPage() {
             setFilter({ ...filter, sortDir: filter.sortDir === 'desc' ? 'asc' : 'desc' })
           }
           onEditRecord={openEditModal}
-          onDeleteRecord={handleDeleteRecord}
           emptyMessage={activeCount > 0 ? '没有符合条件的记录' : '暂无询报价记录'}
           emptySubMessage={
             activeCount > 0
@@ -611,6 +609,7 @@ export function InquiryPage() {
         existingRecords={records}
         onClose={closeModal}
         onSubmit={handleSubmit}
+        onDelete={handleHardDeleteRecord}
       />
 
       <BatchLinkCustomerModal
