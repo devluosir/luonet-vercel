@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  headerCellOverflowClass,
   headerRowClass,
 } from '@/components/table/tableHeaderStyles';
 import { ResizeHandle } from '@/components/table/ResizeHandle';
@@ -31,13 +32,13 @@ const COLUMNS: ResizableColumnDef[] = [
   { id: 'status', defaultWidth: 340, minWidth: 180 },
 ];
 
-const purchaseRegistrationHeaderCellClass =
-  'overflow-hidden border-r border-gray-200/70 px-2 py-0.5 text-left align-middle text-[11px] lg:py-2.5 ' +
-  'font-semibold text-gray-600 last:border-r-0 dark:border-gray-700/70 dark:text-gray-300';
-const resizableHeaderCellClass = `${purchaseRegistrationHeaderCellClass} relative`;
+const STATUS_DESCRIPTION_MIN_WIDTH = 180;
+const resizableHeaderCellClass = `${headerCellOverflowClass} relative`;
+const headerLabelClass = 'flex h-6 items-center truncate whitespace-nowrap';
 
 export function PurchaseRegistrationTable({ records, onUpdate, onEditRecord }: PurchaseRegistrationTableProps) {
   const { widths, startResize, resetColumn } = useResizableColumns('purchaseRegistration.tableColWidths', COLUMNS);
+  const tableMinWidth = widths.no + widths.desc + widths.status + STATUS_DESCRIPTION_MIN_WIDTH;
 
   if (records.length === 0) {
     return (
@@ -53,7 +54,7 @@ export function PurchaseRegistrationTable({ records, onUpdate, onEditRecord }: P
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed">
+        <table className="w-full table-fixed" style={{ minWidth: tableMinWidth }}>
           <colgroup>
             <col style={{ width: widths.no ?? 150 }} />
             <col style={{ width: widths.desc ?? 320 }} />
@@ -63,18 +64,20 @@ export function PurchaseRegistrationTable({ records, onUpdate, onEditRecord }: P
           <thead>
             <tr className={headerRowClass}>
               <th className={resizableHeaderCellClass}>
-                询价编号
+                <span className={headerLabelClass}>询价编号</span>
                 <ResizeHandle onPointerDown={startResize('no')} onDoubleClick={() => resetColumn('no')} label="询价编号" />
               </th>
               <th className={resizableHeaderCellClass}>
-                内容描述
+                <span className={headerLabelClass}>内容描述</span>
                 <ResizeHandle onPointerDown={startResize('desc')} onDoubleClick={() => resetColumn('desc')} label="内容描述" />
               </th>
               <th className={resizableHeaderCellClass}>
-                询报价状态
+                <span className={headerLabelClass}>询报价状态</span>
                 <ResizeHandle onPointerDown={startResize('status')} onDoubleClick={() => resetColumn('status')} label="询报价状态" />
               </th>
-              <th className={purchaseRegistrationHeaderCellClass}>状态描述</th>
+              <th className={headerCellOverflowClass}>
+                <span className={headerLabelClass}>状态描述</span>
+              </th>
             </tr>
           </thead>
           <tbody>
