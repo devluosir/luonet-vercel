@@ -5,7 +5,7 @@ import { CalendarDays, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import type { InquiryRecord, PurchaseOrderSupplierEntry } from '@/features/inquiry/types';
 import { normalizeShortDateInput, stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
-import { STATUS_PRESETS } from '@/features/order/components/DeliveryStatusCell';
+import { STATUS_PRESETS } from '@/features/order/components/deliveryStatusPresets';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { PurchaseSupplierPicker } from '@/features/purchase-supplier/components/PurchaseSupplierPicker';
 import { buildPurchaseOrderDirtyPatch } from '../utils/purchaseOrderPatch';

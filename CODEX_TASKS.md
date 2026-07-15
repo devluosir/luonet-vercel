@@ -4731,6 +4731,126 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **完成说明：** 已完成一单多家供应商的标签式弹窗编辑、旧单值字段自动 fallback/首项镜像、采购单号弹窗编辑入口、多供应商搜索筛选及受限视图读写白名单；新增 helper、patch、弹窗、表格行、选择器和 API 权限测试。`npx tsc --noEmit`、改动文件 ESLint、生产构建及本地响应式页面验收均通过。当前没有“仅 purchaseRegistration、无 inquiry”专用测试账号，受限视图本轮完成了 GET 清洗/PUT 白名单自动测试，但未执行该专用账号的真实保存验收。
 
+## TASK-174：订单状态表去掉全部行内编辑，改成点击整行打开"编辑订单"弹窗
+
+**状态：** completed（2026-07-15）
+
+**背景：** 用户要求订单状态表（`/order`）、采购部登记（`/purchase-registration`）、采购订单表（`/purchase-order-table`）三张表都去掉行内编辑，改成跟询报价登记表（`/inquiry`，`InquiryRow.tsx`）一样——点击整行打开编辑弹窗，弹窗才是唯一编辑入口。三张表分拆成三个任务（本任务 + TASK-175 + TASK-176），先做订单状态表这个字段最多、风险最高的。
+
+参考模型 `InquiryRow.tsx`：整个 `<tr>`上挂 `onClick={() => onEdit(record)}`，所有 `<td>` 都是纯只读展示（不带 `role="button"`/`onClick`），只有批量选择 checkbox 那一格用 `onClick={(e) => e.stopPropagation()}` 挡住冒泡。
+
+订单状态表现状：`OrderRow.tsx` 里有 7 个行内可编辑字段（交货日期、确认日期、客户订单号、执行情况+收货人、金额、回款月份、到账金额），分别由本文件内定义的 `EditableCell`/`DatePickerCell`/`MonthPickerCell`/`AmountCell` 四个组件 + 共享组件 `DeliveryStatusCell`（`@/features/order/components/DeliveryStatusCell.tsx`）渲染；`onOpenEdit` 目前只挂在"订单编号+询价编号"那一格的内层 `<div>` 上。好消息是 `OrderEditModal.tsx` 早就已经覆盖了这 7 个字段外加撤销C/悬挂P/善后S 状态标记（弹窗顶部注释写着"行内单元格点击编辑保留、并存，不是替代关系"——这次就是要把"并存"改成"只保留弹窗"），**不需要新增弹窗字段，只需要把行内编辑拿掉**。
+
+**Files in scope：**
+
+- `src/features/order/components/OrderRow.tsx` —
+  - 删除 `EditField` 类型、`activeField`/`setActiveField`/`activate`/`cancel`，以及本文件内定义的 `EditableCell`、`DatePickerCell`、`MonthPickerCell`、`AmountCell` 四个组件（连同它们各自的 props interface）。这四个组件都只有"编辑"和"只读"两个渲染分支，**只读分支的 JSX/class 原样保留、去掉 `role="button"`/`tabIndex`/`onClick`/`onKeyDown`/`cursor-text` 这些交互相关的部分**，直接内联到对应单元格里（其余格式化逻辑——`stripDateBrackets`、`formatAmountDisplay`、`parseAmount`、`getRecordCurrency` 这些纯函数不变，继续复用）。
+  - `<tr>` 开头（第 434 行）加上 `onClick={() => onOpenEdit?.(record)}`，`cursor-pointer` class（参照 `InquiryRow.tsx` 的 `group cursor-pointer` 写法，注意保留现有 `getOrderRowBgClass(record)` 背景色逻辑）。批量选择 checkbox 那一格（第 438-448 行）已经有 `onClick={(e) => e.stopPropagation()}`，不用改。
+  - "订单编号+询价编号"那一格（第 450-467 行）目前自己也有 `role="button"`/`onClick={() => onOpenEdit?.(record)}`——这次改成 tr 级点击后，这一格自己的 `role`/`tabIndex`/`onClick`/`onKeyDown`/`cursor-pointer` 都可以去掉（避免和 tr 的点击重复触发两次 `onOpenEdit`），只保留 `title` 提示文案和内容展示。
+  - "执行情况"单元格（第 530-544 行）不再渲染 `DeliveryStatusCell`（`editing` 分支），改成内联只读展示（状态文字 + 收货人，参照 `DeliveryStatusCell.tsx` 第 163-183 行"非 editing"分支的 JSX/class，去掉交互部分），文件顶部 `import { DeliveryStatusCell } from './DeliveryStatusCell';` 也去掉。
+  - `OrderRowProps` 里的 `onUpdate: (patch: Partial<InquiryRecord>) => void` 不再被用到（所有 patch 现在都走弹窗自己的 `onSave`），删掉这个 prop 和函数体里对应的解构；`OrderTable.tsx` 渲染 `<OrderRow>` 那里（第 300-313 行附近）去掉 `onUpdate={(patch) => onUpdate(record.id, patch)}` 这一行传参（`OrderTable` 自己的 `onUpdate` prop 不用动，弹窗的 `onSave` 还在用）。
+
+**验收标准：**
+
+- 订单状态表任何一行的任意单元格（交货日期、确认日期、客户订单号、执行情况、金额、回款月份、到账金额）点击后都不再出现行内输入框/原生日期选择器，而是打开"编辑订单"弹窗，且弹窗里对应字段的当前值正确。
+- 点击行内任意位置（不含批量选择 checkbox）只触发一次 `onOpenEdit`，不会重复弹出/重复触发。
+- 批量选择 checkbox 继续正常工作，点击 checkbox 不会同时打开弹窗。
+- 善后 S/S-OK 徽标、行背景色（`getOrderRowBgClass`）等既有只读展示逻辑不受影响。
+- 弹窗内编辑保存后，表格对应单元格立刻显示新值（这条本来就该成立，因为弹窗保存路径没变，只是确认一下没有回归）。
+
+**Non-goals / 红线：**
+
+- 不改 `OrderEditModal.tsx`，它已经覆盖所有字段，不需要新增。
+- 不改 `DeliveryStatusCell.tsx` 这个共享组件文件本身（`PurchaseOrderRow.tsx` 目前还在用它，TASK-176 会处理那边；这个组件到 TASK-176 完成后如果彻底没人用了，由 TASK-176 里统一判断是否要删除导出，这个任务不要动它）。
+- 不改批量选择、排序（`onSortToggle`）、断点响应式列显隐（`orderTableLayout.ts`）逻辑。
+- 不改 D1/worker 相关代码，这次纯前端交互调整。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`、改动文件 ESLint。
+- `OrderRow.test.tsx` 现有用例大量依赖原生日期/月份选择器的行内编辑交互（`screen.getAllByLabelText('选择日期')` 等），这些用例需要整体重写成"点击行触发 `onOpenEdit`"的断言，参照 TASK-173 里 `PurchaseOrderRow.test.tsx` 的写法（渲染 + `fireEvent.click`/`keyDown` on `<tr>` 或某个单元格，断言 `onOpenEdit` 被调用、且没有出现 `input`/`select`）。善后 S/S-OK 徽标和行背景色两个既有用例应该继续通过，不用改。
+- 手动测试：桌面宽度下点开订单状态表任意一行，确认弹窗打开且字段齐全；勾选批量选择 checkbox 不触发弹窗；金额/回款月份/到账金额（需要财务权限账号）显示正确。
+
+**Status:** completed（2026-07-15）
+
+**完成说明：** 订单状态表 7 个字段已全部改为只读展示，点击任意业务单元格统一打开“编辑订单”弹窗；原生日期/月选择器及行内文本、金额、执行情况编辑状态均已删除。批量 checkbox 继续阻止冒泡，C/P/S 与 S-OK 展示保持不变。
+
+## TASK-175：采购部登记去掉"内容描述"行内编辑
+
+**状态：** completed（2026-07-15）
+
+**背景：** 与 TASK-174 同一批需求的第二部分。采购部登记（`/purchase-registration`）的 `PurchaseRegistrationRow.tsx` 其实已经是"点击整行打开编辑弹窗"模式了（`<tr onClick={() => onEditRecord(record)}>`），**唯一的例外**是"内容描述"这一格自己 `onClick={(e) => e.stopPropagation()}` 挡住冒泡、改成行内 `EditableText` 编辑。"编辑询价"弹窗（`PurchaseInquiryEditModal.tsx`）里本来就已经有"内容描述"这个可编辑输入框（`localDescription` state，第 117-129 行），所以这次同样是纯粹的"拿掉行内入口"，不需要新增弹窗字段。
+
+**Files in scope：**
+
+- `src/features/purchase-registration/components/PurchaseRegistrationRow.tsx` —
+  - 删除本文件内定义的 `EditableText` 组件（第 12-61 行，注意这是这个文件自己的一份定义，跟 `PurchaseOrderRow.tsx` 里已经在 TASK-173 删掉的那个同名组件是两回事，互不影响）、`EditField` 类型、`activeField`/`setActiveField`。
+  - "内容描述"单元格（第 116-129 行）：去掉 `onClick={(e) => e.stopPropagation()}`，把 `EditableText` 换成纯只读展示（参照它"非 editing"分支的 JSX/class，去掉交互部分），值用 `record.description`，为空时展示"内容描述"占位文案（灰色，和其它空值单元格一致）。
+  - `PurchaseRegistrationRowProps` 里的 `onUpdate: (patch: Partial<InquiryRecord>) => void` 不再被用到，删掉这个 prop 和函数体解构；`PurchaseRegistrationTable.tsx` 渲染 `<PurchaseRegistrationRow>` 那里（第 88 行）去掉 `onUpdate={(patch) => onUpdate(record.id, patch)}` 这一行；`PurchaseRegistrationTable.tsx` 自己的 `onUpdate` prop（interface 第 14 行、解构第 39 行）确认没有其它用途后一并删掉；`PurchaseRegistrationPage.tsx` 渲染 `<PurchaseRegistrationTable>` 那里（第 248 行附近）去掉 `onUpdate={(id, patch) => patchRecordForView(id, patch)}` 这一行传参——**注意 `patchRecordForView` 本身不要删**，它同一个 Page 里第 256 行的弹窗 `onSave={(id, patch) => patchRecordForView(id, patch)}` 还在用。
+
+**验收标准：**
+
+- 采购部登记表"内容描述"单元格点击后不再出现行内输入框，而是（跟点这一行其它地方一样）打开"编辑询价"弹窗，弹窗里能正常编辑内容描述并保存，保存后表格立刻显示新值。
+- 点击行内任意位置只触发一次打开弹窗，不重复。
+- "询报价状态"预览列（`InquiryQuoteStatusDisplay`）、状态徽标列的展示和点击行为不受影响（它们本来就不是行内可编辑的，这次不用动）。
+
+**Non-goals / 红线：**
+
+- 不改 `PurchaseInquiryEditModal.tsx`，它已经有内容描述字段。
+- 不改 `InquiryQuoteStatusDisplay` 组件（询报价状态预览，跟这次的"内容描述"字段无关）。
+- 不改采购部登记的筛选、供应商关联等其它逻辑。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`、改动文件 ESLint。
+- `PurchaseRegistrationTable.test.tsx` 现有用例如果断言了"内容描述"行内可编辑交互，同步更新为"点击打开弹窗"；如果没有直接测到这部分可以补一条。
+- 手动测试：点击采购部登记任意一行（含"内容描述"格）都能打开弹窗，弹窗里改内容描述保存后表格同步更新。
+
+**Status:** completed（2026-07-15）
+
+**完成说明：** 采购部登记“内容描述”已取消独立行内输入，点击该格与其它格一致打开“编辑询价”弹窗；`PurchaseRegistrationRow` → Table → Page 的无用 `onUpdate` prop 链已清理，弹窗保存路径保持不变。
+
+## TASK-176：采购订单表收尾——去掉剩余行内编辑，改成点击整行打开弹窗
+
+**状态：** completed（2026-07-15）
+
+**背景：** TASK-173 已经把"供应商"和"采购单号"改成点击对应单元格打开"编辑采购订单"弹窗，但用的是单元格级 `onClick`，不是整行点击；"金额""交货日期""执行情况"这三个字段目前还是行内编辑（本文件内定义的 `AmountEditCell`/`DateEditCell` + 共享组件 `DeliveryStatusCell`）。这个任务收尾：把剩下三个字段的行内编辑也拿掉，并把点击目标从"几个单独的单元格"统一收敛成"整行"，跟询报价登记 `InquiryRow.tsx` 的模式完全一致。`PurchaseOrderEditModal.tsx` 已经覆盖交货日期、执行情况、金额这三个字段（TASK-173 之前就有），不需要新增弹窗字段。
+
+**依赖：** 请在 TASK-173 之后做（现在 TASK-173 状态是 completed，可以直接开始）。
+
+**Files in scope：**
+
+- `src/features/purchase-order-registration/components/PurchaseOrderRow.tsx` —
+  - 删除 `EditField` 类型、`activeField`/`setActiveField`/`activate`/`cancel`，以及本文件内定义的 `AmountEditCell`、`DateEditCell` 两个组件（连同 props interface）。两者只读分支的 JSX/class 保留、去掉交互部分，内联到"金额""交货日期"两个单元格。
+  - "执行情况"单元格不再渲染 `DeliveryStatusCell`（`editing` 分支），改成内联只读展示（参照该组件"非 editing"分支的 JSX/class，去掉交互部分），文件顶部对 `DeliveryStatusCell` 的 import 去掉。
+  - `<tr>` 开头加上 `onClick={() => onOpenEdit?.(record)}` + `cursor-pointer`（参照 `InquiryRow.tsx`/TASK-174 改完后的 `OrderRow.tsx`）。
+  - "订单编号"、"采购单号"、"供应商"这三个单元格目前各自都有 `role="button"`/`onClick={() => onOpenEdit?.(record)}`（TASK-173 加的），改成 tr 级点击后这三处的 `role`/`tabIndex`/`onClick`/`onKeyDown`/`cursor-pointer` 都去掉，避免和 tr 点击重复触发，只保留 `title`/展示内容。
+  - `PurchaseOrderRowProps` 里的 `onUpdate: (patch: Partial<InquiryRecord>) => void` 不再被用到，删掉这个 prop 和解构；`PurchaseOrderTable.tsx` 渲染 `<PurchaseOrderRow>` 那里去掉 `onUpdate={(patch) => onUpdate(record.id, patch)}` 这一行（`PurchaseOrderTable`/`PurchaseOrderRegistrationPage` 自己的 `onUpdate` 不用动，弹窗 `onSave` 还在用）。
+- `src/features/order/components/DeliveryStatusCell.tsx` — 这个任务完成后，`OrderRow.tsx`（TASK-174 改完）和 `PurchaseOrderRow.tsx`（本任务）应该都不再 import/渲染 `DeliveryStatusCell` 这个组件本身了（`STATUS_PRESETS` 常量两个弹窗还在用，不能删）。确认这一点后，把 `DeliveryStatusCell` 这个函数组件的导出一并删掉，避免留死代码；如果有专门测试这个组件的测试文件，一并处理（删除或按需保留，视测试内容而定）。**如果 TASK-174 还没完成、`OrderRow.tsx` 仍在用它，这一步先跳过，只做 `PurchaseOrderRow.tsx` 那部分**，不要因为这个任务提前删掉别的表还在用的组件。
+
+**验收标准：**
+
+- 采购订单表任意一行点击后（不管点哪个单元格）都打开"编辑采购订单"弹窗，且只触发一次，不重复。
+- "金额""交货日期""执行情况"三个字段不再能行内编辑（无输入框/日期选择器/预设按钮弹出），只读展示正确（含空值占位、`canViewFinancials` 权限门控——没有财务权限时金额列本来就不渲染，这个逻辑不变）。
+- 小屏下"采购单号"列隐藏、其它响应式列宽逻辑不受影响。
+- 如果 `DeliveryStatusCell` 组件在两张表都不再引用后被删除，`tsc`/eslint 不报错，`STATUS_PRESETS` 仍可正常从该文件导入。
+
+**Non-goals / 红线：**
+
+- 不改 `PurchaseOrderEditModal.tsx`。
+- 不改 TASK-173 已经做好的供应商多选、采购单号弹窗编辑的数据逻辑，这次只动"点击目标从单元格收敛到整行"这一层。
+- 不要在 `OrderRow.tsx`（TASK-174 范围）还没改完时就删除 `DeliveryStatusCell` 组件导出。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`、改动文件 ESLint。
+- `PurchaseOrderRow.test.tsx`（TASK-173 新增）里针对"点击采购单号/供应商单元格各自触发一次 `onOpenEdit`"的用例，改成"点击行内任意单元格都只触发一次"；新增/更新用例覆盖金额、交货日期、执行情况三个格子点击后不出现行内编辑控件、且触发 `onOpenEdit`。
+- 手动测试：桌面和小屏下分别点开采购订单表任意一行，确认弹窗打开、字段齐全，行内不再有任何可编辑控件。
+
+**Status:** completed（2026-07-15）
+
+**完成说明：** 采购订单表金额、交货日期、执行情况已取消行内编辑，订单编号、采购单号、供应商等全部单元格统一由整行点击打开“编辑采购订单”弹窗；小屏采购单号隐藏和金额权限门保持不变。已无调用方的 `DeliveryStatusCell` 组件删除，弹窗仍需的 `STATUS_PRESETS` 移至独立 `deliveryStatusPresets.ts`。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

@@ -11,7 +11,6 @@ import { PurchaseRegistrationRow } from './PurchaseRegistrationRow';
 
 interface PurchaseRegistrationTableProps {
   records: InquiryRecord[];
-  onUpdate: (id: string, patch: Partial<InquiryRecord>) => void;
   onEditRecord: (record: InquiryRecord) => void;
 }
 
@@ -36,7 +35,7 @@ const STATUS_DESCRIPTION_MIN_WIDTH = 180;
 const resizableHeaderCellClass = `${headerCellOverflowClass} relative`;
 const headerLabelClass = 'flex h-6 items-center truncate whitespace-nowrap';
 
-export function PurchaseRegistrationTable({ records, onUpdate, onEditRecord }: PurchaseRegistrationTableProps) {
+export function PurchaseRegistrationTable({ records, onEditRecord }: PurchaseRegistrationTableProps) {
   const { widths, startResize, resetColumn } = useResizableColumns('purchaseRegistration.tableColWidths', COLUMNS);
   const tableMinWidth = widths.no + widths.desc + widths.status + STATUS_DESCRIPTION_MIN_WIDTH;
 
@@ -85,7 +84,6 @@ export function PurchaseRegistrationTable({ records, onUpdate, onEditRecord }: P
               <PurchaseRegistrationRow
                 key={record.id}
                 record={record}
-                onUpdate={(patch) => onUpdate(record.id, patch)}
                 onEditRecord={onEditRecord}
               />
             ))}

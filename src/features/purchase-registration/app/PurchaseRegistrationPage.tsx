@@ -245,7 +245,6 @@ export function PurchaseRegistrationPage() {
         </div>
         <PurchaseRegistrationTable
           records={finalRecords}
-          onUpdate={(id, patch) => patchRecordForView(id, patch)}
           onEditRecord={setEditingRecord}
         />
       </div>

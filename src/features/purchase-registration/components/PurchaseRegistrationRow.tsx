@@ -1,75 +1,20 @@
 'use client';
 
-import { useState } from 'react';
 import { InquiryQuoteStatusDisplay } from '@/features/inquiry/components/InquiryQuoteStatusDisplay';
 import { stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
 import { getOrderSubStatusLetter, isFollowupCompleted } from '@/features/inquiry/utils/orderStatus';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { computePurchaseMainStatus, formatPurchaseMainStatus, getPurchaseRowColorClass } from '../utils/purchaseInquiryStatus';
 
-type EditField = 'content' | null;
-
-interface EditableTextProps {
-  editing: boolean;
-  value: string | undefined;
-  placeholder: string;
-  colorClassName?: string;
-  onActivate: () => void;
-  onSave: (value: string | undefined) => void;
-  onCancel: () => void;
-}
-
-function EditableText({ editing, value, placeholder, colorClassName, onActivate, onSave, onCancel }: EditableTextProps) {
-  const display = value?.trim() || '';
-
-  if (editing) {
-    return (
-      <input
-        autoFocus
-        type="text"
-        defaultValue={display}
-        placeholder={placeholder}
-        onBlur={(e) => onSave(e.target.value.trim() || undefined)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur();
-          if (e.key === 'Escape') {
-            e.preventDefault();
-            onCancel();
-          }
-        }}
-        className="w-full rounded border border-blue-300 bg-white px-1.5 py-0.5 text-xs outline-none focus:ring-1 focus:ring-blue-200 dark:border-blue-600 dark:bg-gray-900 dark:text-gray-100"
-      />
-    );
-  }
-
-  return (
-    <span
-      role="button"
-      tabIndex={0}
-      onClick={onActivate}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') onActivate();
-      }}
-      title={display || undefined}
-      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-[13px] font-medium hover:bg-black/5 dark:hover:bg-white/5 ${
-        display ? (colorClassName ?? 'text-gray-800 dark:text-gray-100') : 'text-gray-300 dark:text-gray-700'
-      }`}
-    >
-      {display || placeholder}
-    </span>
-  );
-}
-
 interface PurchaseRegistrationRowProps {
   record: InquiryRecord;
-  onUpdate: (patch: Partial<InquiryRecord>) => void;
   onEditRecord: (record: InquiryRecord) => void;
 }
 
-export function PurchaseRegistrationRow({ record, onUpdate, onEditRecord }: PurchaseRegistrationRowProps) {
-  const [activeField, setActiveField] = useState<EditField>(null);
+export function PurchaseRegistrationRow({ record, onEditRecord }: PurchaseRegistrationRowProps) {
   const mainStatus = formatPurchaseMainStatus(computePurchaseMainStatus(record));
   const subStatusBadge = getOrderSubStatusLetter(record);
+  const description = record.description?.trim() || '';
 
   // 供只读预览用的影子记录：把采购部专属供应商/报价状态接到 InquiryQuoteStatusDisplay 期望的字段名上
   const previewRecord: InquiryRecord = {
@@ -113,19 +58,15 @@ export function PurchaseRegistrationRow({ record, onUpdate, onEditRecord }: Purc
           </span>
         </div>
       </td>
-      <td className="max-w-0 overflow-hidden px-2 py-2" onClick={(e) => e.stopPropagation()}>
-        <EditableText
-          editing={activeField === 'content'}
-          value={record.description}
-          placeholder="内容描述"
-          colorClassName={mainColorClass}
-          onActivate={() => setActiveField('content')}
-          onSave={(value) => {
-            setActiveField(null);
-            onUpdate({ description: value ?? '' });
-          }}
-          onCancel={() => setActiveField(null)}
-        />
+      <td className="max-w-0 overflow-hidden px-2 py-2">
+        <span
+          title={description || undefined}
+          className={`block min-h-[1.25rem] min-w-0 truncate px-0.5 text-[13px] font-medium ${
+            description ? mainColorClass : 'text-gray-300 dark:text-gray-700'
+          }`}
+        >
+          {description || '内容描述'}
+        </span>
       </td>
       <td className="max-w-0 overflow-hidden px-2 py-2">
         <InquiryQuoteStatusDisplay record={previewRecord} />

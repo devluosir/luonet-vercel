@@ -196,8 +196,6 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
               record={record}
               bp={bp}
               canViewFinancials={canViewFinancials}
-              consigneeOptions={consigneeOptions}
-              onUpdate={(patch) => onUpdate(record.id, patch)}
               onOpenEdit={(record) => setEditingRecordId(record.id)}
             />
           ))}

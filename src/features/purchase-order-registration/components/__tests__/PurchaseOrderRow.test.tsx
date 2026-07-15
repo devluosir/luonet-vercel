@@ -26,36 +26,50 @@ function record(overrides: Partial<InquiryRecord> = {}): InquiryRecord {
   };
 }
 
-function renderRow(item: InquiryRecord, bp: 'sm' | 'lg' = 'lg', onOpenEdit = jest.fn()) {
-  render(
+function renderRow(
+  item: InquiryRecord,
+  options: { bp?: 'sm' | 'lg'; canViewFinancials?: boolean } = {}
+) {
+  const onOpenEdit = jest.fn();
+  const view = render(
     <table>
       <tbody>
         <PurchaseOrderRow
           record={item}
-          bp={bp}
-          canViewFinancials={false}
-          consigneeOptions={[]}
-          onUpdate={jest.fn()}
+          bp={options.bp ?? 'lg'}
+          canViewFinancials={options.canViewFinancials ?? false}
           onOpenEdit={onOpenEdit}
         />
       </tbody>
     </table>
   );
-  return onOpenEdit;
+  return { ...view, onOpenEdit };
 }
 
 describe('PurchaseOrderRow', () => {
-  it('采购单号和全部供应商只读展示，点击均打开编辑弹窗', () => {
-    const item = record();
-    const onOpenEdit = renderRow(item);
+  it('点击采购单号、供应商、金额、交货日期和执行情况都只打开一次编辑弹窗', () => {
+    const item = record({
+      purchaseOrderAmount: '€1234.5',
+      orderDeliveryDate: '[7.20]',
+      orderDeliveryStatus: '交货',
+      orderDeliveryConsignee: '上海仓',
+    });
+    const { onOpenEdit } = renderRow(item, { canViewFinancials: true });
 
+    ['PROC-1', '供应商一、供应商二', '€1,234.50', '7.20', '交货'].forEach((text) => {
+      fireEvent.click(screen.getByText(text));
+    });
+
+    expect(onOpenEdit).toHaveBeenCalledTimes(5);
+    expect(onOpenEdit).toHaveBeenLastCalledWith(item);
+    expect(screen.queryByLabelText('选择日期')).not.toBeInTheDocument();
+    expect(document.querySelector('input, select')).not.toBeInTheDocument();
+  });
+
+  it('采购单号和全部供应商保持只读展示', () => {
+    renderRow(record());
     expect(screen.getByText('供应商一、供应商二')).toHaveAttribute('title', '供应商一、供应商二');
     expect(screen.queryByDisplayValue('PROC-1')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('PROC-1'));
-    fireEvent.keyDown(screen.getByText('供应商一、供应商二'), { key: 'Enter' });
-    expect(onOpenEdit).toHaveBeenCalledTimes(2);
-    expect(onOpenEdit).toHaveBeenLastCalledWith(item);
   });
 
   it('旧单值供应商仍可回退显示', () => {
@@ -68,7 +82,7 @@ describe('PurchaseOrderRow', () => {
   });
 
   it('小屏继续隐藏采购单号列', () => {
-    renderRow(record(), 'sm');
+    renderRow(record(), { bp: 'sm' });
     expect(screen.queryByText('PROC-1')).not.toBeInTheDocument();
     expect(screen.getByText('供应商一、供应商二')).toBeInTheDocument();
   });

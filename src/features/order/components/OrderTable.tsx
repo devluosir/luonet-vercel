@@ -303,8 +303,6 @@ export function OrderTable({
               record={record}
               bp={bp}
               canViewFinancials={canViewFinancials}
-              consigneeOptions={consigneeOptions}
-              onUpdate={(patch) => onUpdate(record.id, patch)}
               onOpenEdit={(record) => setEditingRecordId(record.id)}
               canBatchEdit={canBatchEdit}
               selected={selectedIds.has(record.id)}

@@ -5,7 +5,7 @@ import { CalendarDays, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import type { InquiryRecord, OrderSubStatus } from '@/features/inquiry/types';
 import { normalizeShortDateInput, stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
-import { STATUS_PRESETS } from './DeliveryStatusCell';
+import { STATUS_PRESETS } from './deliveryStatusPresets';
 
 /**
  * 订单状态表——"编辑订单"弹窗（2026-07-10 新增）

@@ -27,7 +27,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
   it('询价编号/内容描述/询报价状态 3 列渲染拖拽手柄；最后一列"状态描述"是唯一不设显式宽度的撑满列，没有手柄', () => {
     render(
-      <PurchaseRegistrationTable records={[baseRecord()]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />
+      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} />
     );
     expect(screen.getAllByRole('separator')).toHaveLength(3);
     expect(screen.queryByLabelText('调整"状态描述"列宽')).not.toBeInTheDocument();
@@ -35,7 +35,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
   it('四列表头与询报价登记保持同一单行高度，窄屏通过表格最小宽度避免末列被压缩换行', () => {
     const { container } = render(
-      <PurchaseRegistrationTable records={[baseRecord()]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />
+      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} />
     );
 
     const headers = screen.getAllByRole('columnheader');
@@ -50,7 +50,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
   it('表格始终 w-full 撑满容器，不会在列宽总和小于容器宽度时留白', () => {
     const { container } = render(
-      <PurchaseRegistrationTable records={[baseRecord()]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />
+      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} />
     );
     const table = container.querySelector('table');
     expect(table).toHaveClass('w-full');
@@ -63,7 +63,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
   it('"询报价状态"列默认宽度比原来的 26% 更宽（用户反馈原宽度装不下状态提示）', () => {
     const { container } = render(
-      <PurchaseRegistrationTable records={[baseRecord()]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />
+      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} />
     );
     const cols = container.querySelectorAll('col');
     // 询报价状态是第 3 列
@@ -73,7 +73,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
   it('拖拽状态列的手柄会增大该列宽度，并持久化到 localStorage', () => {
     const { container } = render(
-      <PurchaseRegistrationTable records={[baseRecord()]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />
+      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} />
     );
     const statusHandle = screen.getByLabelText('调整"询报价状态"列宽');
 
@@ -102,7 +102,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
   it('回归：拖拽"内容描述"手柄只改变它自己的宽度，不影响它左边"询价编号"列的宽度', () => {
     const { container } = render(
-      <PurchaseRegistrationTable records={[baseRecord()]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />
+      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} />
     );
     const cols = container.querySelectorAll('col');
     const noWidthBefore = (cols[0] as HTMLElement).style.width;
@@ -125,8 +125,24 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
     expect(parseInt((colsAfter[1] as HTMLElement).style.width, 10)).toBe(380); // 320 默认 + 60
   });
 
+  it('点击内容描述与其它业务单元格都打开编辑弹窗，且不渲染行内输入框', () => {
+    const item = baseRecord();
+    const onEditRecord = jest.fn();
+    const { container } = render(
+      <PurchaseRegistrationTable records={[item]} onEditRecord={onEditRecord} />
+    );
+
+    fireEvent.click(screen.getByText('初始描述'));
+    fireEvent.click(container.querySelector('tbody td:last-child') as HTMLElement);
+
+    expect(onEditRecord).toHaveBeenCalledTimes(2);
+    expect(onEditRecord).toHaveBeenLastCalledWith(item);
+    expect(screen.queryByDisplayValue('初始描述')).not.toBeInTheDocument();
+    expect(container.querySelector('tbody input')).not.toBeInTheDocument();
+  });
+
   it('空记录时渲染空态提示，不渲染表格', () => {
-    render(<PurchaseRegistrationTable records={[]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />);
+    render(<PurchaseRegistrationTable records={[]} onEditRecord={jest.fn()} />);
     expect(screen.getByText('暂无采购部登记记录')).toBeInTheDocument();
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
   });
