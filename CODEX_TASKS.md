@@ -4553,6 +4553,79 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **Status:** completed（2026-07-14）
 
+## TASK-171：采购供应商列表页去掉归档按钮
+
+**状态：** completed（2026-07-15）
+
+**背景：** 采购供应商列表页（`/purchase-supplier`）每一行末尾有一个「归档」图标按钮，用户要求把这个入口从列表页去掉。详情页（`PurchaseSupplierDetailPage.tsx`）里也有归档功能（第 118-131 行 `handleArchive`，通过 `onArchive={handleArchive}` 传给某个头部组件），这次反馈只针对列表页，详情页的归档不用动，服务层 `archivePurchaseSupplier`（`purchaseSupplierService.ts` 第 231 行）和 worker 端点（`src/worker.ts` `handleArchivePurchaseSupplier`）仍被详情页使用，不能删除。
+
+**Files in scope：**
+
+- `src/features/purchase-supplier/app/PurchaseSupplierPage.tsx` —
+  - 删除第 129-142 行整个 `{canWrite && <div className="flex gap-1">...</div>}` 块（归档按钮及其外层容器）。
+  - 删除第 66-75 行的 `handleArchive` 函数。
+  - 清理因此变成未使用的引用：第 4 行 `Archive` 图标 import、第 12 行 `archivePurchaseSupplier` import、第 8 行 `useConfirm` import 及第 21 行 `confirm` 变量（确认它们在文件里没有被其它地方使用后再删，若还有用到就保留）。
+
+**验收标准：**
+
+- 采购供应商列表页每一行不再显示归档图标按钮。
+- 点击整行仍然正常跳转到供应商详情页（`router.push` 行为不受影响）。
+- 新建/编辑供应商（`showForm` / `handleSave`）功能不受影响。
+- 详情页的归档功能（`PurchaseSupplierDetailPage.tsx`）保持不变，仍可正常归档。
+
+**Non-goals / 红线：**
+
+- 不删除 `archivePurchaseSupplier`（`purchaseSupplierService.ts`）或 worker 端点 `handleArchivePurchaseSupplier`，详情页仍依赖。
+- 不改动详情页的归档按钮/逻辑。
+- 不改列表页其它功能（搜索、新增、权限门 `canRead`/`canWrite`）。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`、改动文件 ESLint。
+- 更新 `src/features/purchase-supplier/app/__tests__/PurchaseSupplierPage.test.tsx` 第 89-97 行「点击归档按钮不会触发行跳转」这条用例——归档按钮已删除，此用例需要删除或改写；同时移除该测试文件里为 `archivePurchaseSupplier` 打的 mock（若不再被引用）。
+- 手动检查列表页渲染，确认归档按钮不再出现。
+
+**Status:** completed（2026-07-15）
+
+## TASK-172：采购供应商页副标题/新增按钮/联系人排布 + 采购部登记表表头压缩
+
+**状态：** completed（2026-07-15）
+
+**背景：** 用户反馈四点，分两组文件：（1）采购供应商列表页（`/purchase-supplier`）副标题文案要去掉、小屏下新增按钮要和标题同一行、小屏下每条记录的"主联系人"和"供货范围"要放同一行；（2）采购部登记表（`/purchase-registration`）在中屏/小屏时表头行整体过高，应该压缩（用户确认：表头行比数据行占用的空间明显偏大，需要减小表头的上下内边距）。
+
+**Files in scope：**
+
+- `src/features/purchase-supplier/app/PurchaseSupplierPage.tsx` —
+  1. 删除第 75 行 `<p className="mt-1 text-sm text-gray-500">采购侧独立主数据，不与销售侧客户管理中的供应商混用。</p>`（副标题整段去掉，`<div>` 容器里只剩 `<h1>`）。
+  2. 第 72 行 `mb-6 flex flex-wrap items-center justify-between gap-3` 去掉 `flex-wrap`（改成 `mb-6 flex items-center justify-between gap-3`），避免小屏下新增按钮换到标题下一行；同时给第 73 行标题容器 `<div>` 加 `min-w-0`，给第 77 行 `<Button>` 加 `shrink-0`，防止标题过长时把按钮挤出可视区或撑破一行布局。
+  3. 第 108-115 行（供应商姓名/联系人/供货范围三个直接子元素）：小屏（默认，无 `md:` 前缀）时外层 `grid` 没有列定义，三个子元素各自单独占一行；现在要求小屏下"主联系人"和"供货范围"这两个子元素合并到同一行，供应商名称保持单独一行。做法：把第 114-115 行的联系人 `<div>` 和供货范围 `<div>` 包进一个新的 wrapper `<div className="flex items-center justify-between gap-2 md:contents">`，wrapper 在小屏下用 `flex` 把两者并排显示（联系人靠左、供货范围靠右），在 `md:` 断点用 `contents`（`display:contents`）让 wrapper 本身消失，使联系人和供货范围重新变成外层 `grid-cols-[1.8fr_1fr_1.3fr]` 的直接子项，md+ 端的三列布局必须保持和现在完全一样。
+
+- `src/features/purchase-registration/components/PurchaseRegistrationTable.tsx` —
+  4. 第 35 行 `const th = ${headerCellOverflowClass} relative;` 复用了 `@/components/table/tableHeaderStyles` 里的共享样式 `headerCellOverflowClass`（`px-2 py-2.5 ...`）。这个样式同时被 `InquiryTable.tsx`、`PurchaseOrderTable.tsx`、`OrderTable.tsx` 三个其它表格复用，**不要改 `tableHeaderStyles.ts` 本身**，否则会连带改变那三张表的表头，超出本次范围。改法：只在本文件内新建一个采购部登记表专用的 `th` 样式常量（内容基于 `headerCellOverflowClass` 复制展开，把 `py-2.5` 改小，比如先试 `py-1.5`），只应用在本表格的 `<th>` 上（第 63/67/71/75 行）。目标是表头行的视觉高度接近数据行（`PurchaseRegistrationRow.tsx` 单元格是 `py-2`），不要求像素级一致，改完后目测对比一下表头和第一条数据行的高度比例，如果还是明显偏高可以再往下调，但不要小到文字被裁切或贴边。
+
+**验收标准：**
+
+- 采购供应商列表页不再显示"采购侧独立主数据，不与销售侧客户管理中的供应商混用。"这句副标题。
+- 在窄屏（如 375px 宽）下，"采购供应商"标题和"新增采购供应商"按钮始终在同一行，不换行。
+- 在窄屏下，每条供应商记录里"主联系人"和"供货范围"两个值显示在同一行；供应商名称仍单独占一行。
+- md 及以上宽度时，采购供应商列表的三列（供应商 / 主联系人 / 供货范围）表头和数据对齐方式与改动前完全一致（用 `md:contents` 验证不会破坏现有桌面端布局）。
+- 采购部登记表的表头行高度明显压缩，不再有截图里那种表头比数据行高出一大截的观感；`InquiryTable`、`PurchaseOrderTable`、`OrderTable` 三张表的表头样式和高度不受影响（因为改动没有碰共享的 `tableHeaderStyles.ts`）。
+
+**Non-goals / 红线：**
+
+- 不改 `src/components/table/tableHeaderStyles.ts` 里的共享导出（`headerRowClass`/`headerCellClass`/`headerCellOverflowClass` 等），会影响其它三张表。
+- 不改采购供应商列表页的搜索、新增供应商弹窗、权限门（`canRead`/`canWrite`）、路由跳转等逻辑。
+- 不改采购部登记表的列宽拖拽（`useResizableColumns`）、`table-fixed` 布局、四列的内容渲染逻辑，只动表头单元格的内边距。
+- 不新增"状态描述"列在小屏下的显示/隐藏逻辑，这次只针对表头行高。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`、改动文件 ESLint。
+- 现有 `PurchaseSupplierPage.test.tsx` 继续通过；如果有依赖副标题文案或者联系人/供货范围 DOM 结构的断言因改动失效，同步更新，不要为了让测试通过而改回原布局。
+- 手动在窄屏（约 375px）和中等宽度（约 768px）下分别查看两张表格，确认四项改动都生效，且 md+ 桌面宽度下两张表格的既有布局没有回归。
+
+**Status:** completed（2026-07-15）
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

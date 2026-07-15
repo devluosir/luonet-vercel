@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  headerCellOverflowClass,
   headerRowClass,
 } from '@/components/table/tableHeaderStyles';
 import { ResizeHandle } from '@/components/table/ResizeHandle';
@@ -32,7 +31,10 @@ const COLUMNS: ResizableColumnDef[] = [
   { id: 'status', defaultWidth: 340, minWidth: 180 },
 ];
 
-const th = `${headerCellOverflowClass} relative`;
+const purchaseRegistrationHeaderCellClass =
+  'overflow-hidden border-r border-gray-200/70 px-2 py-0.5 text-left align-middle text-[11px] lg:py-2.5 ' +
+  'font-semibold text-gray-600 last:border-r-0 dark:border-gray-700/70 dark:text-gray-300';
+const resizableHeaderCellClass = `${purchaseRegistrationHeaderCellClass} relative`;
 
 export function PurchaseRegistrationTable({ records, onUpdate, onEditRecord }: PurchaseRegistrationTableProps) {
   const { widths, startResize, resetColumn } = useResizableColumns('purchaseRegistration.tableColWidths', COLUMNS);
@@ -60,19 +62,19 @@ export function PurchaseRegistrationTable({ records, onUpdate, onEditRecord }: P
           </colgroup>
           <thead>
             <tr className={headerRowClass}>
-              <th className={th}>
+              <th className={resizableHeaderCellClass}>
                 询价编号
                 <ResizeHandle onPointerDown={startResize('no')} onDoubleClick={() => resetColumn('no')} label="询价编号" />
               </th>
-              <th className={th}>
+              <th className={resizableHeaderCellClass}>
                 内容描述
                 <ResizeHandle onPointerDown={startResize('desc')} onDoubleClick={() => resetColumn('desc')} label="内容描述" />
               </th>
-              <th className={th}>
+              <th className={resizableHeaderCellClass}>
                 询报价状态
                 <ResizeHandle onPointerDown={startResize('status')} onDoubleClick={() => resetColumn('status')} label="询报价状态" />
               </th>
-              <th className={headerCellOverflowClass}>状态描述</th>
+              <th className={purchaseRegistrationHeaderCellClass}>状态描述</th>
             </tr>
           </thead>
           <tbody>

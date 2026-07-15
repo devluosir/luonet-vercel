@@ -33,6 +33,19 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
     expect(screen.queryByLabelText('调整"状态描述"列宽')).not.toBeInTheDocument();
   });
 
+  it('仅本表的四列表头使用压缩后的纵向内边距', () => {
+    render(
+      <PurchaseRegistrationTable records={[baseRecord()]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />
+    );
+
+    const headers = screen.getAllByRole('columnheader');
+    expect(headers).toHaveLength(4);
+    headers.forEach((header) => {
+      expect(header).toHaveClass('py-0.5', 'lg:py-2.5');
+      expect(header).not.toHaveClass('py-2.5');
+    });
+  });
+
   it('表格始终 w-full 撑满容器，不会在列宽总和小于容器宽度时留白', () => {
     const { container } = render(
       <PurchaseRegistrationTable records={[baseRecord()]} onUpdate={jest.fn()} onEditRecord={jest.fn()} />
