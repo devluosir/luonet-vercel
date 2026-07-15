@@ -24,6 +24,7 @@ export const PURCHASE_REGISTRATION_WRITE_FIELDS = [
 // orderDeliveryConsignee 是双向共享字段，订单状态表和采购订单表都能编辑。
 export const PURCHASE_ORDER_TABLE_WRITE_FIELDS = [
   'purchaseOrderNo',
+  'purchaseOrderSuppliers',
   'purchaseOrderSupplier',
   'purchaseOrderSupplierId',
   'purchaseOrderAmount',
@@ -72,6 +73,7 @@ export function sanitizeRestrictedRecord(
     // 善后完成后展示为 "S-OK" 需要这个字段；与 orderSubStatus 一样只读展示，不放行写入
     result.orderFollowupCompleted = record.orderFollowupCompleted;
     result.purchaseOrderNo = record.purchaseOrderNo;
+    result.purchaseOrderSuppliers = record.purchaseOrderSuppliers;
     result.purchaseOrderSupplier = record.purchaseOrderSupplier;
     result.purchaseOrderSupplierId = record.purchaseOrderSupplierId;
     result.purchaseOrderAmount = record.purchaseOrderAmount;

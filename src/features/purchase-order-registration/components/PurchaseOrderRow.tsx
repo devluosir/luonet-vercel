@@ -13,6 +13,7 @@ import {
   showCustomerNoCol,
   showPurchaseOrderNoCol,
 } from '../utils/purchaseOrderTableLayout';
+import { formatPurchaseOrderSuppliers, getPurchaseOrderSuppliers } from '../utils/purchaseOrderSuppliers';
 
 // ── 行颜色（与订单状态表 OrderRow 一致，两边展示的是同一个共享字段，共用 orderStatus.ts）──
 
@@ -36,64 +37,10 @@ function getOrderSubStatusRemarkClass(record: InquiryRecord): string {
 
 // ── 可编辑字段类型 ────────────────────────────────────────────────────────────
 
-type EditField = 'purchaseOrderNo' | 'purchaseOrderSupplier' | 'amount' | 'deliveryDate' | 'deliveryStatus' | null;
+type EditField = 'amount' | 'deliveryDate' | 'deliveryStatus' | null;
 
 const NUMBER_INPUT_NO_SPINNER_CLS =
   '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
-
-// ── EditableText（采购单号 / 供应商，纯文本） ─────────────────────────────────
-
-interface EditableTextProps {
-  editing: boolean;
-  value: string | undefined;
-  placeholder: string;
-  textClassName?: string;
-  onActivate: () => void;
-  onSave: (value: string | undefined) => void;
-  onCancel: () => void;
-  options?: string[];
-  listId?: string;
-}
-
-function EditableText({ editing, value, placeholder, textClassName, onActivate, onSave, onCancel, options, listId }: EditableTextProps) {
-  const display = value?.trim() || '';
-
-  if (editing) {
-    return (
-      <>
-      <input
-        autoFocus
-        type="text"
-        list={options?.length ? listId : undefined}
-        defaultValue={display}
-        placeholder={placeholder}
-        onBlur={(e) => onSave(e.target.value.trim() || undefined)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur();
-          if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
-        }}
-        className="w-full rounded border border-blue-300 bg-white px-1.5 py-0.5 text-xs outline-none focus:ring-1 focus:ring-blue-200 dark:border-blue-600 dark:bg-gray-900 dark:text-gray-100"
-      />
-      {options?.length ? <datalist id={listId}>{options.map((option) => <option key={option} value={option} />)}</datalist> : null}
-      </>
-    );
-  }
-
-  return (
-    <span
-      role="button"
-      tabIndex={0}
-      onClick={onActivate}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onActivate(); }}
-      title={display || undefined}
-      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-[13px] hover:bg-black/5 dark:hover:bg-white/5 ${
-        display ? (textClassName ?? 'text-gray-800 dark:text-gray-100') : 'text-gray-300 dark:text-gray-700'
-      }`}
-    >
-      {display || placeholder}
-    </span>
-  );
-}
 
 // ── ReadOnlyText（确认日期 / 客户订单号：来自订单状态表，这里只读展示） ───────
 
@@ -287,12 +234,11 @@ interface PurchaseOrderRowProps {
   bp: PurchaseOrderTableBreakpoint;
   canViewFinancials: boolean;
   consigneeOptions: string[];
-  supplierOptions: Array<{ id: string; name: string }>;
   onUpdate: (patch: Partial<InquiryRecord>) => void;
   onOpenEdit?: (record: InquiryRecord) => void;
 }
 
-export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptions, supplierOptions, onUpdate, onOpenEdit }: PurchaseOrderRowProps) {
+export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptions, onUpdate, onOpenEdit }: PurchaseOrderRowProps) {
   const [activeField, setActiveField] = useState<EditField>(null);
   const activate = (f: EditField) => setActiveField(f);
   const cancel = () => setActiveField(null);
@@ -304,6 +250,8 @@ export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptio
   // 客户订单号只读展示，fallback 逻辑与订单状态表一致（RFQ→PO）
   const customerNoFallback = (record.customerNo ?? '').replace(/RFQ/g, 'PO');
   const orderSubStatusRemark = record.orderSubStatusRemark?.trim();
+  const purchaseOrderNo = record.purchaseOrderNo?.trim() ?? '';
+  const supplierDisplay = formatPurchaseOrderSuppliers(getPurchaseOrderSuppliers(record));
 
   return (
     <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getOrderRowBgClass(record)}`}>
@@ -334,35 +282,45 @@ export function PurchaseOrderRow({ record, bp, canViewFinancials, consigneeOptio
       {/* 采购单号：小屏隐藏 */}
       {purchaseOrderNoCol && (
         <td className="max-w-0 overflow-hidden px-1.5 py-2 sm:px-2">
-          <EditableText
-            editing={activeField === 'purchaseOrderNo'}
-            value={record.purchaseOrderNo}
-            placeholder="采购单号"
-            textClassName={rowTextClass}
-            onActivate={() => activate('purchaseOrderNo')}
-            onSave={(val) => { setActiveField(null); onUpdate({ purchaseOrderNo: val }); }}
-            onCancel={cancel}
-          />
+          <span
+            role={onOpenEdit ? 'button' : undefined}
+            tabIndex={onOpenEdit ? 0 : undefined}
+            onClick={() => onOpenEdit?.(record)}
+            onKeyDown={(event) => {
+              if (onOpenEdit && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                onOpenEdit(record);
+              }
+            }}
+            title={purchaseOrderNo || undefined}
+            className={`block min-h-[1.25rem] min-w-0 truncate rounded px-0.5 text-[13px] ${
+              onOpenEdit ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5' : ''
+            } ${purchaseOrderNo ? rowTextClass : 'text-gray-300 dark:text-gray-700'}`}
+          >
+            {purchaseOrderNo || '采购单号'}
+          </span>
         </td>
       )}
 
       {/* 供应商 */}
       <td className="max-w-0 overflow-hidden px-1.5 py-2 sm:px-2">
-        <EditableText
-          editing={activeField === 'purchaseOrderSupplier'}
-          value={record.purchaseOrderSupplier}
-          placeholder="供应商"
-          textClassName={rowTextClass}
-          onActivate={() => activate('purchaseOrderSupplier')}
-          options={supplierOptions.map((option) => option.name)}
-          listId={`purchase-order-suppliers-${record.id}`}
-          onSave={(val) => {
-            const match = supplierOptions.find((option) => option.name === val);
-            setActiveField(null);
-            onUpdate({ purchaseOrderSupplier: val, purchaseOrderSupplierId: match?.id });
+        <span
+          role={onOpenEdit ? 'button' : undefined}
+          tabIndex={onOpenEdit ? 0 : undefined}
+          onClick={() => onOpenEdit?.(record)}
+          onKeyDown={(event) => {
+            if (onOpenEdit && (event.key === 'Enter' || event.key === ' ')) {
+              event.preventDefault();
+              onOpenEdit(record);
+            }
           }}
-          onCancel={cancel}
-        />
+          title={supplierDisplay || undefined}
+          className={`block min-h-[1.25rem] min-w-0 truncate rounded px-0.5 text-[13px] ${
+            onOpenEdit ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5' : ''
+          } ${supplierDisplay ? rowTextClass : 'text-gray-300 dark:text-gray-700'}`}
+        >
+          {supplierDisplay || '供应商'}
+        </span>
       </td>
 
       {/* 金额（需要 purchaseRegistration.financials 权限） */}

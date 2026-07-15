@@ -4626,7 +4626,110 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **Status:** completed（2026-07-15）
 
-**Follow-up（2026-07-15）：** 对照询报价登记表后确认，中屏表头异常不是单纯 padding 问题，而是前三列固定宽度合计超过容器后，最后一列被压到 0px 并逐字换行。采购部登记表已恢复复用共享表头样式，四个标题统一使用 `h-6` 单行截断，并按当前拖拽列宽动态设置表格最小宽度、为“状态描述”保留至少 180px。768px 实测表头 44.5px、数据行 49px，与询报价登记表一致。
+**Follow-up（2026-07-15）：** 对照询报价登记表后确认，中屏表头异常不是单纯 padding 问题，而是前三列固定宽度合计超过容器后，最后一列被压到 0px 并逐字换行。采购部登记表已恢复复用共享表头样式，四个标题统一使用 `h-6` 单行截断，并按当前拖拽列宽动态设置表格最小宽度、为”状态描述”保留至少 180px。768px 实测表头 44.5px、数据行 49px，与询报价登记表一致。
+
+## TASK-173：采购订单表"供应商"支持一单多家（多选）+ "采购单号"也改成弹窗编辑
+
+**状态：** completed（2026-07-15）
+
+**背景：** 两件事一起做，都是把"采购订单表"某一列从表格行内直接编辑改成点击打开"编辑采购订单"弹窗（`PurchaseOrderEditModal.tsx`）编辑，动的是同一个文件（`PurchaseOrderRow.tsx`）、同一个 `EditField` 联合类型，所以合并成一个任务一起改，避免分两次改同一处代码互相冲突。
+
+1. **供应商支持多选：** 采购订单表（`/purchase-order-table`）"供应商"这一列目前是单值字段（`InquiryRecord.purchaseOrderSupplier` 字符串 + `purchaseOrderSupplierId` 主数据 ID），行内点击即可编辑（`PurchaseOrderRow.tsx` 里的 `EditableText` + datalist）。用户反馈：有时一个采购订单会拆给两家及以上供应商，需要支持多选。已与用户确认交互方案：**行内不再直接编辑，点击"供应商"单元格（和点击"订单编号"单元格一样）打开弹窗，在弹窗里用"标签列表 + 搜索添加"的方式管理多个供应商**，不做表格行内的紧凑多选下拉。
+
+2. **采购单号改弹窗编辑：** 用户接着要求"采购单号"也一并改成同样的模式——现在"采购单号"单元格（`PurchaseOrderRow.tsx` 第 334-347 行）还是行内直接点击变输入框、失焦保存；弹窗（`PurchaseOrderEditModal.tsx` 第 250-257 行）本来就已经有"采购单号"这个可编辑字段了，字段本身、`buildPurchaseOrderDirtyPatch`、`restrictedView.ts` 白名单里都已经支持这个字段的读写，**这部分不需要动数据模型和弹窗，只需要把表格行内那份编辑入口去掉，改成点击打开弹窗**。
+
+这个字段是”采购订单表专属字段，无需 D1 迁移”（见 `InquiryRecord` 类型注释），但**有一个例外必须处理**：受限视图（只有 `purchaseRegistration` 权限、没有 `inquiry` 权限的账号，比如纯采购部同事）通过 `src/app/api/inquiry/[[...path]]/restrictedView.ts` 的字段级白名单读写这些字段——`purchaseOrderSupplier`/`purchaseOrderSupplierId` 已经在 `PURCHASE_ORDER_TABLE_WRITE_FIELDS` 里，新字段如果不加进这个白名单，受限视图用户会读不到、也存不进多供应商数据（历史上这个项目在受限视图字段遗漏上出过好几次真实 bug，参考 memory 里的”受限视图污染本地缓存崩溃””询报价同步幽灵记录”，这次务必把新字段补全到读写两处）。
+
+**总体思路：** 新增一个数组字段 `purchaseOrderSuppliers?: Array<{ id?: string; name: string }>` 作为权威数据源；保留旧的 `purchaseOrderSupplier`/`purchaseOrderSupplierId` 两个字段不删除，新代码保存时把数组第一项镜像写回这两个旧字段（多设备/旧缓存场景下的降级兼容，与项目里”新增字段不删旧字段”的既有惯例一致），所有读取供应商的地方统一通过一个新的 helper 函数，数组为空时自动 fallback 到旧的单值字段包一层，这样存量订单（还没有 `purchaseOrderSuppliers`）不用做数据迁移也能正常显示。
+
+**Files in scope：**
+
+1. `src/features/inquiry/types/index.ts` —
+   - 新增导出类型 `export interface PurchaseOrderSupplierEntry { id?: string; name: string }`。
+   - 在 `InquiryRecord` 里第 76-79 行附近新增 `purchaseOrderSuppliers?: PurchaseOrderSupplierEntry[];`，注释写明”权威字段，支持一单多家供应商；`purchaseOrderSupplier`/`purchaseOrderSupplierId` 保留作为旧数据 fallback 和降级兼容镜像，不再是编辑入口”。不要删除 `purchaseOrderSupplier`/`purchaseOrderSupplierId` 这两行。
+
+2. 新建 `src/features/purchase-order-registration/utils/purchaseOrderSuppliers.ts` —
+   - `getPurchaseOrderSuppliers(record): PurchaseOrderSupplierEntry[]`：`record.purchaseOrderSuppliers` 非空数组时直接返回；否则如果 `record.purchaseOrderSupplier` 有值，返回 `[{ id: record.purchaseOrderSupplierId, name: record.purchaseOrderSupplier.trim() }]`；都没有则返回 `[]`。
+   - `formatPurchaseOrderSuppliers(entries): string`：`entries.map(e => e.name).join('、')`，空数组返回空字符串。
+   - 附带一个新测试文件 `__tests__/purchaseOrderSuppliers.test.ts`，覆盖：数组字段优先、fallback 到旧字段、都为空返回 `[]`/`''`。
+
+3. `src/features/purchase-supplier/components/PurchaseSupplierPicker.tsx` — 新增两个可选 prop，都不改变现有默认行为（`PurchaseBaseInfo.tsx` 里的另一处单选用法不受影响）：
+   - `clearOnSelect?: boolean`（默认 `false`）：为 `true` 时，点击下拉建议项后把输入框清空（`setQuery('')`）而不是填入选中的名称，用于”选中即添加到列表、输入框留着继续加下一个”的场景。
+   - `onEnter?: () => void`：输入框 `onKeyDown` 里 `key === 'Enter'` 时调用（`e.preventDefault()`），用于”自由文本直接回车提交”的场景。
+
+4. `src/features/purchase-order-registration/components/PurchaseOrderEditModal.tsx` —
+   - 状态从 `purchaseOrderSupplier`/`purchaseOrderSupplierId` 两个 `useState` 改成 `const [suppliers, setSuppliers] = useState<PurchaseOrderSupplierEntry[]>([]);` + 一个 `const [addSupplierName, setAddSupplierName] = useState('');`（搜索添加框自己的输入态）。
+   - 打开弹窗的 `useEffect`（第 109-131 行）里用 `getPurchaseOrderSuppliers(record)` 初始化 `suppliers`，`initialValuesRef.current` 记录 `purchaseOrderSuppliers: getPurchaseOrderSuppliers(record)` 作为 diff 基线（不再记录旧的两个单值字段）。
+   - 第 258-269 行”供应商”字段区块改成：
+     - 已选供应商渲染成一排可关闭的标签（`suppliers.map`，每个标签一个删除按钮，点击从 `suppliers` 里移除对应项，用 index 定位即可，不需要额外唯一 key 逻辑之外的东西）。
+     - 下面放 `PurchaseSupplierPicker`，`value={addSupplierName}`、`clearOnSelect`、`onChange`：如果 `selection.id` 存在（用户点了下拉里的主数据条目）直接调用一个本地 `addSupplier({ id: selection.id, name: selection.name })` 并清空 `addSupplierName`；否则只更新 `addSupplierName`（用户还在打字）。`onEnter={() => addSupplier({ name: addSupplierName })}`（自由文本回车追加，追加后同样清空 `addSupplierName`）。`addSupplier` 内部按 `name`（trim 后）去重，已存在同名的不重复添加，`name` 为空直接忽略。
+     - placeholder 改成类似”搜索或输入新增供应商，回车添加”。
+   - `handleSave`（第 146-163 行）：`nextValues` 里把 `purchaseOrderSupplier`/`purchaseOrderSupplierId` 两行改成：
+     ```
+     purchaseOrderSuppliers: suppliers,
+     purchaseOrderSupplier: suppliers[0]?.name,
+     purchaseOrderSupplierId: suppliers[0]?.id,
+     ```
+     `buildPurchaseOrderDirtyPatch` 的调用方式不变，但要配合第 5 点改掉该函数内部的字段处理逻辑。
+
+5. `src/features/purchase-order-registration/utils/purchaseOrderPatch.ts` —
+   - `PURCHASE_ORDER_EDITABLE_FIELDS` 加入 `'purchaseOrderSuppliers'`（保留 `'purchaseOrderSupplier'`/`'purchaseOrderSupplierId'` 两项不删，它们仍然是要写回的镜像字段）。
+   - 因为数组不能用 `!==` 比较，把现有第 26-29 行的特殊处理换成：判断 `JSON.stringify(next.purchaseOrderSuppliers ?? []) !== JSON.stringify(baseline.purchaseOrderSuppliers ?? [])`，为真时把 `purchaseOrderSuppliers`、`purchaseOrderSupplier`（`next.purchaseOrderSuppliers?.[0]?.name`）、`purchaseOrderSupplierId`（`next.purchaseOrderSuppliers?.[0]?.id`）三个字段一起写进 `patch`（三者要么都写、要么都不写，和现在”供应商名称/ID 成对进出”的既有逻辑保持同一个思路）。
+   - 同步更新 `src/features/purchase-order-registration/utils/__tests__/purchaseOrderPatch.test.ts` 里依赖旧单值字段 diff 的用例，改成基于 `purchaseOrderSuppliers` 数组构造 baseline/next。
+
+6. `src/features/purchase-order-registration/components/PurchaseOrderRow.tsx` —
+   - 第 39 行 `EditField` 联合类型去掉 `'purchaseOrderSupplier'` 和 `'purchaseOrderNo'`，改动后应该只剩 `'amount' | 'deliveryDate' | 'deliveryStatus' | null`。
+   - 第 290 行 props 接口删掉 `supplierOptions: Array<{ id: string; name: string }>`（不再需要，多选管理已经搬到弹窗，弹窗里的 `PurchaseSupplierPicker` 自己联网拉取主数据，不依赖这个 prop）。
+   - 第 334-347 行"采购单号"单元格（`purchaseOrderNoCol && (...)` 包裹的部分）：把里面的 `EditableText` 换成只读展示 + 点击打开弹窗，写法参照第 311-327 行"订单编号"单元格那套模式（`role="button" tabIndex={0} onClick={() => onOpenEdit?.(record)}`、`onKeyDown` 处理 Enter/Space、hover 态 class、`title` 属性），值直接用 `record.purchaseOrderNo`，为空时展示"采购单号"占位文案（灰色，和其它空值单元格一致）。`purchaseOrderNoCol` 这个小屏隐藏逻辑保持不变。
+   - 第 349-366 行"供应商"单元格改成只读展示：用 `getPurchaseOrderSuppliers(record)` + `formatPurchaseOrderSuppliers(...)` 拿到显示文本，为空时展示"供应商"占位文案（灰色，和其它空值单元格一致），同样包一层点击打开弹窗（`role="button" tabIndex={0} onClick={() => onOpenEdit?.(record)}`，`onKeyDown` Enter/Space，hover 态），`title` 属性放完整供应商名单方便悬停查看被截断的长列表。
+   - "采购单号"和"供应商"两处都改完后，`EditableText` 组件（原第 44-96 行的定义）在这个文件里就没有调用点了，**连同它的定义和 `EditableTextProps` interface 一起删除**，不要留死代码。
+
+7. `src/features/purchase-order-registration/components/PurchaseOrderTable.tsx` —
+   - `PurchaseOrderTableProps` 接口删掉 `supplierOptions: Array<{ id: string; name: string }>`。
+   - 渲染 `<PurchaseOrderRow>` 那里（第 182-191 行）去掉 `supplierOptions={supplierOptions}` 这一行传参。
+
+8. `src/features/purchase-order-registration/app/PurchaseOrderRegistrationPage.tsx` —
+   - `matchesKeyword`（第 60-70 行）：`record.purchaseOrderSupplier` 换成 `...getPurchaseOrderSuppliers(record).map((s) => s.name)`（展开进那个数组里一起参与关键词匹配，多个供应商任意一个命中都算匹配）。
+   - `supplierOptions`（第 143-148 行，供筛选栏下拉用）：改成 `Array.from(new Set(orderRecords.flatMap((r) => getPurchaseOrderSuppliers(r).map((s) => s.name.trim())).filter(Boolean))).sort(...)`（原排序逻辑不变）。
+   - `supplierFilter` 匹配（第 164-165 行）：`(!supplierFilter || getPurchaseOrderSuppliers(record).some((s) => s.name.trim() === supplierFilter))`。
+   - 清理现在变成死代码的东西：`purchaseSuppliers` state（第 95 行）、`purchaseSupplierAccess`（第 96 行）、加载 `fetchPurchaseSuppliers` 的 `useEffect`（第 109-116 行）、`purchaseSupplierOptions` memo（第 149-152 行）、传给 `<PurchaseOrderTable supplierOptions={purchaseSupplierOptions} />` 的这一行 prop（第 262 行），以及相应变得多余的 import（`usePurchaseSupplierAccess`、`fetchPurchaseSuppliers`、`PurchaseSupplier` 类型）——这条链路原本只是为了给 Row 的行内 datalist 提供选项，弹窗自己会联网拉取主数据，不再需要 Page 层重复维护这份状态。删之前确认这些变量/import 在文件里确实没有被别的地方引用。
+
+9. `src/app/api/inquiry/[[...path]]/restrictedView.ts` —
+   - `PURCHASE_ORDER_TABLE_WRITE_FIELDS`（第 25-33 行）加入 `'purchaseOrderSuppliers'`。
+   - `sanitizeRestrictedRecord` 的 `flags.allowPurchaseOrderTable` 分支（第 70-83 行）加入 `result.purchaseOrderSuppliers = record.purchaseOrderSuppliers;`。
+   - 这一步是本次改动里唯一真正touch 受限视图权限白名单的地方，**红线部分特别强调不要漏掉**。
+
+**验收标准：**
+
+- 采购订单表”供应商”列不再能行内直接点击编辑；点击该单元格（或订单编号单元格）都能打开”编辑采购订单”弹窗。
+- 弹窗里能看到当前订单已有的供应商标签列表，每个标签可以单独删除；搜索框选中主数据里的供应商会立刻加入标签列表并清空搜索框，可以连续加好几家；自由输入一个不在主数据里的供应商名称、按回车，也能加入标签列表。
+- 保存后，供应商单元格显示所有供应商名称（用”、”连接），刷新页面或重新打开弹窗后多供应商数据仍然存在。
+- 存量订单（这次改动前保存的、只有旧版 `purchaseOrderSupplier` 单值）不用做任何数据迁移，依然能在列表和弹窗里正常显示这一家供应商；打开弹窗编辑并保存后自动升级成新的数组字段。
+- “供应商”筛选下拉：选项来自所有订单里出现过的供应商名称去重集合；选中某个供应商后，只要订单的供应商列表里包含这一家（不要求是唯一或第一家），就应该出现在筛选结果里。
+- 关键词搜索命中任意一家供应商名称都算命中。
+- 只有 `purchaseRegistration` 权限（无 `inquiry` 权限）的受限视图账号，能正常读到、也能正常保存多供应商数据——这条必须实际验证，不能只看桌面端普通账号。
+- 采购订单表"采购单号"列不再能行内直接点击编辑；点击该单元格能打开弹窗，且弹窗里"采购单号"输入框能正常编辑、保存，保存后表格里对应单元格立刻显示新值。小屏下"采购单号"列隐藏的行为不受影响（`purchaseOrderNoCol` 逻辑不变）。
+- 改动完成后 `EditableText` 组件已被删除（两处调用都改掉了），`tsc`/eslint 不报未使用变量/组件。
+
+**Non-goals / 红线：**
+
+- 不要删除 `purchaseOrderSupplier`/`purchaseOrderSupplierId` 这两个旧字段（类型定义、restrictedView 白名单里都保留），只是不再作为编辑入口，继续写入作为降级兼容镜像。
+- 不要漏掉 `restrictedView.ts` 里 `PURCHASE_ORDER_TABLE_WRITE_FIELDS` 和 `sanitizeRestrictedRecord` 两处新增字段的登记——这是本次改动里唯一涉及受限视图权限白名单的地方，历史上这类遗漏在本项目里造成过真实的数据不同步 bug。
+- 不改 `PurchaseSupplierPicker.tsx` 里已有的默认行为（`PurchaseBaseInfo.tsx` 那处单选用法不能受影响），新增的两个 prop 必须是可选且默认关闭。
+- 不改询报价登记 / 采购部登记表里已有的、结构不同的多供应商机制（`supplierStatuses`/`purchaseSupplierStatuses`，那是报价状态追踪，字段里带日期/状态，跟这次"采购订单表按订单拆多家供应商"是两回事，不要混用或复用那一套组件）。
+- 不改弹窗（`PurchaseOrderEditModal.tsx`）里"采购单号"字段本身的实现，它已经是可用的，不需要动；也不改 `buildPurchaseOrderDirtyPatch`、`restrictedView.ts` 白名单里 `purchaseOrderNo` 的部分——它已经在两处都放行了，不需要新增字段（这条只对供应商字段成立，供应商需要新增字段登记，见上面红线第二条）。
+- 不改采购订单表其它列（金额、交货日期、执行情况）的编辑方式，也不涉及订单编号单元格已有的打开弹窗逻辑。
+- 不改 D1 schema、`worker.ts`（这些字段本来就不经过 worker.ts 的具名列，保持"无需 D1 迁移"的现状）。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`、改动文件 ESLint。
+- 新增 `purchaseOrderSuppliers.test.ts`；更新 `purchaseOrderPatch.test.ts`；如果 `PurchaseOrderRow`/`PurchaseOrderEditModal`/`route.test.ts` 有依赖旧单值字段编辑交互或白名单的断言因改动失效，同步更新或补充新用例（尤其是 `route.test.ts` 里针对 `PURCHASE_ORDER_TABLE_WRITE_FIELDS` 和 `sanitizeRestrictedRecord` 的用例，要补一条覆盖 `purchaseOrderSuppliers`）；"采购单号"行内可编辑相关的旧断言改成"点击打开弹窗"。
+- 手动测试：新建/编辑一个订单，加两家供应商（一家选主数据、一家自由输入），保存后刷新页面确认都还在；用一个只有 `purchaseRegistration` 权限的测试账号重复一遍，确认受限视图下同样能读写成功；用一条改动前就存在的旧订单（只有单值供应商）打开弹窗，确认能正常显示、编辑、加第二家供应商后保存成功；点击采购单号单元格能打开弹窗，弹窗里改采购单号保存后表格同步更新，小屏下该列隐藏正常。
+
+**Status:** completed（2026-07-15）
+
+**完成说明：** 已完成一单多家供应商的标签式弹窗编辑、旧单值字段自动 fallback/首项镜像、采购单号弹窗编辑入口、多供应商搜索筛选及受限视图读写白名单；新增 helper、patch、弹窗、表格行、选择器和 API 权限测试。`npx tsc --noEmit`、改动文件 ESLint、生产构建及本地响应式页面验收均通过。当前没有“仅 purchaseRegistration、无 inquiry”专用测试账号，受限视图本轮完成了 GET 清洗/PUT 白名单自动测试，但未执行该专用账号的真实保存验收。
 
 ## 已关闭 / 不做
 

@@ -44,7 +44,6 @@ interface PurchaseOrderTableProps {
   records: InquiryRecord[];
   canViewFinancials: boolean;
   consigneeOptions: string[];
-  supplierOptions: Array<{ id: string; name: string }>;
   onUpdate: (id: string, patch: Partial<InquiryRecord>) => void;
 }
 
@@ -64,7 +63,7 @@ function useBreakpoint(): PurchaseOrderTableBreakpoint {
   return bp;
 }
 
-export function PurchaseOrderTable({ records, canViewFinancials, consigneeOptions, supplierOptions, onUpdate }: PurchaseOrderTableProps) {
+export function PurchaseOrderTable({ records, canViewFinancials, consigneeOptions, onUpdate }: PurchaseOrderTableProps) {
   const bp = useBreakpoint();
   const purchaseOrderNoCol = showPurchaseOrderNoCol(bp);
   const confirmDateCol = showConfirmDateCol(bp);
@@ -185,7 +184,6 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
               bp={bp}
               canViewFinancials={canViewFinancials}
               consigneeOptions={consigneeOptions}
-              supplierOptions={supplierOptions}
               onUpdate={(patch) => onUpdate(record.id, patch)}
               onOpenEdit={(record) => setEditingRecordId(record.id)}
             />

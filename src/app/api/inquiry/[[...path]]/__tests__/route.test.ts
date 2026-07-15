@@ -91,21 +91,37 @@ describe('sanitizeRestrictedRecord：采购部只读响应携带完整 quotedSta
 
     const order = sanitizeRestrictedRecord({
       ...fullRecord,
+      purchaseOrderSuppliers: [
+        { id: 'master-1', name: '采购供应商A' },
+        { name: '自由供应商B' },
+      ],
       purchaseOrderSupplier: '采购供应商A',
       purchaseOrderSupplierId: 'master-1',
       secret: 'no',
     }, { allowPurchaseRegistration: false, allowPurchaseOrderTable: true });
+    expect(order.purchaseOrderSuppliers).toEqual([
+      { id: 'master-1', name: '采购供应商A' },
+      { name: '自由供应商B' },
+    ]);
     expect(order.purchaseOrderSupplierId).toBe('master-1');
     expect(order).not.toHaveProperty('secret');
   });
 
   it('采购订单表 PUT 白名单允许供应商 ID/快照原子写入', () => {
     const patch = pickRestrictedPatch({
+      purchaseOrderSuppliers: [
+        { id: 'master-1', name: '采购供应商A' },
+        { name: '自由供应商B' },
+      ],
       purchaseOrderSupplier: '采购供应商A',
       purchaseOrderSupplierId: 'master-1',
       secret: 'no',
     }, new Set<string>(PURCHASE_ORDER_TABLE_WRITE_FIELDS));
     expect(patch).toEqual({
+      purchaseOrderSuppliers: [
+        { id: 'master-1', name: '采购供应商A' },
+        { name: '自由供应商B' },
+      ],
       purchaseOrderSupplier: '采购供应商A',
       purchaseOrderSupplierId: 'master-1',
     });

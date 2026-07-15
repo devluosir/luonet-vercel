@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { CalendarDays, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import type { InquiryRecord } from '@/features/inquiry/types';
+import type { InquiryRecord, PurchaseOrderSupplierEntry } from '@/features/inquiry/types';
 import { normalizeShortDateInput, stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
 import { STATUS_PRESETS } from '@/features/order/components/DeliveryStatusCell';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { PurchaseSupplierPicker } from '@/features/purchase-supplier/components/PurchaseSupplierPicker';
 import { buildPurchaseOrderDirtyPatch } from '../utils/purchaseOrderPatch';
+import { getPurchaseOrderSuppliers } from '../utils/purchaseOrderSuppliers';
 
 /**
  * 采购订单表——"编辑采购订单"弹窗（2026-07-10 新增，参考订单状态表的 OrderEditModal.tsx 同款模式）
@@ -18,7 +19,7 @@ import { buildPurchaseOrderDirtyPatch } from '../utils/purchaseOrderPatch';
  *   确认日期、客户订单号、订单状态备注）——确认日期/客户订单号本来就是采购订单表这边只读展示、
  *   不允许编辑（见 InquiryRecord 类型注释），撤销C/悬挂P/善后S 状态标记及其情况备注也只在订单状态表
  *   的"编辑订单"弹窗编辑，这里同样只读展示，不提供编辑入口。
- * - 可编辑区：采购单号、供应商、采购金额（需要 purchaseRegistration.financials 权限）——采购订单表专属字段；
+ * - 可编辑区：采购单号、多家供应商、采购金额（需要 purchaseRegistration.financials 权限）——采购订单表专属字段；
  *   交货日期、执行情况——跟订单状态表双向共享的字段，这里也允许编辑（与行内点击编辑并存）。
  */
 
@@ -97,8 +98,8 @@ export function PurchaseOrderEditModal({
 }: PurchaseOrderEditModalProps) {
   const record = useInquiryStore((state) => recordId ? state.records.find((item) => item.id === recordId) : undefined);
   const [purchaseOrderNo, setPurchaseOrderNo] = useState('');
-  const [purchaseOrderSupplier, setPurchaseOrderSupplier] = useState('');
-  const [purchaseOrderSupplierId, setPurchaseOrderSupplierId] = useState<string | undefined>();
+  const [suppliers, setSuppliers] = useState<PurchaseOrderSupplierEntry[]>([]);
+  const [addSupplierName, setAddSupplierName] = useState('');
   const [amountCurrency, setAmountCurrency] = useState<PurchaseCurrency>('¥');
   const [amountNumStr, setAmountNumStr] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
@@ -108,9 +109,10 @@ export function PurchaseOrderEditModal({
 
   useEffect(() => {
     if (!isOpen || !record) return;
+    const initialSuppliers = getPurchaseOrderSuppliers(record);
     setPurchaseOrderNo(record.purchaseOrderNo ?? '');
-    setPurchaseOrderSupplier(record.purchaseOrderSupplier ?? '');
-    setPurchaseOrderSupplierId(record.purchaseOrderSupplierId);
+    setSuppliers(initialSuppliers);
+    setAddSupplierName('');
     const amount = parsePurchaseAmount(record.purchaseOrderAmount);
     setAmountCurrency(amount.currency);
     setAmountNumStr(amount.numStr);
@@ -119,8 +121,7 @@ export function PurchaseOrderEditModal({
     setDeliveryConsignee(record.orderDeliveryConsignee ?? '');
     initialValuesRef.current = {
       purchaseOrderNo: record.purchaseOrderNo,
-      purchaseOrderSupplier: record.purchaseOrderSupplier,
-      purchaseOrderSupplierId: record.purchaseOrderSupplierId,
+      purchaseOrderSuppliers: initialSuppliers,
       ...(canViewFinancials ? { purchaseOrderAmount: record.purchaseOrderAmount } : {}),
       orderDeliveryDate: record.orderDeliveryDate,
       orderDeliveryStatus: record.orderDeliveryStatus,
@@ -143,14 +144,26 @@ export function PurchaseOrderEditModal({
     : record.orderSubStatus === 'followup' ? '善后S'
     : null;
 
+  const addSupplier = (entry: PurchaseOrderSupplierEntry) => {
+    const name = entry.name.trim();
+    if (!name) return;
+    setSuppliers((current) => (
+      current.some((supplier) => supplier.name.trim() === name)
+        ? current
+        : [...current, { ...(entry.id ? { id: entry.id } : {}), name }]
+    ));
+    setAddSupplierName('');
+  };
+
   const handleSave = () => {
     const trimmedAmount = amountNumStr.trim();
     const amountN = parseFloat(trimmedAmount);
 
     const nextValues: Partial<InquiryRecord> = {
       purchaseOrderNo: purchaseOrderNo.trim() || undefined,
-      purchaseOrderSupplier: purchaseOrderSupplier.trim() || undefined,
-      purchaseOrderSupplierId,
+      purchaseOrderSuppliers: suppliers,
+      purchaseOrderSupplier: suppliers[0]?.name,
+      purchaseOrderSupplierId: suppliers[0]?.id,
       ...(canViewFinancials ? { purchaseOrderAmount: !isNaN(amountN) && trimmedAmount ? `${amountCurrency}${amountN.toFixed(2)}` : undefined } : {}),
       orderDeliveryDate: deliveryDate.trim() ? normalizeShortDateInput(deliveryDate.trim()) : undefined,
       orderDeliveryStatus: deliveryStatus.trim() || undefined,
@@ -257,14 +270,38 @@ export function PurchaseOrderEditModal({
               </div>
               <div className="space-y-1">
                 <label className={LABEL_CLS}>供应商</label>
+                {suppliers.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {suppliers.map((supplier, index) => (
+                      <span
+                        key={`${supplier.id ?? supplier.name}-${index}`}
+                        className="inline-flex max-w-full items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                      >
+                        <span className="truncate">{supplier.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setSuppliers((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                          className="shrink-0 rounded-full p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/60"
+                          aria-label={`移除供应商${supplier.name}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <PurchaseSupplierPicker
-                  selectedId={purchaseOrderSupplierId}
-                  value={purchaseOrderSupplier}
+                  value={addSupplierName}
+                  clearOnSelect
                   onChange={(selection) => {
-                    setPurchaseOrderSupplier(selection.name);
-                    setPurchaseOrderSupplierId(selection.id);
+                    if (selection.id) {
+                      addSupplier({ id: selection.id, name: selection.name });
+                    } else {
+                      setAddSupplierName(selection.name);
+                    }
                   }}
-                  placeholder="供应商"
+                  onEnter={() => addSupplier({ name: addSupplierName })}
+                  placeholder="搜索或输入新增供应商，回车添加"
                 />
               </div>
             </div>

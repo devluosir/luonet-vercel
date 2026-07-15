@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### 采购订单表一单多家供应商（TASK-173）
+- 采购订单新增权威数组字段 `purchaseOrderSuppliers`，支持在“编辑采购订单”弹窗内以标签列表连续添加、删除主数据或自由文本供应商；旧 `purchaseOrderSupplier` / `purchaseOrderSupplierId` 继续保存首项镜像，存量记录无需迁移即可回退显示并在首次编辑后自动升级。
+- 供应商列和采购单号列取消行内文本编辑，点击后统一打开编辑弹窗；供应商列表以“、”连接展示，关键词和供应商筛选可命中任意一家，小屏采购单号隐藏规则保持不变。
+- 仅采购权限的受限视图同步开放新数组字段的读写，并补充 helper、原子 patch、弹窗、表格行、选择器和受限 API 测试。
+
 #### 询报价编辑弹窗永久删除（TASK-169）
 - 询报价编辑弹窗左下角新增独立永久删除入口，明确提示物理删除且不可撤销；已有订单号时追加订单警告。该入口只由询报价登记页传入，客户详情复用弹窗不显示。
 - 新增同步 `DELETE /api/inquiry/:id/hard-delete` 链路：完整 `inquiry` 权限方可代理，Worker 真正删除 `Document` 行；服务端成功前不清理本地数据，成功后同步清理本地记录、旧墓碑和该记录待同步队列，避免幽灵重建。

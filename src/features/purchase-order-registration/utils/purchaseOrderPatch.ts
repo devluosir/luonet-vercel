@@ -2,6 +2,7 @@ import type { InquiryRecord } from '@/features/inquiry/types';
 
 export const PURCHASE_ORDER_EDITABLE_FIELDS = [
   'purchaseOrderNo',
+  'purchaseOrderSuppliers',
   'purchaseOrderSupplier',
   'purchaseOrderSupplierId',
   'purchaseOrderAmount',
@@ -19,13 +20,21 @@ export function buildPurchaseOrderDirtyPatch(
 ): Partial<InquiryRecord> {
   const patch: Partial<InquiryRecord> = {};
   PURCHASE_ORDER_EDITABLE_FIELDS.forEach((field) => {
+    if (
+      field === 'purchaseOrderSuppliers' ||
+      field === 'purchaseOrderSupplier' ||
+      field === 'purchaseOrderSupplierId'
+    ) return;
     if (next[field] !== baseline[field]) {
       (patch as Record<string, unknown>)[field] = next[field];
     }
   });
-  if ('purchaseOrderSupplier' in patch || 'purchaseOrderSupplierId' in patch) {
-    patch.purchaseOrderSupplier = next.purchaseOrderSupplier;
-    patch.purchaseOrderSupplierId = next.purchaseOrderSupplierId;
+
+  const nextSuppliers = next.purchaseOrderSuppliers ?? [];
+  if (JSON.stringify(nextSuppliers) !== JSON.stringify(baseline.purchaseOrderSuppliers ?? [])) {
+    patch.purchaseOrderSuppliers = nextSuppliers;
+    patch.purchaseOrderSupplier = nextSuppliers[0]?.name;
+    patch.purchaseOrderSupplierId = nextSuppliers[0]?.id;
   }
   return patch;
 }

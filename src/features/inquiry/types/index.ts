@@ -27,6 +27,11 @@ export interface CustomerQuoteStatus {
   type?: CustomerQuoteType;
 }
 
+export interface PurchaseOrderSupplierEntry {
+  id?: string;
+  name: string;
+}
+
 export interface InquiryRecord {
   id: string;
   inquiryDate: string;
@@ -73,9 +78,11 @@ export interface InquiryRecord {
   // ── 采购订单表专属字段（仅在 orderNo 有值的记录上有意义，无需 D1 迁移）──
   /** 采购单号，采购部自行编排 */
   purchaseOrderNo?: string;
-  /** 供应商（采购订单表专属，与询报价登记的 supplierStatuses/purchaseSupplierStatuses 无关） */
+  /** 权威字段，支持一单多家供应商；旧单值字段仅作 fallback 和降级兼容镜像。 */
+  purchaseOrderSuppliers?: PurchaseOrderSupplierEntry[];
+  /** 旧版供应商名称；保留用于旧数据 fallback 和降级兼容镜像，不再作为编辑入口。 */
   purchaseOrderSupplier?: string;
-  /** 采购订单表选中的采购供应商主数据 ID；自由输入名称时必须清空。 */
+  /** 旧版供应商主数据 ID；保留用于旧数据 fallback 和降级兼容镜像。 */
   purchaseOrderSupplierId?: string;
   /** 采购金额（需要 purchaseRegistration.financials 权限），含币种符号自由录入，如 ¥120000 / $15000 / €1000 */
   purchaseOrderAmount?: string;

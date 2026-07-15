@@ -1,6 +1,6 @@
 # Current State
 
-最后更新：2026-07-14
+最后更新：2026-07-15
 当前分支：`main`
 当前提交：以 `git log -1 --oneline` 为准
 应用版本：`1.2.0`（`package.json`）
@@ -44,7 +44,7 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 | `/inquiry` | 询报价登记 | 已接入 D1 `Document`，支持客户/联络人关联、批量关联和筛选；列表点击行编辑，编辑弹窗可永久删除，批量删除仍为软删除；与另外三张登记表共用跨标签自适应同步 |
 | `/order` | 订单状态表 | 复用询报价记录，支持订单状态、金额权限和进行中筛选 |
 | `/purchase-registration` | 采购部登记 | 复用询报价 D1 JSON 记录，只开放内容描述（与询报价登记共享 description）和采购部专属供应商/报价状态字段；不含备货/交货/发票 |
-| `/purchase-order-table` | 采购订单表 | 询报价登记的过滤视图（与订单状态表之于询报价登记关系相同），只展示 orderNo 有值的记录，不能新增/删除；交货日期/执行情况与订单状态表双向共享，确认日期/客户订单号只读来自订单状态表 |
+| `/purchase-order-table` | 采购订单表 | 询报价登记的过滤视图，只展示 orderNo 有值的记录，不能新增/删除；支持一单多家采购供应商，采购单号/供应商在编辑弹窗维护；交货日期/执行情况与订单状态表双向共享，确认日期/客户订单号只读来自订单状态表 |
 | `/packing` | 箱单发票 | 支持从销售确认导入，已切断装箱单 Consignee 反向污染客户库的保存动作 |
 | `/invoice` | 财务发票 | 本地历史为主，支持导入、PDF/Excel、复制、编辑 |
 | `/purchase` | 采购订单 | 本地历史为主，支持供应商资料、PDF、草稿 |
@@ -244,7 +244,8 @@ theme-config
 
 - `/purchase` 仍是旧采购订单单据创建功能，数据保存在 `purchase_history`，用于 PDF/Excel 和草稿，与本节无关。
 - `/purchase-order-table`（TASK-101 重构后）不再是独立数据表，改为询报价登记的过滤视图：只展示 `orderNo` 有值（已成单）的 `InquiryRecord`，不能手动新增/删除，记录随询价成单自动出现——关系与"订单状态表 `/order` 之于询报价登记"完全一致。
-- 新增字段 `purchaseOrderNo`（采购单号）、`purchaseOrderSupplier`（供应商）、`purchaseOrderAmount`（金额，受 `order.financials` 权限门槛控制）为采购订单表专属，独立存储。
+- `purchaseOrderNo`（采购单号）、`purchaseOrderSuppliers`（一单多家供应商）和 `purchaseOrderAmount`（金额，受 `purchaseRegistration.financials` 权限门槛控制）为采购订单表专属字段。采购单号与供应商不再行内编辑，点击对应单元格统一打开“编辑采购订单”弹窗。
+- `purchaseOrderSuppliers` 是供应商权威数组；旧 `purchaseOrderSupplier` / `purchaseOrderSupplierId` 保留为存量记录 fallback 和数组首项兼容镜像。列表、关键词搜索和供应商筛选均读取全部供应商；受限采购视图已在 GET 清洗和 PUT 白名单同时开放数组字段。
 - 交货日期（`orderDeliveryDate`）、执行情况（`orderDeliveryStatus`/`orderDeliveryConsignee`）与订单状态表**双向共享同一份数据**，两边都能编辑。
 - 确认日期（`orderConfirmDate`）、客户订单号（`orderCustomerNo`）**只读**，来自订单状态表，采购订单表这边不能编辑（API 层强制）。
 - 旧的独立 D1 `Document.type='purchase'` 记录、`/api/purchase-order` 路由、`handlePurchaseOrderRequest`、`purchase-order.store.ts`/`purchase-order.service.ts`/`PurchaseOrderFormModal.tsx` 已全部删除；旧数据未迁移（功能上线仅 1 天，数据量极少），未来如需清理需手动处理。

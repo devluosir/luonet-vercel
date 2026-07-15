@@ -13,6 +13,8 @@ interface PurchaseSupplierPickerProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  clearOnSelect?: boolean;
+  onEnter?: () => void;
 }
 
 export function PurchaseSupplierPicker({
@@ -22,6 +24,8 @@ export function PurchaseSupplierPicker({
   placeholder = '选择或输入采购供应商',
   className = '',
   disabled = false,
+  clearOnSelect = false,
+  onEnter,
 }: PurchaseSupplierPickerProps) {
   const { canRead, userId } = usePurchaseSupplierAccess();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -80,6 +84,12 @@ export function PurchaseSupplierPicker({
             setOpen(true);
             onChange({ name });
           }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && onEnter) {
+              event.preventDefault();
+              onEnter();
+            }
+          }}
           placeholder={placeholder}
           autoComplete="off"
           className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 pr-9 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:focus:ring-blue-900/30"
@@ -107,7 +117,7 @@ export function PurchaseSupplierPicker({
                 type="button"
                 onClick={() => {
                   const name = supplier.shortName || supplier.name;
-                  setQuery(name);
+                  setQuery(clearOnSelect ? '' : name);
                   setOpen(false);
                   onChange({ id: supplier.id, name, supplier });
                 }}
