@@ -8,7 +8,11 @@ import {
   headerRowClass,
 } from '@/components/table/tableHeaderStyles';
 import { ResizeHandle } from '@/components/table/ResizeHandle';
-import { type ResizableColumnDef, useResizableColumns } from '@/components/table/useResizableColumns';
+import {
+  computeResizableTableMinWidth,
+  type ResizableColumnDef,
+  useResizableColumns,
+} from '@/components/table/useResizableColumns';
 import type { InquiryRecord } from '../types';
 import { InquiryRow } from './InquiryRow';
 
@@ -20,7 +24,8 @@ const CHECK_COL_PX = 40;
 //
 // "询报价状态"列（也是表格最后一列）故意不在这个数组里、不给拖拽手柄：
 // 它是唯一没有显式像素宽度的列，table-layout:fixed 会把 table 宽度（w-full）减去其它列显式宽度后
-// 的剩余空间全分给它，表格才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白。
+// 的剩余空间全分给它，表格才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白；
+// table min-width 同时为它保留下限，空间不足时由外层横向滚动承接，避免状态列被压窄或隐藏。
 // 这个"吸收剩余空间"的列必须放在可拖拽列里的最后一个——之前误放在中间的"内容简述"上，导致拖动它
 // 后面的"询报价状态"手柄时，宽度变化要靠"内容简述"收缩/膨胀补偿，而"内容简述"在左边，视觉上就变成
 // "往左扩展"而不是正常的"往右扩展"，用户反馈过这个问题。放在最后一个可拖拽列就不会有这个问题。
@@ -30,6 +35,9 @@ const RESIZABLE_COLUMNS: ResizableColumnDef[] = [
   { id: 'custno', defaultWidth: 230, minWidth: 140 },
   { id: 'desc', defaultWidth: 230, minWidth: 140 },
 ];
+
+const INQUIRY_STATUS_MIN_WIDTH = 180;
+const headerLabelClass = 'flex h-6 items-center truncate whitespace-nowrap';
 
 function useBreakpoint() {
   const [bp, setBp] = useState<'sm' | 'md' | 'lg'>('lg');
@@ -76,6 +84,14 @@ export function InquiryTable({
   const bp = useBreakpoint();
   const resizable = bp === 'lg';
   const { widths, startResize, resetColumn } = useResizableColumns('inquiry.tableColWidths', RESIZABLE_COLUMNS);
+  const tableMinWidth = resizable
+    ? computeResizableTableMinWidth(
+        RESIZABLE_COLUMNS,
+        widths,
+        INQUIRY_STATUS_MIN_WIDTH,
+        canBatchEdit ? CHECK_COL_PX : 0
+      )
+    : undefined;
 
   const allIds = records.map((r) => r.id);
   const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
@@ -116,7 +132,10 @@ export function InquiryTable({
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed divide-y divide-gray-100 dark:divide-gray-800">
+        <table
+          className="w-full table-fixed divide-y divide-gray-100 dark:divide-gray-800"
+          style={tableMinWidth ? { minWidth: tableMinWidth } : undefined}
+        >
           <thead>
             <tr className={headerRowClass}>
               {/* 全选 checkbox */}
@@ -151,19 +170,19 @@ export function InquiryTable({
                 {resizable && <ResizeHandle onPointerDown={startResize('no')} onDoubleClick={() => resetColumn('no')} label="询价编号" />}
               </th>
               <th style={{ width: colWidth('inquirer') }} className={`${headerCellClass} hidden md:table-cell ${resizable ? 'relative' : ''}`}>
-                <span className="block truncate">询价人</span>
+                <span className={headerLabelClass}>询价人</span>
                 {resizable && <ResizeHandle onPointerDown={startResize('inquirer')} onDoubleClick={() => resetColumn('inquirer')} label="询价人" />}
               </th>
               <th style={{ width: colWidth('custno') }} className={`${headerCellClass} hidden lg:table-cell ${resizable ? 'relative' : ''}`}>
-                <span className="block truncate">客户编号</span>
+                <span className={headerLabelClass}>客户编号</span>
                 {resizable && <ResizeHandle onPointerDown={startResize('custno')} onDoubleClick={() => resetColumn('custno')} label="客户编号" />}
               </th>
               <th style={{ width: colWidth('desc') }} className={`${headerCellClass} ${resizable ? 'relative' : ''}`}>
-                <span className="block truncate">内容简述</span>
+                <span className={headerLabelClass}>内容简述</span>
                 {resizable && <ResizeHandle onPointerDown={startResize('desc')} onDoubleClick={() => resetColumn('desc')} label="内容简述" />}
               </th>
               <th style={resizable ? undefined : { width: W.status }} className={headerCellClass}>
-                <span className="block truncate">询报价状态</span>
+                <span className={headerLabelClass}>询报价状态</span>
               </th>
             </tr>
           </thead>

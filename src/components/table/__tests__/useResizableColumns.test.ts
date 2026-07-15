@@ -1,6 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
-import { computeResizedWidth, useResizableColumns } from '../useResizableColumns';
+import {
+  computeResizableTableMinWidth,
+  computeResizedWidth,
+  useResizableColumns,
+} from '../useResizableColumns';
 
 function fakePointerDownEvent(clientX: number): ReactPointerEvent {
   return {
@@ -33,6 +37,21 @@ describe('computeResizedWidth', () => {
   it('结果四舍五入为整数', () => {
     expect(computeResizedWidth(100, 0.4, 60)).toBe(100);
     expect(computeResizedWidth(100, 0.6, 60)).toBe(101);
+  });
+});
+
+describe('computeResizableTableMinWidth', () => {
+  const columns = [
+    { id: 'no', defaultWidth: 100 },
+    { id: 'desc', defaultWidth: 200 },
+  ];
+
+  it('累计当前显式列宽，并为末尾弹性列保留最小宽度', () => {
+    expect(computeResizableTableMinWidth(columns, { no: 130, desc: 240 }, 120)).toBe(490);
+  });
+
+  it('缺少当前列宽时回退默认值，并计入固定功能列', () => {
+    expect(computeResizableTableMinWidth(columns, { no: 130 }, 120, 40)).toBe(490);
   });
 });
 

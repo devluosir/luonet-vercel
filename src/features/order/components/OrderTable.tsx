@@ -8,7 +8,11 @@ import {
   headerRowClass,
 } from '@/components/table/tableHeaderStyles';
 import { ResizeHandle } from '@/components/table/ResizeHandle';
-import { type ResizableColumnDef, useResizableColumns } from '@/components/table/useResizableColumns';
+import {
+  computeResizableTableMinWidth,
+  type ResizableColumnDef,
+  useResizableColumns,
+} from '@/components/table/useResizableColumns';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import {
   type OrderTableBreakpoint,
@@ -35,7 +39,8 @@ const CHECK_COL_PX = 40;
 //
 // 渲染顺序里实际的最后一列（有金额权限时是"到账金额"，没有时是"执行情况"）故意不设显式像素宽度、
 // 不给拖拽手柄：它是唯一没有显式宽度的列，table-layout:fixed 会把 table 宽度（w-full）减去其它列
-// 显式宽度后的剩余空间全分给它，表格才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白。
+// 显式宽度后的剩余空间全分给它，表格才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白；
+// table min-width 同时为它保留下限，空间不足时由外层横向滚动承接，避免末列被压到 0。
 // 这个"吸收剩余空间"的列必须是渲染顺序里最后一列——之前误放在中间的"内容简述"上，导致拖动它后面
 // 任意一列的手柄时，宽度变化要靠"内容简述"收缩/膨胀补偿，而"内容简述"在左边，视觉上就变成"往左
 // 扩展"而不是正常的"往右扩展"，用户反馈过这个问题。放在最后一列就不会有这个问题，"内容简述"改为
@@ -52,6 +57,8 @@ const RESIZABLE_COLUMN_DEFS: Record<string, ResizableColumnDef> = {
   paymentDate: { id: 'paymentDate', defaultWidth: 70, minWidth: 60 },
   receivedAmount: { id: 'receivedAmount', defaultWidth: 120, minWidth: 90 },
 };
+
+const headerLabelClass = 'flex h-6 items-center truncate whitespace-nowrap';
 
 function useBreakpoint(): OrderTableBreakpoint {
   const [bp, setBp] = useState<OrderTableBreakpoint>('lg');
@@ -127,6 +134,16 @@ export function OrderTable({
   ];
   const resizableColumns = visibleResizableIds.map((id) => RESIZABLE_COLUMN_DEFS[id]);
   const { widths, startResize, resetColumn } = useResizableColumns('order.tableColWidths', resizableColumns);
+  const flexColumnMinWidth = RESIZABLE_COLUMN_DEFS[flexColumnId].minWidth
+    ?? RESIZABLE_COLUMN_DEFS[flexColumnId].defaultWidth;
+  const tableMinWidth = resizable
+    ? computeResizableTableMinWidth(
+        resizableColumns,
+        widths,
+        flexColumnMinWidth,
+        canBatchEdit ? CHECK_COL_PX : 0
+      )
+    : undefined;
 
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const editingRecord = editingRecordId
@@ -173,7 +190,7 @@ export function OrderTable({
     <>
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <div className="overflow-x-auto">
-      <table className="w-full table-fixed">
+      <table className="w-full table-fixed" style={tableMinWidth ? { minWidth: tableMinWidth } : undefined}>
         <colgroup>
           {resizable ? (
             <>
@@ -226,17 +243,17 @@ export function OrderTable({
             </th>
             {customerCol && (
               <th className={th('customer')}>
-                <span className="block truncate">客户</span>
+                <span className={headerLabelClass}>客户</span>
                 {handle('customer', '客户')}
               </th>
             )}
             <th className={th('desc')}>
-              <span className="block truncate">内容简述</span>
+              <span className={headerLabelClass}>内容简述</span>
               {handle('desc', '内容简述')}
             </th>
             {confirmDateCol && (
               <th className={`${th('confirmDate')} px-1.5 sm:px-2`}>
-                <span className="block truncate">
+                <span className={headerLabelClass}>
                   {bp === 'sm' ? '确认' : '确认日'}
                 </span>
                 {handle('confirmDate', '确认日')}
@@ -244,19 +261,19 @@ export function OrderTable({
             )}
             {lgCols && (
               <th className={th('customerOrderNo')}>
-                <span className="block truncate">客户订单号</span>
+                <span className={headerLabelClass}>客户订单号</span>
                 {handle('customerOrderNo', '客户订单号')}
               </th>
             )}
             {flexColumnId === 'deliveryStatus' ? (
               <th className={`${headerCellClass} px-1.5 sm:px-2`}>
-                <span className="block truncate">
+                <span className={headerLabelClass}>
                   {bp === 'sm' ? '执行' : '执行情况'}
                 </span>
               </th>
             ) : (
               <th className={`${th('deliveryStatus')} px-1.5 sm:px-2`}>
-                <span className="block truncate">
+                <span className={headerLabelClass}>
                   {bp === 'sm' ? '执行' : '执行情况'}
                 </span>
                 {handle('deliveryStatus', '执行情况')}
@@ -265,15 +282,15 @@ export function OrderTable({
             {adminCols && (
               <>
                 <th className={th('amount')}>
-                  <span className="block truncate">金额</span>
+                  <span className={headerLabelClass}>金额</span>
                   {handle('amount', '金额')}
                 </th>
                 <th className={th('paymentDate')}>
-                  <span className="block truncate">回款</span>
+                  <span className={headerLabelClass}>回款</span>
                   {handle('paymentDate', '回款')}
                 </th>
                 <th className={headerCellClass}>
-                  <span className="block truncate">到账金额</span>
+                  <span className={headerLabelClass}>到账金额</span>
                 </th>
               </>
             )}

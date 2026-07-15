@@ -6,7 +6,11 @@ import {
   headerRowClass,
 } from '@/components/table/tableHeaderStyles';
 import { ResizeHandle } from '@/components/table/ResizeHandle';
-import { type ResizableColumnDef, useResizableColumns } from '@/components/table/useResizableColumns';
+import {
+  computeResizableTableMinWidth,
+  type ResizableColumnDef,
+  useResizableColumns,
+} from '@/components/table/useResizableColumns';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import {
   type PurchaseOrderTableBreakpoint,
@@ -25,7 +29,8 @@ export type { PurchaseOrderTableBreakpoint };
 //
 // "执行情况"（渲染顺序里实际的最后一列）故意不设显式像素宽度、不给拖拽手柄：它是唯一没有显式宽度
 // 的列，table-layout:fixed 会把 table 宽度（w-full）减去其它列显式宽度后的剩余空间全分给它，表格
-// 才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白。这个"吸收剩余空间"的列必须是渲染顺序里
+// 才能始终撑满容器，不会在列宽总和小于容器宽度时右侧留白；同时用 table min-width 为它保留下限，
+// 空间不足时由外层横向滚动承接，避免它被压窄后把表头逐字换行。这个"吸收剩余空间"的列必须是渲染顺序里
 // 最后一列——之前误放在中间的"内容描述"上，导致拖动它后面任意一列的手柄时，宽度变化要靠"内容描述"
 // 收缩/膨胀补偿，而"内容描述"在左边，视觉上就变成"往左扩展"而不是正常的"往右扩展"，用户反馈过这个
 // 问题。放在最后一列就不会有这个问题，"内容描述"改为正常可拖拽列。
@@ -39,6 +44,9 @@ const RESIZABLE_COLUMN_DEFS: Record<string, ResizableColumnDef> = {
   confirmDate: { id: 'confirmDate', defaultWidth: 90, minWidth: 70 },
   customerNo: { id: 'customerNo', defaultWidth: 130, minWidth: 90 },
 };
+
+const EXECUTION_STATUS_MIN_WIDTH = 120;
+const headerLabelClass = 'flex h-6 items-center truncate whitespace-nowrap';
 
 interface PurchaseOrderTableProps {
   records: InquiryRecord[];
@@ -84,6 +92,9 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
   ];
   const resizableColumns = visibleResizableIds.map((id) => RESIZABLE_COLUMN_DEFS[id]);
   const { widths, startResize, resetColumn } = useResizableColumns('purchaseOrderTable.tableColWidths', resizableColumns);
+  const tableMinWidth = resizable
+    ? computeResizableTableMinWidth(resizableColumns, widths, EXECUTION_STATUS_MIN_WIDTH)
+    : undefined;
 
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
 
@@ -107,7 +118,7 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
     <>
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <div className="overflow-x-auto">
-      <table className="w-full table-fixed">
+      <table className="w-full table-fixed" style={tableMinWidth ? { minWidth: tableMinWidth } : undefined}>
         <colgroup>
           {resizable ? (
             <>
@@ -134,46 +145,48 @@ export function PurchaseOrderTable({ records, canViewFinancials, consigneeOption
         <thead>
           <tr className={headerRowClass}>
             <th className={`${th('orderNo')} sm:px-3`}>
-              订单编号
+              <span className={headerLabelClass}>订单编号</span>
               {handle('orderNo', '订单编号')}
             </th>
             <th className={th('desc')}>
-              内容描述
+              <span className={headerLabelClass}>内容描述</span>
               {handle('desc', '内容描述')}
             </th>
             {purchaseOrderNoCol && (
               <th className={`${th('purchaseOrderNo')} px-1.5 sm:px-2`}>
-                采购单号
+                <span className={headerLabelClass}>采购单号</span>
                 {handle('purchaseOrderNo', '采购单号')}
               </th>
             )}
             <th className={`${th('supplier')} px-1.5 sm:px-2`}>
-              供应商
+              <span className={headerLabelClass}>供应商</span>
               {handle('supplier', '供应商')}
             </th>
             {canViewFinancials && (
               <th className={th('amount')}>
-                金额
+                <span className={headerLabelClass}>金额</span>
                 {handle('amount', '金额')}
               </th>
             )}
             <th className={`${th('deliveryDate')} px-1.5 sm:px-2`}>
-              交货日期
+              <span className={headerLabelClass}>交货日期</span>
               {handle('deliveryDate', '交货日期')}
             </th>
             {confirmDateCol && (
               <th className={th('confirmDate')}>
-                确认日期
+                <span className={headerLabelClass}>确认日期</span>
                 {handle('confirmDate', '确认日期')}
               </th>
             )}
             {customerNoCol && (
               <th className={th('customerNo')}>
-                客户订单号
+                <span className={headerLabelClass}>客户订单号</span>
                 {handle('customerNo', '客户订单号')}
               </th>
             )}
-            <th className={`${headerCellOverflowClass} px-1.5 sm:px-2`}>执行情况</th>
+            <th className={`${headerCellOverflowClass} px-1.5 sm:px-2`}>
+              <span className={headerLabelClass}>执行情况</span>
+            </th>
           </tr>
         </thead>
         <tbody>

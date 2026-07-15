@@ -30,6 +30,22 @@ export function computeResizedWidth(startWidth: number, deltaX: number, minWidth
 }
 
 /**
+ * 计算可拖拽表格的最小宽度：显式列使用当前/默认宽度，另为末尾吸收剩余空间的列保留下限。
+ * 当容器比这个宽度更窄时，由表格外层的 overflow-x-auto 提供横向滚动，避免末列被压到 0。
+ */
+export function computeResizableTableMinWidth(
+  columns: readonly ResizableColumnDef[],
+  widths: Record<string, number>,
+  flexColumnMinWidth: number,
+  fixedColumnsWidth = 0
+): number {
+  return columns.reduce(
+    (total, column) => total + (widths[column.id] ?? column.defaultWidth),
+    fixedColumnsWidth + flexColumnMinWidth
+  );
+}
+
+/**
  * 通用可拖拽列宽 hook：像素宽度存 localStorage，按列 id 持久化。
  * 用于「本身有响应式断点」的表格时，只在调用方判断「当前处于全列展示断点」时才启用
  * （即只在该断点下把这个 hook 的 widths 用于渲染），窄屏继续用原有百分比布局，不接入这个 hook，
