@@ -321,12 +321,6 @@ export function OrderEditModal({
                 <dt className="text-xs text-gray-400 dark:text-gray-500">询价编号</dt>
                 <dd className="truncate font-mono text-gray-800 dark:text-gray-100">{record.inquiryNo}</dd>
               </div>
-              <div className="min-w-0 sm:col-span-2">
-                <dt className="text-xs text-gray-400 dark:text-gray-500">客户询价编号</dt>
-                <dd className="truncate text-gray-700 dark:text-gray-200" title={record.customerNo}>
-                  {record.customerNo || '—'}
-                </dd>
-              </div>
               <div className="min-w-0">
                 <dt className="text-xs text-gray-400 dark:text-gray-500">联络人</dt>
                 <dd className="truncate text-gray-700 dark:text-gray-200">{record.inquirer || '—'}</dd>
@@ -352,82 +346,93 @@ export function OrderEditModal({
               <DateField label="交货日期" value={deliveryDate} onChange={setDeliveryDate} />
               <DateField label="确认日期" value={confirmDate} onChange={setConfirmDate} />
             </div>
-            <div className="space-y-1">
-              <label className={LABEL_CLS}>客户订单号</label>
-              <input
-                value={customerNo}
-                onChange={(e) => setCustomerNo(e.target.value)}
-                className={FIELD_CLS}
-                placeholder="—"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className={LABEL_CLS}>执行情况</label>
-              <input
-                aria-label="执行情况"
-                value={deliveryStatus}
-                onChange={(e) => setDeliveryStatus(e.target.value)}
-                className={FIELD_CLS}
-                placeholder="自由输入或选预设"
-              />
-              <div className="flex flex-wrap items-center gap-1.5">
-                {STATUS_PRESETS.map((p) => (
-                  <button
-                    key={p.label}
-                    type="button"
-                    onClick={() => setDeliveryStatus(p.value)}
-                    className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs font-semibold
-                      text-gray-500 transition-colors hover:border-gray-400 hover:text-gray-700
-                      dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:text-gray-200"
-                  >
-                    {p.label}
-                  </button>
-                ))}
-                {deliveryStatus && (
-                  <button
-                    type="button"
-                    onClick={() => { setDeliveryStatus(''); setDeliveryConsignee(''); }}
-                    className="rounded-full border border-red-200 px-2.5 py-0.5 text-xs font-semibold
-                      text-red-400 hover:border-red-400 hover:text-red-600
-                      dark:border-red-800 dark:text-red-500 dark:hover:border-red-600"
-                  >
-                    清除
-                  </button>
-                )}
-              </div>
-              {isDeliveryStatusActive && consigneeOptions.length > 0 && (
-                <select
-                  value={deliveryConsignee}
-                  onChange={(e) => setDeliveryConsignee(e.target.value)}
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="space-y-1 sm:col-span-3">
+                <label className={LABEL_CLS}>客户订单号</label>
+                <input
+                  value={customerNo}
+                  onChange={(e) => setCustomerNo(e.target.value)}
                   className={FIELD_CLS}
-                >
-                  <option value="">选择收货人</option>
-                  {consigneeOptions.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
+                  placeholder="—"
+                />
+              </div>
+              {canViewFinancials && (
+                <div className="min-w-0 sm:col-span-1">
+                  <AmountField
+                    label="金额"
+                    currency={currency}
+                    numStr={amountNumStr}
+                    onCurrencyChange={setCurrency}
+                    onNumChange={setAmountNumStr}
+                  />
+                </div>
               )}
             </div>
-
-            {canViewFinancials && (
-              <div className="grid gap-3 sm:grid-cols-3">
-                <AmountField
-                  label="金额"
-                  currency={currency}
-                  numStr={amountNumStr}
-                  onCurrencyChange={setCurrency}
-                  onNumChange={setAmountNumStr}
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="space-y-1 sm:col-span-2">
+                <label className={LABEL_CLS}>执行情况</label>
+                <input
+                  aria-label="执行情况"
+                  value={deliveryStatus}
+                  onChange={(e) => setDeliveryStatus(e.target.value)}
+                  className={FIELD_CLS}
+                  placeholder="自由输入或选预设"
                 />
-                <MonthField label="回款月份" value={paymentDate} onChange={setPaymentDate} />
-                <AmountField
-                  label="到账金额"
-                  currency={currency}
-                  numStr={receivedNumStr}
-                  onNumChange={setReceivedNumStr}
-                  locked
-                />
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {STATUS_PRESETS.map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => setDeliveryStatus(p.value)}
+                      className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs font-semibold
+                        text-gray-500 transition-colors hover:border-gray-400 hover:text-gray-700
+                        dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:text-gray-200"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                  {deliveryStatus && (
+                    <button
+                      type="button"
+                      onClick={() => { setDeliveryStatus(''); setDeliveryConsignee(''); }}
+                      className="rounded-full border border-red-200 px-2.5 py-0.5 text-xs font-semibold
+                        text-red-400 hover:border-red-400 hover:text-red-600
+                        dark:border-red-800 dark:text-red-500 dark:hover:border-red-600"
+                    >
+                      清除
+                    </button>
+                  )}
+                </div>
+                {isDeliveryStatusActive && consigneeOptions.length > 0 && (
+                  <select
+                    value={deliveryConsignee}
+                    onChange={(e) => setDeliveryConsignee(e.target.value)}
+                    className={FIELD_CLS}
+                  >
+                    <option value="">选择收货人</option>
+                    {consigneeOptions.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
-            )}
+              {canViewFinancials && (
+                <>
+                  <div className="min-w-0 sm:col-span-1">
+                    <MonthField label="回款月份" value={paymentDate} onChange={setPaymentDate} />
+                  </div>
+                  <div className="min-w-0 sm:col-span-1">
+                    <AmountField
+                      label="到账金额"
+                      currency={currency}
+                      numStr={receivedNumStr}
+                      onNumChange={setReceivedNumStr}
+                      locked
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* ── 订单状态标记 ── */}
