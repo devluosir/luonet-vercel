@@ -38,32 +38,49 @@ function renderModal(record: InquiryRecord, onSave = jest.fn(), canViewFinancial
 }
 
 describe('OrderEditModal layout', () => {
-  it('removes the customer inquiry number and keeps the remaining read-only fields in two columns', () => {
+  it('keeps order/contact paired on mobile while preserving the desktop read-only order', () => {
     const { container } = renderModal(createRecord());
 
     expect(screen.queryByText('客户询价编号')).not.toBeInTheDocument();
     const readOnlyList = container.querySelector('dl');
-    expect(readOnlyList).toHaveClass('grid', 'sm:grid-cols-2');
-    expect(
-      Array.from(readOnlyList?.querySelectorAll(':scope > div > dt') ?? []).map((item) => item.textContent)
-    ).toEqual(['订单编号', '询价编号', '联络人', '内容简述']);
+    const readOnlyItems = Array.from(readOnlyList?.querySelectorAll(':scope > div') ?? []);
+    expect(readOnlyList).toHaveClass('grid', 'grid-cols-2');
+    expect(readOnlyItems.map((item) => item.querySelector('dt')?.textContent)).toEqual([
+      '订单编号', '询价编号', '联络人', '内容简述',
+    ]);
+    expect(readOnlyItems[0]).toHaveClass('order-1');
+    expect(readOnlyItems[1]).toHaveClass('order-3', 'sm:order-2');
+    expect(readOnlyItems[2]).toHaveClass('order-2', 'sm:order-3');
+    expect(readOnlyItems[3]).toHaveClass('order-4');
+  });
+
+  it('keeps delivery and confirmation dates in the same row at every breakpoint', () => {
+    renderModal(createRecord());
+
+    const deliveryDateField = screen.getByText('交货日期').parentElement;
+    const dateGrid = deliveryDateField?.parentElement;
+    expect(dateGrid).toHaveClass('grid', 'grid-cols-2');
+    expect(dateGrid).not.toHaveClass('sm:grid-cols-2');
+    expect(screen.getByText('确认日期').parentElement?.parentElement).toBe(dateGrid);
   });
 
   it('uses 75/25 and 50/25/25 field proportions when financials are visible', () => {
     renderModal(createRecord(), jest.fn(), true);
 
     const customerOrderField = screen.getByText('客户订单号').parentElement;
-    const customerOrderGrid = customerOrderField?.parentElement;
-    expect(customerOrderGrid).toHaveClass('grid', 'sm:grid-cols-4');
-    expect(customerOrderField).toHaveClass('sm:col-span-3');
-    expect(screen.getByText('金额').parentElement?.parentElement).toHaveClass('sm:col-span-1');
-
     const executionField = screen.getByText('执行情况').parentElement;
-    const executionGrid = executionField?.parentElement;
-    expect(executionGrid).toHaveClass('grid', 'sm:grid-cols-4');
-    expect(executionField).toHaveClass('sm:col-span-2');
-    expect(screen.getByText('回款月份').parentElement?.parentElement).toHaveClass('sm:col-span-1');
-    expect(screen.getByText('到账金额').parentElement?.parentElement).toHaveClass('sm:col-span-1');
+    const responsiveGrid = customerOrderField?.parentElement;
+    const amountField = screen.getByText('金额').parentElement?.parentElement;
+    const paymentMonthField = screen.getByText('回款月份').parentElement?.parentElement;
+    const receivedAmountField = screen.getByText('到账金额').parentElement?.parentElement;
+
+    expect(responsiveGrid).toBe(executionField?.parentElement);
+    expect(responsiveGrid).toHaveClass('grid', 'grid-cols-3', 'sm:grid-cols-4');
+    expect(customerOrderField).toHaveClass('order-1', 'col-span-3', 'sm:col-span-3');
+    expect(amountField).toHaveClass('order-3', 'sm:order-2', 'sm:col-span-1');
+    expect(executionField).toHaveClass('order-2', 'col-span-3', 'sm:order-3', 'sm:col-span-2');
+    expect(paymentMonthField).toHaveClass('order-4', 'sm:col-span-1');
+    expect(receivedAmountField).toHaveClass('order-5', 'sm:col-span-1');
   });
 
   it('keeps the customer order and execution spans without rendering financial fields', () => {
@@ -71,10 +88,10 @@ describe('OrderEditModal layout', () => {
 
     const customerOrderField = screen.getByText('客户订单号').parentElement;
     const executionField = screen.getByText('执行情况').parentElement;
-    expect(customerOrderField).toHaveClass('sm:col-span-3');
-    expect(customerOrderField?.parentElement?.children).toHaveLength(1);
-    expect(executionField).toHaveClass('sm:col-span-2');
-    expect(executionField?.parentElement?.children).toHaveLength(1);
+    expect(customerOrderField).toHaveClass('col-span-3', 'sm:col-span-3');
+    expect(executionField).toHaveClass('col-span-3', 'sm:col-span-2');
+    expect(customerOrderField?.parentElement).toBe(executionField?.parentElement);
+    expect(customerOrderField?.parentElement?.children).toHaveLength(2);
     expect(screen.queryByText('金额')).not.toBeInTheDocument();
     expect(screen.queryByText('回款月份')).not.toBeInTheDocument();
     expect(screen.queryByText('到账金额')).not.toBeInTheDocument();

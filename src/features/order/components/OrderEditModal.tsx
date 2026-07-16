@@ -66,14 +66,14 @@ interface DateFieldProps {
 function DateField({ label, value, onChange }: DateFieldProps) {
   const dateRef = useRef<HTMLInputElement>(null);
   return (
-    <div className="space-y-1">
+    <div className="min-w-0 space-y-1">
       <label className={LABEL_CLS}>{label}</label>
       <div className="flex items-center gap-1.5">
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="m.D"
-          className={FIELD_CLS}
+          className={`${FIELD_CLS} min-w-0`}
         />
         <span className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700">
           <input
@@ -112,14 +112,14 @@ function MonthField({ label, value, onChange }: DateFieldProps) {
   };
 
   return (
-    <div className="space-y-1">
+    <div className="min-w-0 space-y-1">
       <label className={LABEL_CLS}>{label}</label>
       <div className="flex items-center gap-1.5">
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="m"
-          className={FIELD_CLS}
+          className={`${FIELD_CLS} min-w-0`}
         />
         <span className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700">
           <input
@@ -153,7 +153,7 @@ interface AmountFieldProps {
 
 function AmountField({ label, currency, numStr, onCurrencyChange, onNumChange, locked = false }: AmountFieldProps) {
   return (
-    <div className="space-y-1">
+    <div className="min-w-0 space-y-1">
       <label className={LABEL_CLS}>{label}</label>
       <div className="flex items-center gap-1">
         {locked ? (
@@ -176,7 +176,7 @@ function AmountField({ label, currency, numStr, onCurrencyChange, onNumChange, l
           min="0"
           value={numStr}
           onChange={(e) => onNumChange(e.target.value)}
-          className={`${FIELD_CLS} text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+          className={`${FIELD_CLS} min-w-0 text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
         />
       </div>
     </div>
@@ -310,22 +310,22 @@ export function OrderEditModal({
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
               来自询价（只读）
             </p>
-            <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
-              <div className="min-w-0">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div className="order-1 min-w-0">
                 <dt className="text-xs text-gray-400 dark:text-gray-500">订单编号</dt>
                 <dd className="truncate font-mono font-semibold text-green-700 dark:text-green-400">
                   {record.orderNo || '—'}
                 </dd>
               </div>
-              <div className="min-w-0">
+              <div className="order-3 min-w-0 sm:order-2">
                 <dt className="text-xs text-gray-400 dark:text-gray-500">询价编号</dt>
                 <dd className="truncate font-mono text-gray-800 dark:text-gray-100">{record.inquiryNo}</dd>
               </div>
-              <div className="min-w-0">
+              <div className="order-2 min-w-0 sm:order-3">
                 <dt className="text-xs text-gray-400 dark:text-gray-500">联络人</dt>
                 <dd className="truncate text-gray-700 dark:text-gray-200">{record.inquirer || '—'}</dd>
               </div>
-              <div className="min-w-0">
+              <div className="order-4 min-w-0">
                 <dt className="text-xs text-gray-400 dark:text-gray-500">内容简述</dt>
                 <dd className="truncate text-gray-700 dark:text-gray-200" title={record.description}>
                   {record.description || '—'}
@@ -342,12 +342,12 @@ export function OrderEditModal({
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
               订单信息
             </p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3">
               <DateField label="交货日期" value={deliveryDate} onChange={setDeliveryDate} />
               <DateField label="确认日期" value={confirmDate} onChange={setConfirmDate} />
             </div>
-            <div className="grid gap-3 sm:grid-cols-4">
-              <div className="space-y-1 sm:col-span-3">
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+              <div className="order-1 col-span-3 space-y-1 sm:col-span-3">
                 <label className={LABEL_CLS}>客户订单号</label>
                 <input
                   value={customerNo}
@@ -357,7 +357,7 @@ export function OrderEditModal({
                 />
               </div>
               {canViewFinancials && (
-                <div className="min-w-0 sm:col-span-1">
+                <div className="order-3 min-w-0 sm:order-2 sm:col-span-1">
                   <AmountField
                     label="金额"
                     currency={currency}
@@ -367,9 +367,7 @@ export function OrderEditModal({
                   />
                 </div>
               )}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-4">
-              <div className="space-y-1 sm:col-span-2">
+              <div className="order-2 col-span-3 space-y-1 sm:order-3 sm:col-span-2">
                 <label className={LABEL_CLS}>执行情况</label>
                 <input
                   aria-label="执行情况"
@@ -418,10 +416,10 @@ export function OrderEditModal({
               </div>
               {canViewFinancials && (
                 <>
-                  <div className="min-w-0 sm:col-span-1">
+                  <div className="order-4 min-w-0 sm:col-span-1">
                     <MonthField label="回款月份" value={paymentDate} onChange={setPaymentDate} />
                   </div>
-                  <div className="min-w-0 sm:col-span-1">
+                  <div className="order-5 min-w-0 sm:col-span-1">
                     <AmountField
                       label="到账金额"
                       currency={currency}
