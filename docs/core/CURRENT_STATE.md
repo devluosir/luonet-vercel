@@ -246,6 +246,7 @@ theme-config
 - `/purchase` 仍是旧采购订单单据创建功能，数据保存在 `purchase_history`，用于 PDF/Excel 和草稿，与本节无关。
 - `/purchase-order-table`（TASK-101 重构后）不再是独立数据表，改为询报价登记的过滤视图：只展示 `orderNo` 有值（已成单）的 `InquiryRecord`，不能手动新增/删除，记录随询价成单自动出现——关系与"订单状态表 `/order` 之于询报价登记"完全一致。
 - `purchaseOrderNo`（采购单号）、`purchaseOrderSuppliers`（一单多家供应商）和 `purchaseOrderAmount`（金额，受 `purchaseRegistration.financials` 权限门槛控制）为采购订单表专属字段。采购订单表不提供任何行内编辑，点击任意业务单元格统一打开“编辑采购订单”弹窗。
+- “编辑采购订单”弹窗的只读区按“订单编号/询价编号/联络人”和“内容描述/客户订单号/确认日期”两组三列展示，订单状态标记独占一行；编辑区桌面按交货日期 25%、采购金额 25%、执行情况 50% 排布，小屏将日期与金额同排、执行情况放到下一行。无财务权限时不渲染金额，桌面日期/执行情况约为 1/3 / 2/3，小屏纵向堆叠（TASK-179）。
 - `purchaseOrderSuppliers` 是供应商权威数组；旧 `purchaseOrderSupplier` / `purchaseOrderSupplierId` 保留为存量记录 fallback 和数组首项兼容镜像。列表、关键词搜索和供应商筛选均读取全部供应商；受限采购视图已在 GET 清洗和 PUT 白名单同时开放数组字段。
 - 交货日期（`orderDeliveryDate`）、执行情况（`orderDeliveryStatus`/`orderDeliveryConsignee`）与订单状态表**双向共享同一份数据**，两边都能编辑。
 - 确认日期（`orderConfirmDate`）、客户订单号（`orderCustomerNo`）**只读**，来自订单状态表，采购订单表这边不能编辑（API 层强制）。

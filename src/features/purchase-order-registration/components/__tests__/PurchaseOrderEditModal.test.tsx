@@ -63,6 +63,99 @@ function record(overrides: Partial<InquiryRecord> = {}): InquiryRecord {
 }
 
 describe('PurchaseOrderEditModal', () => {
+  it('只读信息按两组三列排序，移除客户询价编号，订单状态标记独立展示', () => {
+    const item = record({
+      orderCustomerNo: 'PO-CUSTOMER-1',
+      orderConfirmDate: '[7.16]',
+      orderSubStatus: 'followup',
+      orderSubStatusRemark: '等待补件',
+    });
+    act(() => useInquiryStore.setState({ records: [item] }));
+    render(
+      <PurchaseOrderEditModal
+        isOpen
+        recordId={item.id}
+        canViewFinancials
+        consigneeOptions={[]}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByText('客户询价编号')).not.toBeInTheDocument();
+
+    const firstInfoRow = screen.getByText('订单编号').parentElement?.parentElement;
+    const secondInfoRow = screen.getByText('内容描述').parentElement?.parentElement;
+    expect(firstInfoRow).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-3');
+    expect(secondInfoRow).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-3');
+    expect(Array.from(firstInfoRow?.children ?? []).map((item) => item.querySelector('dt')?.textContent)).toEqual([
+      '订单编号',
+      '询价编号',
+      '联络人',
+    ]);
+    expect(Array.from(secondInfoRow?.children ?? []).map((item) => item.querySelector('dt')?.textContent)).toEqual([
+      '内容描述',
+      '客户订单号',
+      '确认日期',
+    ]);
+
+    const statusItem = screen.getByText('订单状态标记').parentElement;
+    expect(statusItem?.parentElement?.tagName).toBe('DL');
+    expect(screen.getByText('善后S')).toHaveClass('text-red-500');
+    expect(screen.getByText('等待补件')).toBeInTheDocument();
+  });
+
+  it('交货日期、采购金额、执行情况按三列顺序排列', () => {
+    const item = record();
+    act(() => useInquiryStore.setState({ records: [item] }));
+    render(
+      <PurchaseOrderEditModal
+        isOpen
+        recordId={item.id}
+        canViewFinancials
+        consigneeOptions={[]}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    const editableGrid = screen.getByText('执行情况').parentElement?.parentElement;
+    expect(editableGrid).toHaveClass('grid', 'grid-cols-2', 'sm:grid-cols-12');
+    expect(Array.from(editableGrid?.children ?? []).map((item) => item.querySelector('label')?.textContent)).toEqual([
+      '交货日期',
+      '采购金额',
+      '执行情况',
+    ]);
+    expect(editableGrid?.children[0]).toHaveClass('sm:col-span-3');
+    expect(editableGrid?.children[1]).toHaveClass('sm:col-span-3');
+    expect(editableGrid?.children[2]).toHaveClass('col-span-2', 'sm:col-span-6');
+  });
+
+  it('无财务权限时三列容器仅渲染交货日期和执行情况', () => {
+    const item = record();
+    act(() => useInquiryStore.setState({ records: [item] }));
+    render(
+      <PurchaseOrderEditModal
+        isOpen
+        recordId={item.id}
+        canViewFinancials={false}
+        consigneeOptions={[]}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    const editableGrid = screen.getByText('执行情况').parentElement?.parentElement;
+    expect(editableGrid).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-12');
+    expect(Array.from(editableGrid?.children ?? []).map((item) => item.querySelector('label')?.textContent)).toEqual([
+      '交货日期',
+      '执行情况',
+    ]);
+    expect(editableGrid?.children[0]).toHaveClass('sm:col-span-4');
+    expect(editableGrid?.children[1]).toHaveClass('sm:col-span-8');
+    expect(screen.queryByText('采购金额')).not.toBeInTheDocument();
+  });
+
   it('旧供应商可显示，并能连续加入主数据与自由供应商后原子保存', () => {
     const item = record();
     const onSave = jest.fn();

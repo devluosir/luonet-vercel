@@ -15,7 +15,7 @@ import { getPurchaseOrderSuppliers } from '../utils/purchaseOrderSuppliers';
  * 采购订单表——"编辑采购订单"弹窗（2026-07-10 新增，参考订单状态表的 OrderEditModal.tsx 同款模式）
  *
  * 点击每一行"订单编号+询价编号"这个原本纯只读区域触发。弹窗里：
- * - 只读信息区：来自询价/订单状态表的字段（订单编号、询价编号、客户询价编号、联络人、内容描述、
+ * - 只读信息区：来自询价/订单状态表的字段（订单编号、询价编号、联络人、内容描述、
  *   确认日期、客户订单号、订单状态备注）——确认日期/客户订单号本来就是采购订单表这边只读展示、
  *   不允许编辑（见 InquiryRecord 类型注释），撤销C/悬挂P/善后S 状态标记及其情况备注也只在订单状态表
  *   的"编辑订单"弹窗编辑，这里同样只读展示，不提供编辑入口。
@@ -199,45 +199,43 @@ export function PurchaseOrderEditModal({
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
               来自询价/订单状态表（只读）
             </p>
-            <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
-              <div className="min-w-0">
-                <dt className="text-xs text-gray-400 dark:text-gray-500">订单编号</dt>
-                <dd className="truncate font-mono font-semibold text-green-700 dark:text-green-400">
-                  {record.orderNo || '—'}
-                </dd>
+            <dl className="space-y-2 text-sm">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-3">
+                <div className="min-w-0">
+                  <dt className="text-xs text-gray-400 dark:text-gray-500">订单编号</dt>
+                  <dd className="truncate font-mono font-semibold text-green-700 dark:text-green-400">
+                    {record.orderNo || '—'}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-gray-400 dark:text-gray-500">询价编号</dt>
+                  <dd className="truncate font-mono text-gray-800 dark:text-gray-100">{record.inquiryNo}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-gray-400 dark:text-gray-500">联络人</dt>
+                  <dd className="truncate text-gray-700 dark:text-gray-200">{record.inquirer || '—'}</dd>
+                </div>
               </div>
-              <div className="min-w-0">
-                <dt className="text-xs text-gray-400 dark:text-gray-500">询价编号</dt>
-                <dd className="truncate font-mono text-gray-800 dark:text-gray-100">{record.inquiryNo}</dd>
-              </div>
-              <div className="min-w-0 sm:col-span-2">
-                <dt className="text-xs text-gray-400 dark:text-gray-500">客户询价编号</dt>
-                <dd className="truncate text-gray-700 dark:text-gray-200" title={record.customerNo}>
-                  {record.customerNo || '—'}
-                </dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="text-xs text-gray-400 dark:text-gray-500">联络人</dt>
-                <dd className="truncate text-gray-700 dark:text-gray-200">{record.inquirer || '—'}</dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="text-xs text-gray-400 dark:text-gray-500">内容描述</dt>
-                <dd className="truncate text-gray-700 dark:text-gray-200" title={record.description}>
-                  {record.description || '—'}
-                </dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="text-xs text-gray-400 dark:text-gray-500">确认日期</dt>
-                <dd className="truncate text-gray-700 dark:text-gray-200">{confirmDateDisplay}</dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="text-xs text-gray-400 dark:text-gray-500">客户订单号</dt>
-                <dd className="truncate text-gray-700 dark:text-gray-200" title={customerNoDisplay}>
-                  {customerNoDisplay}
-                </dd>
+              <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-3">
+                <div className="min-w-0">
+                  <dt className="text-xs text-gray-400 dark:text-gray-500">内容描述</dt>
+                  <dd className="truncate text-gray-700 dark:text-gray-200" title={record.description}>
+                    {record.description || '—'}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-gray-400 dark:text-gray-500">客户订单号</dt>
+                  <dd className="truncate text-gray-700 dark:text-gray-200" title={customerNoDisplay}>
+                    {customerNoDisplay}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-gray-400 dark:text-gray-500">确认日期</dt>
+                  <dd className="truncate text-gray-700 dark:text-gray-200">{confirmDateDisplay}</dd>
+                </div>
               </div>
               {subStatusLabel && (
-                <div className="min-w-0 sm:col-span-2">
+                <div className="min-w-0">
                   <dt className="text-xs text-gray-400 dark:text-gray-500">订单状态标记</dt>
                   <dd className="truncate text-sm">
                     <span className="font-semibold text-red-500">{subStatusLabel}</span>
@@ -306,77 +304,81 @@ export function PurchaseOrderEditModal({
               </div>
             </div>
 
-            <DateField label="交货日期" value={deliveryDate} onChange={setDeliveryDate} />
+            <div className={`grid gap-3 ${canViewFinancials ? 'grid-cols-2 sm:grid-cols-12' : 'grid-cols-1 sm:grid-cols-12'}`}>
+              <div className={canViewFinancials ? 'min-w-0 sm:col-span-3' : 'min-w-0 sm:col-span-4'}>
+                <DateField label="交货日期" value={deliveryDate} onChange={setDeliveryDate} />
+              </div>
 
-            <div className="space-y-1">
-              <label className={LABEL_CLS}>执行情况</label>
-              <input
-                value={deliveryStatus}
-                onChange={(e) => setDeliveryStatus(e.target.value)}
-                className={FIELD_CLS}
-                placeholder="自由输入或选预设"
-              />
-              <div className="flex flex-wrap items-center gap-1.5">
-                {STATUS_PRESETS.map((p) => (
-                  <button
-                    key={p.label}
-                    type="button"
-                    onClick={() => setDeliveryStatus(p.value)}
-                    className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs font-semibold
-                      text-gray-500 transition-colors hover:border-gray-400 hover:text-gray-700
-                      dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:text-gray-200"
+              {canViewFinancials && (
+                <div className="space-y-1 sm:col-span-3">
+                  <label className={LABEL_CLS}>采购金额</label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setAmountCurrency((c) => CURRENCY_CYCLE[c])}
+                      className="h-9 w-8 shrink-0 rounded-lg border border-gray-200 text-sm font-bold text-blue-500 hover:text-blue-700 dark:border-gray-700 dark:text-blue-400"
+                    >
+                      {amountCurrency}
+                    </button>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={amountNumStr}
+                      onChange={(e) => setAmountNumStr(e.target.value)}
+                      className={`${FIELD_CLS} text-right ${NUMBER_INPUT_NO_SPINNER_CLS}`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className={canViewFinancials ? 'col-span-2 space-y-1 sm:col-span-6' : 'min-w-0 space-y-1 sm:col-span-8'}>
+                <label className={LABEL_CLS}>执行情况</label>
+                <input
+                  value={deliveryStatus}
+                  onChange={(e) => setDeliveryStatus(e.target.value)}
+                  className={FIELD_CLS}
+                  placeholder="自由输入或选预设"
+                />
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {STATUS_PRESETS.map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => setDeliveryStatus(p.value)}
+                      className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs font-semibold
+                        text-gray-500 transition-colors hover:border-gray-400 hover:text-gray-700
+                        dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:text-gray-200"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                  {deliveryStatus && (
+                    <button
+                      type="button"
+                      onClick={() => { setDeliveryStatus(''); setDeliveryConsignee(''); }}
+                      className="rounded-full border border-red-200 px-2.5 py-0.5 text-xs font-semibold
+                        text-red-400 hover:border-red-400 hover:text-red-600
+                        dark:border-red-800 dark:text-red-500 dark:hover:border-red-600"
+                    >
+                      清除
+                    </button>
+                  )}
+                </div>
+                {isDeliveryStatusActive && consigneeOptions.length > 0 && (
+                  <select
+                    value={deliveryConsignee}
+                    onChange={(e) => setDeliveryConsignee(e.target.value)}
+                    className={FIELD_CLS}
                   >
-                    {p.label}
-                  </button>
-                ))}
-                {deliveryStatus && (
-                  <button
-                    type="button"
-                    onClick={() => { setDeliveryStatus(''); setDeliveryConsignee(''); }}
-                    className="rounded-full border border-red-200 px-2.5 py-0.5 text-xs font-semibold
-                      text-red-400 hover:border-red-400 hover:text-red-600
-                      dark:border-red-800 dark:text-red-500 dark:hover:border-red-600"
-                  >
-                    清除
-                  </button>
+                    <option value="">选择收货人</option>
+                    {consigneeOptions.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
                 )}
               </div>
-              {isDeliveryStatusActive && consigneeOptions.length > 0 && (
-                <select
-                  value={deliveryConsignee}
-                  onChange={(e) => setDeliveryConsignee(e.target.value)}
-                  className={FIELD_CLS}
-                >
-                  <option value="">选择收货人</option>
-                  {consigneeOptions.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              )}
             </div>
-
-            {canViewFinancials && (
-              <div className="space-y-1">
-                <label className={LABEL_CLS}>采购金额</label>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setAmountCurrency((c) => CURRENCY_CYCLE[c])}
-                    className="h-9 w-8 shrink-0 rounded-lg border border-gray-200 text-sm font-bold text-blue-500 hover:text-blue-700 dark:border-gray-700 dark:text-blue-400"
-                  >
-                    {amountCurrency}
-                  </button>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={amountNumStr}
-                    onChange={(e) => setAmountNumStr(e.target.value)}
-                    className={`${FIELD_CLS} text-right ${NUMBER_INPUT_NO_SPINNER_CLS}`}
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
           {/* 操作按钮 */}
