@@ -1,12 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { InquiryQuoteStatus } from '@/features/inquiry/components/InquiryQuoteStatus';
 import { stripDateBrackets } from '@/features/inquiry/utils/inquiryUtils';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import type { CustomerQuoteStatus, InquiryRecord, PurchaseSupplierQuoteStatus } from '@/features/inquiry/types';
+import { usePurchaseSupplierAccess } from '@/features/purchase-supplier/hooks/usePurchaseSupplierAccess';
+import {
+  fetchPurchaseSuppliers,
+  savePurchaseSupplier,
+} from '@/features/purchase-supplier/services/purchaseSupplierService';
 import {
   computeSelfSupplierPatch,
   countOtherQuotedSuppliers,
@@ -22,9 +27,18 @@ interface PurchaseInquiryEditModalProps {
   onSave: (id: string, patch: Partial<InquiryRecord>) => void;
   /** 采购部登记自己已用过的供应商简称列表（来自 purchaseSupplierStatuses），与询报价登记的客户管理供应商库分开 */
   supplierOptions?: Array<string | { id: string; name: string }>;
+  /** 采购供应商主档当前名称索引，仅用于展示；不会写回询价记录里的名称快照。 */
+  purchaseSupplierNameById: Map<string, string>;
 }
 
-export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, supplierOptions }: PurchaseInquiryEditModalProps) {
+export function PurchaseInquiryEditModal({
+  record: recordProp,
+  onClose,
+  onSave,
+  supplierOptions,
+  purchaseSupplierNameById,
+}: PurchaseInquiryEditModalProps) {
+  const { canRead, canWrite, userId } = usePurchaseSupplierAccess();
   // 弹窗打开期间 store 可能因为后台同步而更新（例如另一设备/受限视图周期性拉取），
   // 优先按 record.id 从最新 store 解析记录，避免保存时用打开弹窗那一刻的旧快照覆盖飞罗同步判断。
   // 找不到（记录被删除等极端情况）时退回 props 传入的快照，不阻塞关闭弹窗。
@@ -50,10 +64,77 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
   // 借用询报价登记的供应商/已报价编辑器：该组件只读写 record.supplierStatuses / record.quotedStatuses，
   // 与 record 其余字段无关，因此用「影子记录」把采购部专属数组接到这两个字段名上即可复用，
   // 编辑内容互不影响询报价登记原本的 supplierStatuses / quotedStatuses。
+  const displaySuppliers = useMemo(
+    () => localSuppliers.map((supplier) => {
+      const currentName = supplier.purchaseSupplierId
+        ? purchaseSupplierNameById.get(supplier.purchaseSupplierId)
+        : undefined;
+      return currentName ? { ...supplier, supplierShortName: currentName } : supplier;
+    }),
+    [localSuppliers, purchaseSupplierNameById]
+  );
+
   const shimRecord = useMemo<InquiryRecord | null>(() => {
     if (!record) return null;
-    return { ...record, supplierStatuses: localSuppliers, quotedStatuses: localQuoted };
-  }, [record, localSuppliers, localQuoted]);
+    return { ...record, supplierStatuses: displaySuppliers, quotedStatuses: localQuoted };
+  }, [record, displaySuppliers, localQuoted]);
+
+  const handleSuppliersChange = useCallback((suppliers: PurchaseSupplierQuoteStatus[]) => {
+    setLocalSuppliers((previousSuppliers) => {
+      const previousSupplierById = new Map(previousSuppliers.map((supplier) => [supplier.id, supplier]));
+      return suppliers.map((supplier) => {
+        const previousSupplier = previousSupplierById.get(supplier.id);
+        const currentMasterName = supplier.purchaseSupplierId
+          ? purchaseSupplierNameById.get(supplier.purchaseSupplierId)
+          : undefined;
+        if (
+          previousSupplier
+          && previousSupplier.purchaseSupplierId === supplier.purchaseSupplierId
+          && currentMasterName === supplier.supplierShortName
+        ) {
+          return { ...supplier, supplierShortName: previousSupplier.supplierShortName };
+        }
+        return supplier;
+      });
+    });
+  }, [purchaseSupplierNameById]);
+
+  const handleEnsurePurchaseSupplier = useCallback(async (rawName: string) => {
+    const name = rawName.trim();
+    if (!name || !canRead || !canWrite || !userId) return undefined;
+
+    try {
+      const { items } = await fetchPurchaseSuppliers({
+        userId,
+        canRead,
+        search: name,
+        limit: 10,
+      });
+      const normalizedName = name.toLowerCase();
+      const existingSupplier = items.find((supplier) =>
+        (supplier.shortName || supplier.name).trim().toLowerCase() === normalizedName
+      );
+      if (existingSupplier) {
+        return {
+          id: existingSupplier.id,
+          name: existingSupplier.shortName || existingSupplier.name,
+        };
+      }
+
+      const savedSupplier = await savePurchaseSupplier({
+        name,
+        shortName: name,
+        contacts: [],
+        data: {},
+      });
+      return {
+        id: savedSupplier.id,
+        name: savedSupplier.shortName || savedSupplier.name,
+      };
+    } catch {
+      return undefined;
+    }
+  }, [canRead, canWrite, userId]);
 
   if (!record || !shimRecord) return null;
 
@@ -155,9 +236,10 @@ export function PurchaseInquiryEditModal({ record: recordProp, onClose, onSave, 
             </p>
             <InquiryQuoteStatus
               record={shimRecord}
-              onSuppliersChange={(suppliers) => setLocalSuppliers(suppliers as PurchaseSupplierQuoteStatus[])}
+              onSuppliersChange={(suppliers) => handleSuppliersChange(suppliers as PurchaseSupplierQuoteStatus[])}
               onQuotedChange={setLocalQuoted}
               supplierOptions={supplierOptions ?? []}
+              onEnsurePurchaseSupplier={handleEnsurePurchaseSupplier}
               unavailableLabel="我司无法报价"
               showClosedControl={false}
               extraNeedInfo={!!selfSupplierNeedInfoEntry}

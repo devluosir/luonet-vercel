@@ -9,9 +9,10 @@ import { computePurchaseMainStatus, formatPurchaseMainStatus, getPurchaseRowColo
 interface PurchaseRegistrationRowProps {
   record: InquiryRecord;
   onEditRecord: (record: InquiryRecord) => void;
+  purchaseSupplierNameById: Map<string, string>;
 }
 
-export function PurchaseRegistrationRow({ record, onEditRecord }: PurchaseRegistrationRowProps) {
+export function PurchaseRegistrationRow({ record, onEditRecord, purchaseSupplierNameById }: PurchaseRegistrationRowProps) {
   const mainStatus = formatPurchaseMainStatus(computePurchaseMainStatus(record));
   const subStatusBadge = getOrderSubStatusLetter(record);
   const description = record.description?.trim() || '';
@@ -19,7 +20,12 @@ export function PurchaseRegistrationRow({ record, onEditRecord }: PurchaseRegist
   // 供只读预览用的影子记录：把采购部专属供应商/报价状态接到 InquiryQuoteStatusDisplay 期望的字段名上
   const previewRecord: InquiryRecord = {
     ...record,
-    supplierStatuses: record.purchaseSupplierStatuses ?? [],
+    supplierStatuses: (record.purchaseSupplierStatuses ?? []).map((supplier) => {
+      const currentName = supplier.purchaseSupplierId
+        ? purchaseSupplierNameById.get(supplier.purchaseSupplierId)
+        : undefined;
+      return currentName ? { ...supplier, supplierShortName: currentName } : supplier;
+    }),
     quotedStatuses: record.purchaseQuotedStatuses ?? [],
   };
 

@@ -4,6 +4,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { PurchaseRegistrationTable } from '../PurchaseRegistrationTable';
 
+const EMPTY_PURCHASE_SUPPLIER_NAMES = new Map<string, string>();
+
 function baseRecord(overrides: Partial<InquiryRecord> = {}): InquiryRecord {
   return {
     id: 'r1',
@@ -27,7 +29,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
   it('询价编号/内容描述/询报价状态 3 列渲染拖拽手柄；最后一列"状态描述"是唯一不设显式宽度的撑满列，没有手柄', () => {
     render(
-      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} />
+      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} purchaseSupplierNameById={EMPTY_PURCHASE_SUPPLIER_NAMES} />
     );
     expect(screen.getAllByRole('separator')).toHaveLength(3);
     expect(screen.queryByLabelText('调整"状态描述"列宽')).not.toBeInTheDocument();
@@ -35,7 +37,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
   it('四列表头与询报价登记保持同一单行高度，窄屏通过表格最小宽度避免末列被压缩换行', () => {
     const { container } = render(
-      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} />
+      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} purchaseSupplierNameById={EMPTY_PURCHASE_SUPPLIER_NAMES} />
     );
 
     const headers = screen.getAllByRole('columnheader');
@@ -50,7 +52,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
   it('表格始终 w-full 撑满容器，不会在列宽总和小于容器宽度时留白', () => {
     const { container } = render(
-      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} />
+      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} purchaseSupplierNameById={EMPTY_PURCHASE_SUPPLIER_NAMES} />
     );
     const table = container.querySelector('table');
     expect(table).toHaveClass('w-full');
@@ -63,7 +65,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
   it('"询报价状态"列默认宽度比原来的 26% 更宽（用户反馈原宽度装不下状态提示）', () => {
     const { container } = render(
-      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} />
+      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} purchaseSupplierNameById={EMPTY_PURCHASE_SUPPLIER_NAMES} />
     );
     const cols = container.querySelectorAll('col');
     // 询报价状态是第 3 列
@@ -73,7 +75,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
   it('拖拽状态列的手柄会增大该列宽度，并持久化到 localStorage', () => {
     const { container } = render(
-      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} />
+      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} purchaseSupplierNameById={EMPTY_PURCHASE_SUPPLIER_NAMES} />
     );
     const statusHandle = screen.getByLabelText('调整"询报价状态"列宽');
 
@@ -102,7 +104,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
 
   it('回归：拖拽"内容描述"手柄只改变它自己的宽度，不影响它左边"询价编号"列的宽度', () => {
     const { container } = render(
-      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} />
+      <PurchaseRegistrationTable records={[baseRecord()]} onEditRecord={jest.fn()} purchaseSupplierNameById={EMPTY_PURCHASE_SUPPLIER_NAMES} />
     );
     const cols = container.querySelectorAll('col');
     const noWidthBefore = (cols[0] as HTMLElement).style.width;
@@ -129,7 +131,7 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
     const item = baseRecord();
     const onEditRecord = jest.fn();
     const { container } = render(
-      <PurchaseRegistrationTable records={[item]} onEditRecord={onEditRecord} />
+      <PurchaseRegistrationTable records={[item]} onEditRecord={onEditRecord} purchaseSupplierNameById={EMPTY_PURCHASE_SUPPLIER_NAMES} />
     );
 
     fireEvent.click(screen.getByText('初始描述'));
@@ -142,8 +144,27 @@ describe('PurchaseRegistrationTable 可拖拽列宽（本表无响应式断点�
   });
 
   it('空记录时渲染空态提示，不渲染表格', () => {
-    render(<PurchaseRegistrationTable records={[]} onEditRecord={jest.fn()} />);
+    render(<PurchaseRegistrationTable records={[]} onEditRecord={jest.fn()} purchaseSupplierNameById={EMPTY_PURCHASE_SUPPLIER_NAMES} />);
     expect(screen.getByText('暂无采购部登记记录')).toBeInTheDocument();
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+  });
+
+  it('已关联条目显示采购供应商主档当前名，未关联条目仍显示原始自由文本', () => {
+    render(
+      <PurchaseRegistrationTable
+        records={[baseRecord({
+          purchaseSupplierStatuses: [
+            { id: 'linked', purchaseSupplierId: 'supplier-1', supplierShortName: '旧名称', status: 'pending' },
+            { id: 'unlinked', supplierShortName: '自由文本', status: 'pending' },
+          ],
+        })]}
+        onEditRecord={jest.fn()}
+        purchaseSupplierNameById={new Map([['supplier-1', '当前名称']])}
+      />
+    );
+
+    expect(screen.getByText('当前名称')).toBeInTheDocument();
+    expect(screen.getByText('自由文本')).toBeInTheDocument();
+    expect(screen.queryByText('旧名称')).not.toBeInTheDocument();
   });
 });

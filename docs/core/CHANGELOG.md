@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### 采购部登记供应商自动建档与主档名实时展示（TASK-177/178）
+- “编辑询价”弹窗手动录入新采购供应商时，会先按简称/全称做忽略首尾空格和大小写的精确查重；未命中则自动创建采购供应商主档，并把 `purchaseSupplierId` 写入本次供应商状态。无主档读写权限或接口失败时继续保存自由文本，不阻塞询价编辑。
+- 采购部登记表、编辑弹窗和供应商筛选统一按 `purchaseSupplierId` 解析采购供应商主档当前名称；主档改名后已关联历史记录显示和筛选随之更新，未关联自由文本保持原样。
+- 名称解析只作用于展示影子数据，不回写 `purchaseSupplierStatuses.supplierShortName` 历史快照，也不改询价同步/合并层；询报价登记页面沿用原行为。
+
 #### 采购订单表一单多家供应商（TASK-173）
 - 采购订单新增权威数组字段 `purchaseOrderSuppliers`，支持在“编辑采购订单”弹窗内以标签列表连续添加、删除主数据或自由文本供应商；旧 `purchaseOrderSupplier` / `purchaseOrderSupplierId` 继续保存首项镜像，存量记录无需迁移即可回退显示并在首次编辑后自动升级。
 - 供应商列和采购单号列取消行内文本编辑，点击后统一打开编辑弹窗；供应商列表以“、”连接展示，关键词和供应商筛选可命中任意一家，小屏采购单号隐藏规则保持不变。

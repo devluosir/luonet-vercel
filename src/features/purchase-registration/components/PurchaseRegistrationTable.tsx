@@ -12,6 +12,7 @@ import { PurchaseRegistrationRow } from './PurchaseRegistrationRow';
 interface PurchaseRegistrationTableProps {
   records: InquiryRecord[];
   onEditRecord: (record: InquiryRecord) => void;
+  purchaseSupplierNameById: Map<string, string>;
 }
 
 // 采购部登记表本身没有响应式断点（任何屏宽都渲染同样 4 列），直接全量启用拖拽调宽。
@@ -35,7 +36,7 @@ const STATUS_DESCRIPTION_MIN_WIDTH = 180;
 const resizableHeaderCellClass = `${headerCellOverflowClass} relative`;
 const headerLabelClass = 'flex h-6 items-center truncate whitespace-nowrap';
 
-export function PurchaseRegistrationTable({ records, onEditRecord }: PurchaseRegistrationTableProps) {
+export function PurchaseRegistrationTable({ records, onEditRecord, purchaseSupplierNameById }: PurchaseRegistrationTableProps) {
   const { widths, startResize, resetColumn } = useResizableColumns('purchaseRegistration.tableColWidths', COLUMNS);
   const tableMinWidth = widths.no + widths.desc + widths.status + STATUS_DESCRIPTION_MIN_WIDTH;
 
@@ -85,6 +86,7 @@ export function PurchaseRegistrationTable({ records, onEditRecord }: PurchaseReg
                 key={record.id}
                 record={record}
                 onEditRecord={onEditRecord}
+                purchaseSupplierNameById={purchaseSupplierNameById}
               />
             ))}
           </tbody>

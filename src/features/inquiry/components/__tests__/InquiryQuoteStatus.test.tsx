@@ -10,7 +10,7 @@ jest.mock('@/features/customer/services/supplierService', () => ({
   supplierService: { getAllSuppliers: () => Promise.resolve([]) },
 }));
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog';
 import { InquiryQuoteStatus } from '../InquiryQuoteStatus';
 import type { InquiryRecord } from '../../types';
@@ -77,14 +77,34 @@ describe('13. 询报价登记页面（默认 props）保留原有文案和可编
 
 describe('采购部登记场景（传入窄配置 props）', () => {
   it('选择结构化采购供应商时保存独立主档 ID 和名称快照', () => {
+    const onEnsurePurchaseSupplier = jest.fn();
     const { onSuppliersChange } = renderStatus({
       supplierOptions: [{ id: 'master-1', name: '采购供应商A' }],
+      onEnsurePurchaseSupplier,
     });
     fireEvent.click(screen.getByRole('button', { name: '供应商' }));
     fireEvent.change(screen.getByPlaceholderText('供应商'), { target: { value: '采购供应商A' } });
     fireEvent.click(screen.getByRole('button', { name: '确认' }));
     expect(onSuppliersChange).toHaveBeenCalledWith([
       expect.objectContaining({ purchaseSupplierId: 'master-1', supplierShortName: '采购供应商A' }),
+    ]);
+    expect(onEnsurePurchaseSupplier).not.toHaveBeenCalled();
+  });
+
+  it('手动输入新名字时等待主档查重/创建，并把返回的 ID 写回状态', async () => {
+    const onEnsurePurchaseSupplier = jest.fn().mockResolvedValue({
+      id: 'master-new',
+      name: '新供应商',
+    });
+    const { onSuppliersChange } = renderStatus({ onEnsurePurchaseSupplier });
+
+    fireEvent.click(screen.getByRole('button', { name: '供应商' }));
+    fireEvent.change(screen.getByPlaceholderText('供应商'), { target: { value: '  新供应商  ' } });
+    fireEvent.click(screen.getByRole('button', { name: '确认' }));
+
+    await waitFor(() => expect(onEnsurePurchaseSupplier).toHaveBeenCalledWith('新供应商'));
+    expect(onSuppliersChange).toHaveBeenCalledWith([
+      expect.objectContaining({ purchaseSupplierId: 'master-new', supplierShortName: '新供应商' }),
     ]);
   });
 

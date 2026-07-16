@@ -7,6 +7,14 @@ jest.mock('@/features/customer/services/supplierService', () => ({
   supplierService: { getAllSuppliers: () => Promise.resolve([]) },
 }));
 
+jest.mock('@/features/purchase-supplier/hooks/usePurchaseSupplierAccess', () => ({
+  usePurchaseSupplierAccess: () => ({ canRead: true, canWrite: true, userId: 'user-1' }),
+}));
+jest.mock('@/features/purchase-supplier/services/purchaseSupplierService', () => ({
+  fetchPurchaseSuppliers: jest.fn(),
+  savePurchaseSupplier: jest.fn(),
+}));
+
 // inquiryService 会真的读写 localStorage/发起 fetch；store 内部调用它做持久化和 D1 同步，
 // 这里跟弹窗行为无关，mock 掉避免测试环境里报错或产生副作用。
 jest.mock('@/features/inquiry/services/inquiry.service', () => ({
@@ -20,11 +28,19 @@ jest.mock('@/features/inquiry/services/inquiry.service', () => ({
   },
 }));
 
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import type { InquiryRecord } from '@/features/inquiry/types';
+import {
+  fetchPurchaseSuppliers,
+  savePurchaseSupplier,
+} from '@/features/purchase-supplier/services/purchaseSupplierService';
 import { PurchaseInquiryEditModal } from '../PurchaseInquiryEditModal';
+
+const mockFetchPurchaseSuppliers = jest.mocked(fetchPurchaseSuppliers);
+const mockSavePurchaseSupplier = jest.mocked(savePurchaseSupplier);
+const EMPTY_PURCHASE_SUPPLIER_NAMES = new Map<string, string>();
 
 function baseRecord(overrides: Partial<InquiryRecord> = {}): InquiryRecord {
   return {
@@ -44,15 +60,156 @@ function baseRecord(overrides: Partial<InquiryRecord> = {}): InquiryRecord {
   };
 }
 
-function renderModal(record: InquiryRecord, onSave = jest.fn(), onClose = jest.fn()) {
+function renderModal(
+  record: InquiryRecord,
+  onSave = jest.fn(),
+  onClose = jest.fn(),
+  purchaseSupplierNameById = EMPTY_PURCHASE_SUPPLIER_NAMES
+) {
   useInquiryStore.setState({ records: [record] });
   render(
     <ConfirmDialogProvider>
-      <PurchaseInquiryEditModal record={record} onClose={onClose} onSave={onSave} supplierOptions={[]} />
+      <PurchaseInquiryEditModal
+        record={record}
+        onClose={onClose}
+        onSave={onSave}
+        supplierOptions={[]}
+        purchaseSupplierNameById={purchaseSupplierNameById}
+      />
     </ConfirmDialogProvider>
   );
   return { onSave, onClose };
 }
+
+beforeEach(() => {
+  mockFetchPurchaseSuppliers.mockReset();
+  mockSavePurchaseSupplier.mockReset();
+});
+
+describe('TASK-177：自由输入采购供应商时自动查重/建档', () => {
+  it('没有精确匹配时新建主档，并把新 ID 保存到采购供应商状态', async () => {
+    mockFetchPurchaseSuppliers.mockResolvedValue({ items: [], isStale: false });
+    mockSavePurchaseSupplier.mockResolvedValue({
+      id: 'supplier-new',
+      name: '新供应商',
+      shortName: '新供应商',
+      address: '',
+      contacts: [],
+      data: {},
+      status: 'active',
+      createdAt: '2026-07-16T00:00:00.000Z',
+      updatedAt: '2026-07-16T00:00:00.000Z',
+    });
+    const record = baseRecord();
+    const { onSave } = renderModal(record);
+
+    fireEvent.click(screen.getByRole('button', { name: '供应商' }));
+    fireEvent.change(screen.getByPlaceholderText('供应商'), { target: { value: '新供应商' } });
+    fireEvent.click(screen.getByRole('button', { name: '确认' }));
+
+    await waitFor(() => expect(mockSavePurchaseSupplier).toHaveBeenCalledWith({
+      name: '新供应商',
+      shortName: '新供应商',
+      contacts: [],
+      data: {},
+    }));
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+
+    const patch = onSave.mock.calls[0][1] as Partial<InquiryRecord>;
+    expect(patch.purchaseSupplierStatuses).toEqual([
+      expect.objectContaining({
+        purchaseSupplierId: 'supplier-new',
+        supplierShortName: '新供应商',
+      }),
+    ]);
+  });
+
+  it('忽略首尾空格和大小写精确命中已有主档，不重复新建', async () => {
+    mockFetchPurchaseSuppliers.mockResolvedValue({
+      items: [{
+        id: 'supplier-existing',
+        name: 'Existing Supplier',
+        shortName: 'ABC',
+        address: '',
+        contacts: [],
+        data: {},
+        status: 'active',
+        createdAt: '2026-07-16T00:00:00.000Z',
+        updatedAt: '2026-07-16T00:00:00.000Z',
+      }],
+      isStale: false,
+    });
+    const { onSave } = renderModal(baseRecord());
+
+    fireEvent.click(screen.getByRole('button', { name: '供应商' }));
+    fireEvent.change(screen.getByPlaceholderText('供应商'), { target: { value: '  abc  ' } });
+    fireEvent.click(screen.getByRole('button', { name: '确认' }));
+
+    await waitFor(() => expect(mockFetchPurchaseSuppliers).toHaveBeenCalledWith({
+      userId: 'user-1',
+      canRead: true,
+      search: 'abc',
+      limit: 10,
+    }));
+    await waitFor(() => expect(screen.getByText('abc')).toBeInTheDocument());
+    expect(mockSavePurchaseSupplier).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+    const patch = onSave.mock.calls[0][1] as Partial<InquiryRecord>;
+    expect(patch.purchaseSupplierStatuses?.[0]).toMatchObject({
+      purchaseSupplierId: 'supplier-existing',
+      supplierShortName: 'abc',
+    });
+  });
+
+  it('查重接口失败时仍保存自由文本，不阻塞弹窗保存', async () => {
+    mockFetchPurchaseSuppliers.mockRejectedValue(new Error('network unavailable'));
+    const { onSave } = renderModal(baseRecord());
+
+    fireEvent.click(screen.getByRole('button', { name: '供应商' }));
+    fireEvent.change(screen.getByPlaceholderText('供应商'), { target: { value: '离线供应商' } });
+    fireEvent.click(screen.getByRole('button', { name: '确认' }));
+
+    await waitFor(() => expect(
+      screen.getByRole('button', { name: '离线供应商 · 未关联' })
+    ).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+
+    const patch = onSave.mock.calls[0][1] as Partial<InquiryRecord>;
+    expect(patch.purchaseSupplierStatuses?.[0]).toMatchObject({
+      supplierShortName: '离线供应商',
+    });
+    expect(patch.purchaseSupplierStatuses?.[0].purchaseSupplierId).toBeUndefined();
+    expect(mockSavePurchaseSupplier).not.toHaveBeenCalled();
+  });
+});
+
+describe('TASK-178：采购供应商当前主档名仅用于弹窗展示', () => {
+  it('已关联条目显示当前名、未关联条目保留快照，直接保存不改原快照', () => {
+    const record = baseRecord({
+      purchaseSupplierStatuses: [
+        { id: 'linked', purchaseSupplierId: 'supplier-1', supplierShortName: '旧名称', status: 'pending' },
+        { id: 'unlinked', supplierShortName: '自由文本', status: 'pending' },
+      ],
+    });
+    const { onSave } = renderModal(
+      record,
+      jest.fn(),
+      jest.fn(),
+      new Map([['supplier-1', '当前名称']])
+    );
+
+    expect(screen.getByText('当前名称')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '自由文本 · 未关联' })).toBeInTheDocument();
+    expect(screen.queryByText('旧名称')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
+    const patch = onSave.mock.calls[0][1] as Partial<InquiryRecord>;
+    expect(patch.purchaseSupplierStatuses?.map((status) => status.supplierShortName)).toEqual([
+      '旧名称',
+      '自由文本',
+    ]);
+  });
+});
 
 describe('10. 销售侧 closed 在采购弹窗中只读显示', () => {
   it('record.quotedStatuses 有 closed 时显示灰色只读提示，带日期', () => {

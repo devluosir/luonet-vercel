@@ -218,6 +218,7 @@ theme-config
 - 询报价记录已支持 `customerId`、`contactId` 结构化关联。
 - 询报价登记表不再显示独立“操作”列，点击资料行打开编辑弹窗；仅该页面的编辑弹窗显示永久删除入口，走同步 `hard-delete` 请求并在 Worker 物理删除 `Document` 行，失败不移除本地数据。客户详情复用的询价弹窗不显示该入口；批量选择工具栏删除继续走 30 天可同步感知的软删除。
 - 采购部登记复用 `InquiryRecord` 的 `description` 字段读写内容描述（与询报价登记共享同一份数据）；新增 `purchaseSupplierStatuses` 与 `purchaseQuotedStatuses` 两个采购部专用字段，结构与询报价登记的 `supplierStatuses` / `quotedStatuses` 相同，但数据独立存储，通过点击整行弹出的"编辑询价"弹窗编辑；不展示/不读写 `orderDeliveryStatus` / `orderDeliveryConsignee`（那是订单状态表 `/order` 和采购订单表 `/purchase-order-table` 共同维护的共享字段，两边编辑的是同一份数据）。
+- 采购部登记弹窗手动录入不在候选列表中的采购供应商时，会按 `(shortName || name)` 忽略首尾空格和大小写精确查重，未命中则自动创建采购供应商主档并关联 `purchaseSupplierId`；缺少采购供应商读写权限或接口失败时仍保存未关联自由文本。采购部登记表、编辑弹窗和供应商筛选按 `purchaseSupplierId` 读取主档当前名称，因此主档改名后显示和筛选同步更新；仅替换展示影子数据，不回写历史 `supplierShortName` 快照、不触碰询价同步层（TASK-177/178）。
 - 询价成单后支持 `orderSubStatus` 标记：`cancelled`（辙销C）、`suspended`（悬挂P）、`followup`（善后S）；状态标记和 `orderSubStatusRemark` 情况备注统一在订单状态表的“编辑订单”弹窗维护。善后S 可另外标记 `orderFollowupCompleted`（“善后完成” checkbox，仅在善后S 选中时可见）：完成后订单归入“正常”筛选/统计、字母标记从红色“S”变为红色“S”+绿色“-OK”、行背景恢复正常，但“善后”细分筛选依然能筛出这些记录（判断仍是 `orderSubStatus === 'followup'`，与是否完成无关）。`isNormalOrder`/`isInProgressOrder`/`getOrderRowBgClass`/`getOrderSubStatusLetter` 统一收敛在 `orderStatus.ts`，避免此前 `isInProgressOrder`/行背景色/字母标记组件在订单状态表与采购订单表两处重复实现导致的漂移风险（TASK-158）。
 - “编辑订单”弹窗按记录 ID 读取 store 刷新后的最新对象；后台同步不会重置用户正在编辑的普通订单字段，且保存时只在用户明确操作过 C/P/S 状态区后才提交状态字段，避免编辑执行情况时用旧快照覆盖其它标签页刚更新的状态（TASK-151）。
 - 询报价登记表的统一关键词搜索支持询价编号、客户编号、内容简述和订单号；订单号支持大小写不敏感的部分匹配，没有订单号的记录保持兼容（TASK-152）。

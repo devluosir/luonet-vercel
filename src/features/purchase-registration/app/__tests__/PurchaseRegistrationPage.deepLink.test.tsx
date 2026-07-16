@@ -13,6 +13,17 @@ const mockSearchParams = new URLSearchParams(
   'purchaseSupplierId=supplier-target&supplierName=%E5%BD%93%E5%89%8D%E7%AE%80%E7%A7%B0'
 );
 let mockRecords: InquiryRecord[] = [];
+const mockPurchaseSuppliers = [{
+  id: 'supplier-target',
+  name: '供应商全称',
+  shortName: '当前简称',
+  address: '',
+  contacts: [],
+  data: {},
+  status: 'active' as const,
+  createdAt: '2026-07-01T00:00:00.000Z',
+  updatedAt: '2026-07-01T00:00:00.000Z',
+}];
 
 const defaultFilter: InquiryFilterState = {
   timeRange: 'month:2026-07',
@@ -79,10 +90,11 @@ jest.mock('@/features/inquiry/components/InquiryFilterBar', () => ({
   InquiryFilterBar: ({
     secondarySelect,
   }: {
-    secondarySelect: { value: string; onChange: (value: string) => void };
+    secondarySelect: { value: string; options: string[]; onChange: (value: string) => void };
   }) => (
     <div>
       <span>筛选供应商：{secondarySelect.value || '全部'}</span>
+      <span>供应商选项：{secondarySelect.options.join(',')}</span>
       <button type="button" onClick={() => secondarySelect.onChange('当前简称')}>手动选择当前简称</button>
     </div>
   ),
@@ -115,7 +127,7 @@ jest.mock('@/features/purchase-supplier/hooks/usePurchaseSupplierAccess', () => 
 }));
 
 jest.mock('@/features/purchase-supplier/services/purchaseSupplierService', () => ({
-  fetchPurchaseSuppliers: jest.fn().mockResolvedValue({ items: [], isStale: false }),
+  fetchPurchaseSuppliers: jest.fn(() => Promise.resolve({ items: mockPurchaseSuppliers, isStale: false })),
 }));
 
 function record(overrides: Partial<InquiryRecord>): InquiryRecord {
@@ -170,11 +182,18 @@ describe('采购部登记供应商深链接', () => {
     expect(recordMatchesSupplier(mockRecords[0], '')).toBe(true);
   });
 
+  it('没有 ID 筛选时按主档当前名解析旧快照', () => {
+    const nameById = new Map([['supplier-target', '当前简称']]);
+    expect(recordMatchesSupplier(mockRecords[0], '当前简称', '', nameById)).toBe(true);
+    expect(recordMatchesSupplier(mockRecords[0], '旧名称快照', '', nameById)).toBe(false);
+  });
+
   it('解析深链接后切到全部时间并按 ID 展示；手动选择会清除 ID 筛选', async () => {
     render(<PurchaseRegistrationPage />);
 
     await waitFor(() => expect(screen.getByText('筛选供应商：当前简称')).toBeInTheDocument());
     expect(screen.getByText('结果：INQ-TARGET')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('供应商选项：当前简称')).toBeInTheDocument());
 
     const setFilterUpdater = mockSetFilter.mock.calls.find(
       ([value]) => typeof value === 'function'
@@ -182,6 +201,6 @@ describe('采购部登记供应商深链接', () => {
     expect(setFilterUpdater(defaultFilter).timeRange).toBe('all');
 
     fireEvent.click(screen.getByRole('button', { name: '手动选择当前简称' }));
-    await waitFor(() => expect(screen.getByText('结果：INQ-NAME')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('结果：INQ-TARGET,INQ-NAME')).toBeInTheDocument());
   });
 });

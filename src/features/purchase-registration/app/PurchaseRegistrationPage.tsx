@@ -20,14 +20,24 @@ import { usePurchaseSupplierAccess } from '@/features/purchase-supplier/hooks/us
 import { fetchPurchaseSuppliers } from '@/features/purchase-supplier/services/purchaseSupplierService';
 import type { PurchaseSupplier } from '@/features/purchase-supplier/types';
 
-export function recordMatchesSupplier(record: InquiryRecord, supplier: string, supplierId = '') {
+export function recordMatchesSupplier(
+  record: InquiryRecord,
+  supplier: string,
+  supplierId = '',
+  nameById?: Map<string, string>
+) {
   if (supplierId) {
     return (record.purchaseSupplierStatuses ?? [])
       .some((status) => status.purchaseSupplierId === supplierId);
   }
   return !supplier
     || (record.purchaseSupplierStatuses ?? [])
-      .some((status) => status.supplierShortName === supplier);
+      .some((status) => {
+        const resolvedName = status.purchaseSupplierId
+          ? nameById?.get(status.purchaseSupplierId) || status.supplierShortName
+          : status.supplierShortName;
+        return resolvedName === supplier;
+      });
 }
 
 function recordMatchesSupplierLink(
@@ -87,6 +97,16 @@ export function PurchaseRegistrationPage() {
     [records]
   );
 
+  const purchaseSupplierNameById = useMemo(
+    () => new Map(
+      purchaseSuppliers.map((purchaseSupplier) => [
+        purchaseSupplier.id,
+        purchaseSupplier.shortName || purchaseSupplier.name,
+      ])
+    ),
+    [purchaseSuppliers]
+  );
+
   // 按 id 索引的原始记录，用于筛选/排序结束后把"影子记录"（见下方 filterableRecords 注释）
   // 换回真实数据，避免渲染层读到被覆盖的 quotedStatuses
   const activeRecordsById = useMemo(
@@ -124,11 +144,15 @@ export function PurchaseRegistrationPage() {
       Array.from(
         new Set(
           activeRecords.flatMap((record) =>
-            (record.purchaseSupplierStatuses ?? []).map((s) => s.supplierShortName).filter(Boolean)
+            (record.purchaseSupplierStatuses ?? []).map((status) => (
+              status.purchaseSupplierId
+                ? purchaseSupplierNameById.get(status.purchaseSupplierId) || status.supplierShortName
+                : status.supplierShortName
+            )).filter(Boolean)
           )
         )
       ).sort(),
-    [activeRecords]
+    [activeRecords, purchaseSupplierNameById]
   );
 
   const purchaseSupplierOptions = useMemo(() => {
@@ -146,8 +170,13 @@ export function PurchaseRegistrationPage() {
   // "待关联供应商"：采购部登记自己的供应商列表（purchaseSupplierStatuses）还没有任何一条，
   // 替代原本复用询报价登记"待关联客户"（record.customerId，那是销售侧概念，采购部登记用不上）
   const supplierFilteredBase = useMemo(
-    () => baseFiltered.filter((record) => recordMatchesSupplier(record, supplier, supplierId)),
-    [baseFiltered, supplier, supplierId]
+    () => baseFiltered.filter((record) => recordMatchesSupplier(
+      record,
+      supplier,
+      supplierId,
+      purchaseSupplierNameById
+    )),
+    [baseFiltered, supplier, supplierId, purchaseSupplierNameById]
   );
 
   const linkFilteredBase = useMemo(
@@ -166,11 +195,16 @@ export function PurchaseRegistrationPage() {
     () =>
       restoreOriginalRecords(
         filteredAndSorted
-          .filter((record) => recordMatchesSupplier(record, supplier, supplierId))
+          .filter((record) => recordMatchesSupplier(
+            record,
+            supplier,
+            supplierId,
+            purchaseSupplierNameById
+          ))
           .filter((record) => recordMatchesSupplierLink(record, supplierLinkFilter)),
         activeRecordsById
       ),
-    [filteredAndSorted, supplier, supplierId, supplierLinkFilter, activeRecordsById]
+    [filteredAndSorted, supplier, supplierId, supplierLinkFilter, activeRecordsById, purchaseSupplierNameById]
   );
 
   const totalActiveCount = activeCount + (supplier || supplierId ? 1 : 0) + (supplierLinkFilter === 'unlinked' ? 1 : 0);
@@ -246,6 +280,7 @@ export function PurchaseRegistrationPage() {
         <PurchaseRegistrationTable
           records={finalRecords}
           onEditRecord={setEditingRecord}
+          purchaseSupplierNameById={purchaseSupplierNameById}
         />
       </div>
 
@@ -254,6 +289,7 @@ export function PurchaseRegistrationPage() {
         onClose={() => setEditingRecord(null)}
         onSave={(id, patch) => patchRecordForView(id, patch)}
         supplierOptions={purchaseSupplierOptions}
+        purchaseSupplierNameById={purchaseSupplierNameById}
       />
     </AppLayout>
   );

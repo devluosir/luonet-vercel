@@ -4851,6 +4851,84 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **完成说明：** 采购订单表金额、交货日期、执行情况已取消行内编辑，订单编号、采购单号、供应商等全部单元格统一由整行点击打开“编辑采购订单”弹窗；小屏采购单号隐藏和金额权限门保持不变。已无调用方的 `DeliveryStatusCell` 组件删除，弹窗仍需的 `STATUS_PRESETS` 移至独立 `deliveryStatusPresets.ts`。
 
+## TASK-177：采购部登记编辑弹窗——手动录入供应商名称自动建档并关联
+
+**背景：** 采购部登记"编辑询价"弹窗（`PurchaseInquiryEditModal.tsx`）里的"供应商"输入框，复用的是询报价登记共享组件 `InquiryQuoteStatus.tsx` 的 `submitSupplier()`（第 186-205 行）。它允许从 datalist 选已有采购供应商主档（带上 `purchaseSupplierId`），也允许直接手动输入一个不在候选列表里的新名字（这时 `purchaseSupplierId` 留空，只存 `supplierShortName` 纯文本）。这类未关联主档的记录已经有一套"待关联供应商"识别机制（`PurchaseRegistrationPage.tsx` 的 `recordMatchesSupplierLink`，第 33-40 行；`SupplierStatusTag` 的"未关联"提示），但目前只能提示、不能自动补上——用户得额外跑一趟"采购供应商"页面手动新建再回来选择，容易漏做。这次把"手动输入新名字保存后自动在采购供应商建档并关联"补上，去掉这道额外步骤。
+
+**Files in scope：**
+
+- `src/features/inquiry/components/InquiryQuoteStatus.tsx` — `InquiryQuoteStatusProps` 新增可选 prop `onEnsurePurchaseSupplier?: (name: string) => Promise<{ id: string; name: string } | undefined>`（放在 `supplierOptions` prop 附近，第 36 行后，注释写清楚只有采购部登记场景会传入，询报价登记场景不传、行为不变）；`submitSupplier()` 改成 async 函数（第 186-205 行），当 `payload.purchaseSupplierId` 没有通过 datalist 精确匹配设置、且 `payload.supplierShortName` 非空、且外部传入了 `onEnsurePurchaseSupplier` 时，await 调用它，返回值带 `id` 就写入 `payload.purchaseSupplierId`；触发点（"确认"按钮 `onClick`、`onKeySupplier` 里的 Enter）要能正确处理这个函数变成 async 后的行为，不需要额外 loading UI。
+- `src/features/purchase-registration/components/PurchaseInquiryEditModal.tsx` — 给 `<InquiryQuoteStatus>`（第 156-173 行）新增 `onEnsurePurchaseSupplier` 实现：trim 后的 name 先用 `fetchPurchaseSuppliers({ userId, canRead, search: name, limit: 10 })`（`src/features/purchase-supplier/services/purchaseSupplierService.ts`）查一次，结果里按 `(shortName || name).trim().toLowerCase() === name.trim().toLowerCase()` 精确匹配（不是模糊匹配），命中就返回 `{ id, name: shortName || name }`；没命中则调用 `savePurchaseSupplier({ name, shortName: name, contacts: [], data: {} })` 新建一条主档（`PurchaseSupplierInput` 要求 `contacts`/`data` 必填，见 `src/features/purchase-supplier/types/index.ts` 第 33-41 行），返回新建结果的 `{ id, name: shortName || name }`；`userId`/`canRead` 用本文件新增 import 的 `usePurchaseSupplierAccess()`（参照 `PurchaseSupplierPicker.tsx` 第 5、30 行用法）；缺少读写权限或接口报错时返回 `undefined`，让 `submitSupplier()` 按"仍保存但不关联"兜底，不阻塞保存、不弹错误提示（比照 `PurchaseRegistrationPage.tsx` 第 81 行"主数据不可用时仍可编辑历史自由文本"的容错风格）。
+
+**验收标准：**
+
+- 在"编辑询价"弹窗点"+ 供应商"，手动输入一个采购供应商主档里不存在的名字并保存：保存后该记录 `purchaseSupplierStatuses` 对应条目带上了新的 `purchaseSupplierId`；打开"采购供应商"列表页能看到新增的一条同名记录。
+- 输入的名字如果和某条现有主档的 `name` 或 `shortName` 完全一致（忽略首尾空格、大小写），保存后关联到那条已有主档的 id，不重复新建。
+- 从 datalist 下拉选择已有供应商（原有行为）不受影响，仍直接带 id，不会多打一次查重请求。
+- 询报价登记页面（客户管理供应商库场景，不传 `onEnsurePurchaseSupplier`）的供应商输入行为不变。
+- 无采购供应商读写权限、或接口请求失败时，供应商状态仍保存成功（不带 `purchaseSupplierId`，与当前行为一致），不阻塞弹窗保存、不出现未处理的 Promise 报错。
+
+**Non-goals / 红线：**
+
+- 不改 `purchase-suppliers` worker 端点（`src/worker.ts` 的 `handleCreatePurchaseSupplier` 等）、不加服务端按名称去重的唯一约束——查重逻辑放客户端这一层，服务端契约不变。
+- 不批量回填历史记录里已存在的、没有 `purchaseSupplierId` 的 `purchaseSupplierStatuses`——这次只处理"新保存"这一刻的行为，历史数据批量修复不在本任务范围。
+- 不动询价同步/合并层（`inquiry.store`、`useInquirySync`）。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/inquiry/components/InquiryQuoteStatus.tsx src/features/purchase-registration/components/PurchaseInquiryEditModal.tsx`
+- `PurchaseInquiryEditModal.test.tsx`、`InquiryQuoteStatus` 相关测试（如存在）跑通；新增至少一条用例覆盖"手动输入新名字保存后 `onEnsurePurchaseSupplier` 被调用且返回的 id 写回 payload"。
+- 手动测试：按验收标准五条场景各跑一遍（含无权限/接口失败场景，可临时改权限或断网模拟）。
+
+**Status:** completed（2026-07-16）
+
+**完成说明：** 采购部登记弹窗自由输入供应商时新增客户端精确查重与自动建档，成功后把主档 ID 写回本次状态；无权限或接口失败继续保存自由文本，不阻塞编辑。
+
+## TASK-178：采购部登记表按主档 purchaseSupplierId 现查供应商名字展示（主档改名同步显示）
+
+**依赖：** 建议在 TASK-177 之后做——需要先有 `purchaseSupplierId` 才有东西可以关联展示；TASK-177 完成前也可以用后台已有 `purchaseSupplierId` 的旧记录验证展示逻辑，但正式验收以 TASK-177 完成后端到端为准。
+
+**背景：** TASK-177 让新录入的供应商名字能自动关联 `purchaseSupplierId`，但已关联记录目前展示用的都是保存那一刻写死的 `supplierShortName` 快照（`SupplierStatusTag.tsx` 第 16-18 行、`InquiryQuoteStatusDisplay.tsx` 第 22-26 行都直接读这个字段）。之后如果有人在"采购供应商"页面把某条主档改名，已关联的历史询价记录不会跟着变——改的是主档表 `PurchaseSupplier`，不会触碰 Inquiry 表里几万条 `purchaseSupplierStatuses` JSON 快照。项目 memory 记录过询价同步层很脆弱（幽灵记录、受限视图整条覆盖、pending 保护不对称等历史 bug），批量改写每条历史 inquiry 记录风险很高，不走"改名时批量回写快照"的路子。这次改成"展示时用 `purchaseSupplierId` 现查主档当前名字"，不改快照本身、不碰同步层。
+
+**Files in scope：**
+
+- `src/features/purchase-registration/app/PurchaseRegistrationPage.tsx` — 已在第 64、79-83 行拉取 `purchaseSuppliers: PurchaseSupplier[]`；新增一个 `useMemo` 转成 `Map<string, string>`（id → `shortName || name`），命名 `purchaseSupplierNameById`；分别传给第 246-249 行的 `<PurchaseRegistrationTable>` 和第 252-257 行的 `<PurchaseInquiryEditModal>`（各新增一个 prop）。同时顺带解决"供应商"筛选下拉新旧名字并存的问题：
+  - 顶部"供应商"筛选下拉（`secondarySelect`，第 229-237 行）用的候选列表 `supplierOptions`（第 122-132 行，目前直接收集历史 `supplierShortName` 原始文本）改成：对每条 `purchaseSupplierStatuses`，如果有 `purchaseSupplierId` 且能在 `purchaseSupplierNameById` 里查到，取查到的当前名字；查不到（未关联的历史自由文本）保留原始 `supplierShortName`；再统一去重排序。这样改名后旧名字不会作为独立选项残留。
+  - `recordMatchesSupplier`（第 23-31 行，模块级导出函数）在没有 `supplierId`、只按字符串 `supplier` 匹配那个分支（第 28-30 行）里，同样要把每条状态先解析成"有 id 就用 `purchaseSupplierNameById` 查当前名字，没有就用原始 `supplierShortName`"，再跟 `supplier` 比较，而不是直接比较原始存储值——否则筛选下拉选了新名字之后，反而找不到那些数据库里还存着旧名字快照的历史记录。给这个函数新增一个可选参数 `nameById?: Map<string, string>`，调用处（第 149、169 行 `supplierFilteredBase`/`finalRecords` 的 `.filter`）都要把 `purchaseSupplierNameById` 传进去；该函数已有测试（如有）需要同步更新调用签名。
+- `src/features/purchase-registration/components/PurchaseRegistrationTable.tsx` — `PurchaseRegistrationTableProps` 新增 `purchaseSupplierNameById: Map<string, string>`，透传给第 84-88 行渲染的 `<PurchaseRegistrationRow>`。
+- `src/features/purchase-registration/components/PurchaseRegistrationRow.tsx` — 新增同名 prop，构造 `previewRecord`（第 20-24 行）时，把 `purchaseSupplierStatuses` 里每一条有 `purchaseSupplierId` 且能在 map 里查到值的条目，`supplierShortName` 替换成 map 查到的当前名字（查不到、或没有 `purchaseSupplierId` 的条目保持原样，兼容历史自由文本数据）。
+- `src/features/purchase-registration/components/PurchaseInquiryEditModal.tsx` — `PurchaseInquiryEditModalProps` 新增同名 prop；构造 `shimRecord`（第 53-56 行）之前，对用于展示的 `localSuppliers` 副本做同样替换。**注意**：这一步只影响传给 `InquiryQuoteStatus` 用于显示的数据，`handleSave`（第 77-94 行）里 `patch.purchaseSupplierStatuses = localSuppliers` 必须继续使用未做展示替换的原始 `localSuppliers`，否则会把"当前主档名字"错误固化成新快照，违背这次"不改快照本身"的前提。
+
+**验收标准：**
+
+- 在"采购供应商"页面把一条已有主档的简称或全称改掉并保存后，不刷新页面直接返回"采购部登记"表格页，任何之前关联到这条主档（`purchaseSupplierId` 匹配）的询价记录，在表格行预览（询报价状态列）和"编辑询价"弹窗里显示的都是改名后的新名字。
+- 没有关联 `purchaseSupplierId` 的历史自由文本供应商条目，展示行为不受影响，仍显示原来存的 `supplierShortName`。
+- 打开"编辑询价"弹窗、不做任何修改直接点"保存修改"，`purchaseSupplierStatuses` 里已关联条目的 `supplierShortName` 字段值保持原样、不被替换成新名字——用来验证"仅展示时替换，不改实际存储数据"这条红线。
+- 询报价登记（`/inquiry`）页面的供应商展示逻辑不受影响，新 prop 只加在采购部登记这几个组件上，不会传给询报价登记复用的 `InquiryQuoteStatusDisplay`/`SupplierStatusTag` 调用点。
+- 改名前后，采购部登记表顶部"供应商"筛选下拉里同一家供应商只出现一个（当前）名字，不会新旧名字并存成两条选项；选中新名字后，之前用旧名字保存的历史记录（只要 `purchaseSupplierId` 关联到这家供应商）也能被正确筛出来，不会因为存储的是旧名字快照而漏筛。
+- 没有关联 `purchaseSupplierId` 的历史自由文本供应商，筛选下拉行为不受影响，仍按原始 `supplierShortName` 出现和匹配。
+
+**Non-goals / 红线：**
+
+- 不批量回写 D1 里任何一条 inquiry 记录的 `purchaseSupplierStatuses` 快照——这是本任务存在的前提，不要为了省事改成保存时顺带更新快照。
+- 不改 `inquiry.store`、`useInquirySync`、任何合并/同步逻辑。
+- 不改 `SupplierStatusTag.tsx`、`InquiryQuoteStatusDisplay.tsx` 本身的 props/渲染逻辑——替换发生在调用方传入的 record 数据里（"影子记录"模式，参照本文件已有的 `previewRecord`/`shimRecord` 写法）。
+- 不改 `InquiryFilterBar.tsx` 的 `SecondarySelectConfig` 类型（`options: string[]`）——沿用字符串选项，不改成 id+name 结构，避免影响询报价登记页面对同一个共享组件的用法。
+- 不动"采购订单"模块（`src/types/purchase.ts` 的 `PurchaseOrderData.supplierName`）——那是单据创建时的标准名称快照，按设计不随主档改名变化，不在本任务范围内。
+- 不实现"改名时通知/提醒"等额外功能，只做展示层现查。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`
+- `npx eslint` 改动的 4 个文件
+- `PurchaseInquiryEditModal.test.tsx`、`PurchaseRegistrationRow`/`PurchaseRegistrationPage` 相关测试（如存在）跑通；新增用例覆盖：(a) 传入 `purchaseSupplierNameById` 后 unlinked 条目和 linked 条目分别的展示名字；(b) 保存后传给 `onSave` 的 patch 里 `supplierShortName` 未被替换；(c) `recordMatchesSupplier` 传入 `nameById` 后，按解析后的新名字筛选也能命中存储的是旧名字快照的记录；(d) 筛选下拉 `supplierOptions` 去重后同一供应商只出现一次当前名字。
+- 手动测试：按验收标准六条场景各跑一遍，包括在"采购供应商"页面改名后回到"采购部登记"页面检查筛选下拉候选项。
+
+**Status:** completed（2026-07-16）
+
+**完成说明：** 采购部登记表、编辑弹窗和供应商筛选改为按 `purchaseSupplierId` 解析主档当前名称；主档改名后展示与筛选同步更新，未关联自由文本和历史名称快照保持不变。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

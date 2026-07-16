@@ -35,6 +35,11 @@ interface InquiryQuoteStatusProps {
    */
   supplierOptions?: Array<string | { id: string; name: string }>;
   /**
+   * 仅采购部登记场景传入：自由输入的名称没有匹配到候选主档时，尝试查重或创建采购供应商主档。
+   * 询报价登记场景不传，继续只保存自由文本。
+   */
+  onEnsurePurchaseSupplier?: (name: string) => Promise<{ id: string; name: string } | undefined>;
+  /**
    * "无法报价" checkbox 文案。默认"已回复客户无法报价"（询报价登记场景行为不变）；
    * 采购部登记场景传入"我司无法报价"，仅影响文案，不影响 type: 'unavailable' 的存储结构。
    */
@@ -98,6 +103,7 @@ export function InquiryQuoteStatus({
   onSuppliersChange,
   onQuotedChange,
   supplierOptions: supplierOptionsProp,
+  onEnsurePurchaseSupplier,
   unavailableLabel = '已回复客户无法报价',
   quotedTrailingContent,
   showClosedControl = true,
@@ -183,7 +189,7 @@ export function InquiryQuoteStatus({
   };
 
   // 注意：不再是 FormEvent handler，改为普通函数，由按钮 onClick / Enter 键触发
-  const submitSupplier = () => {
+  const submitSupplier = async () => {
     const quoteDate = normalizeShortDateInput(supplierForm.quoteDate);
     const payload: Omit<PurchaseSupplierQuoteStatus, 'id'> = {
       purchaseSupplierId: supplierForm.purchaseSupplierId,
@@ -192,6 +198,12 @@ export function InquiryQuoteStatus({
       status: supplierForm.status,
     };
     if (!payload.supplierShortName) return;
+    if (!payload.purchaseSupplierId && onEnsurePurchaseSupplier) {
+      const ensuredSupplier = await onEnsurePurchaseSupplier(payload.supplierShortName);
+      if (ensuredSupplier?.id) {
+        payload.purchaseSupplierId = ensuredSupplier.id;
+      }
+    }
     if (activeForm?.kind === 'supplier-edit') {
       onSuppliersChange(
         supplierStatuses.map((s) =>
