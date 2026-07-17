@@ -22,12 +22,12 @@ async function proxyAdmin(request: NextRequest, pathSegments: string[]): Promise
     return NextResponse.json({ error: '需要管理员权限' }, { status: 403 });
   }
 
-  if (
-    request.method === 'DELETE' &&
+  const targetsCurrentUser =
     pathSegments[0] === 'users' &&
     pathSegments.length === 2 &&
-    pathSegments[1] === session.user.id
-  ) {
+    pathSegments[1] === session.user.id;
+
+  if (request.method === 'DELETE' && targetsCurrentUser) {
     return NextResponse.json({ error: '不能删除当前登录用户' }, { status: 400 });
   }
 
@@ -37,6 +37,24 @@ async function proxyAdmin(request: NextRequest, pathSegments: string[]): Promise
     request.method !== 'GET' && request.method !== 'HEAD'
       ? await request.text()
       : undefined;
+
+  if (request.method === 'PUT' && targetsCurrentUser) {
+    let updates: Record<string, unknown>;
+    try {
+      const parsed = JSON.parse(body || '{}');
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('invalid body');
+      updates = parsed as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ error: '请求数据格式错误' }, { status: 400 });
+    }
+
+    if ('status' in updates && updates.status !== true) {
+      return NextResponse.json({ error: '不能禁用当前登录用户' }, { status: 400 });
+    }
+    if ('isAdmin' in updates && updates.isAdmin !== true) {
+      return NextResponse.json({ error: '不能取消当前登录用户的管理员身份' }, { status: 400 });
+    }
+  }
 
   let workerResp: Response;
   try {

@@ -152,9 +152,18 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                 title={isCurrentUser ? '不能修改自己的管理员身份，请让其他管理员操作' : '管理员'}
               />
             </div>
-            <div className="flex items-center gap-1.5" title="账户">
+            <div
+              className="flex items-center gap-1.5"
+              title={isCurrentUser ? '不能禁用当前登录用户' : '账户'}
+            >
               <Power className="h-4 w-4 shrink-0 text-green-400" />
-              <Toggle on={isActive} onChange={toggleActive} color="bg-green-600" disabled={isBusy} />
+              <Toggle
+                on={isActive}
+                onChange={toggleActive}
+                color="bg-green-600"
+                disabled={isBusy || isCurrentUser}
+                title={isCurrentUser ? '不能禁用当前登录用户' : '账户'}
+              />
             </div>
           </div>
           <button
