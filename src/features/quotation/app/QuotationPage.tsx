@@ -70,7 +70,7 @@ import { NotesSection } from '../components/NotesSection';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { ImportDataButton } from '../components/ImportDataButton';
 import { PasteDialog } from '../components/PasteDialog';
-import { Clipboard, History, Save, Settings, Download, Eye, FileSpreadsheet } from 'lucide-react';
+import { Clipboard, History, Save, Settings, Download, Eye, FileSignature, FileSpreadsheet } from 'lucide-react';
 
 
 
@@ -671,7 +671,7 @@ export default function QuotationPage() {
           <PageCard>
             <form onSubmit={handleSubmit}>
               {/* 标题和设置按钮 */}
-              <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-100 dark:border-[#3A3A3C]">
+              <div className="flex flex-col gap-2 border-b border-gray-100 p-3 dark:border-[#3A3A3C] sm:flex-row sm:items-center sm:justify-between sm:p-4">
                 <div className="flex items-center gap-3">
                   <h1 className="text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]">
                     {isDomesticQuotation
@@ -687,7 +687,26 @@ export default function QuotationPage() {
                     <Clipboard className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                   </button>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  {(
+                    (!isDomesticQuotation && activeTab === 'quotation') ||
+                    (isDomesticQuotation && (data.domesticDocType ?? 'contract') === 'quotation')
+                  ) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isDomesticQuotation) {
+                          void handleDomesticDocTypeChange('contract');
+                        } else {
+                          handleTabChange('confirmation');
+                        }
+                      }}
+                      className="inline-flex flex-shrink-0 items-center gap-1 rounded-lg border border-[#007AFF]/25 bg-[#007AFF]/10 px-2.5 py-1.5 text-xs font-medium text-[#007AFF] transition-colors hover:bg-[#007AFF]/15 dark:border-[#0A84FF]/30 dark:bg-[#0A84FF]/15 dark:text-[#0A84FF] dark:hover:bg-[#0A84FF]/20"
+                    >
+                      <FileSignature className="h-4 w-4" />
+                      {isDomesticQuotation ? '转为内销合同' : '转为外贸合同'}
+                    </button>
+                  )}
                   <Link
                     href={`/history?tab=${historyType}`}
                     className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"

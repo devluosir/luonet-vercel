@@ -5172,6 +5172,79 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **完成说明：** 客户统计排名卡片已增加“询价数 / 已报价数 / 订单数”三项切换，标题和 Top 10 排序随当前指标同步变化，三色指标条与图例保持完整；默认询价排序保留原有行为，空数据仍可安全切换并显示占位。新增测试覆盖按已报价数和订单数排序。
 
+## TASK-185：外贸报价页——新增“转为外贸合同”按钮
+
+**背景：** `src/features/quotation/app/QuotationPage.tsx` 用同一个页面组件承载“外贸报价单”（`activeTab === 'quotation'`）和“销售确认/外贸合同”（`activeTab === 'confirmation'`，侧边栏菜单项标“外贸合同”）两种单据，靠 zustand store 里的 `activeTab`（第 97 行 `useQuotationStore(sel.tab)`）区分，不是两个独立页面。已有一个从未被调用的 `handleTabChange`（第 309-312 行，`setTab(tab)`），但目前页面上没有任何按钮触发它。因为 `useInitQuotation` 只在页面首次进入时装载数据、不随 tab 变化重置（该 hook 内有注释说明），单纯调用 `setTab('confirmation')` 就能把正在编辑的报价单（客户信息、货品、金额）原地切成销售确认/外贸合同视图，不需要另存一份或跳转页面——这正是内销那边 `handleDomesticDocTypeChange`（第 195-223 行）已经在用的同一套原理，只是内销侧多了一层“条款默认模板不同，切换前要弹窗确认”的逻辑；导出侧的报价单和销售确认目前共用同一份 `DEFAULT_NOTES_CONFIG`（`src/features/quotation/types/notes.ts` 第 16-24 行，没有为 confirmation 单独定义条款集），所以本任务不需要照搬内销那套条款替换+确认弹窗逻辑，纯粹是切 tab。
+
+**Files in scope：**
+
+- `src/features/quotation/app/QuotationPage.tsx` —
+  - 在顶部图标按钮组（第 690-723 行，“历史记录”/“保存”/“导出Excel”/“Settings”那一排）里新增一个“转为外贸合同”按钮，只在 `activeTab === 'quotation' && !isDomesticQuotation` 时渲染（已经是 confirmation 视图时不显示；内销走 TASK-186，不受影响）。点击直接调用现有的 `handleTabChange('confirmation')`（第 309-312 行，已存在但从未被调用，函数本身不用改）。
+  - 按钮不要做成和“保存”/“导出Excel”一样的纯图标——那类操作幂等、不改变单据类型，这个按钮会改变文档类型，值得更显眼一点。用图标+文字的小按钮（具体像素细节自行判断，配色可参考内销设置面板里单据类型按钮的选中态 `#007AFF`，第 742-750 行），图标用 `lucide-react` 的 `FileSignature`（如果确认当前项目 lucide-react 版本没有这个图标，换一个语义相近的，如 `FileCheck2`），需要加进第 73 行的 import 列表。
+  - 点击后页面标题（第 676-680 行）、面包屑（第 601-611 行 `documentLabel`）、历史记录链接（第 692 行 `historyType`）都会因为 `activeTab` 变了自动更新，不需要额外处理。
+
+**验收标准：**
+
+- 打开外贸报价单（`/quotation?tab=quotation`），顶部图标按钮组里能看到“转为外贸合同”按钮，点击后页面标题变成销售确认/外贸合同对应的文案（沿用现有 `activeTab === 'confirmation'` 分支的展示逻辑），已填好的客户信息、货品明细、金额不丢失、不重置。
+- 页面停留在同一个 URL（不跳转、不刷新），“历史记录”链接的 `tab` 参数随之切到 confirmation 对应的 `historyType`。
+- 点击“保存”后，生成的历史记录类型是 confirmation（沿用 `saveOrUpdate` 现有逻辑自动生成 `contractNo`，`src/features/quotation/services/quotation.service.ts` 第 36-42 行——本任务不改这个函数）。
+- 已经处于销售确认/外贸合同视图（`activeTab === 'confirmation'`）时，这个按钮不显示。
+- 内销报价页面（`isDomesticQuotation === true`）不受影响，不出现这个按钮。
+
+**Non-goals / 红线：**
+
+- 不改 `handleTabChange`、`useInitQuotation`、`quotation.service.ts` 里任何函数的实现，本任务只加一个调用入口。
+- 不做“转回外贸报价单”的反向按钮（用户只要求单向“转为外贸合同”）。
+- 不改内销报价/内销合同（`isDomesticQuotation === true` 分支）任何逻辑。
+- 不往 URL 同步 `?tab=confirmation`：内销切换单据类型现在也是纯 store 内状态、不同步 URL，保持同样的简单模式，不引入路由跳转/刷新风险。
+- 不给 confirmation 单独造一份条款默认值——导出侧报价单和销售确认本来就共用同一套条款默认值，这是本任务确认过的现状，除非产品明确要求两者条款不同，否则不要顺手加。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/quotation/app/QuotationPage.tsx`
+- 手动测试：新建一个外贸报价单，填几行货品和客户信息，点击“转为外贸合同”，核对标题/面包屑变成销售确认对应文案、货品和客户信息都还在；点击“保存”，去历史记录页确认生成的是 confirmation 类型的记录且带 `contractNo`。
+
+**Status:** completed（2026-07-17）
+
+**完成说明：** 外贸报价视图顶部已增加“转为外贸合同”图文按钮，点击复用现有 `handleTabChange('confirmation')` 原地切换为销售确认；标题、面包屑和历史类型随 store 自动更新，表单数据不重置。销售确认和内销视图不显示该按钮。
+
+## TASK-186：内销报价页——新增“转为内销合同”按钮（复用现有单据类型切换逻辑）
+
+**背景：** 内销报价单据类型的切换逻辑已经存在——`QuotationPage.tsx` 里的 `handleDomesticDocTypeChange`（第 195-223 行）已经能把“报价单”（`data.domesticDocType === 'quotation'`）原地切换成“产品购销合同”（`data.domesticDocType === 'contract'`），保留客户/货品/金额数据，只替换条款默认模板（`DOMESTIC_QUOTATION_NOTES_CONFIG` ⇄ `DOMESTIC_NOTES_CONFIG`），条款被手动编辑过时还会先弹窗二次确认（第 208-219 行）。但这个切换目前只能在“设置”面板里操作（点击 Settings 齿轮展开后才能看到，第 731-762 行的单据类型按钮组），不够醒目。用户要求内销报价页面上要有一个直接的“转为内销合同”按钮——本任务是把这个已有能力提升成顶层可见按钮，不是重新实现转换逻辑。
+
+**Files in scope：**
+
+- `src/features/quotation/app/QuotationPage.tsx` —
+  - 在顶部图标按钮组（第 690-723 行）里新增“转为内销合同”按钮，只在 `isDomesticQuotation === true && (data.domesticDocType ?? 'contract') === 'quotation'` 时渲染（当前已经是“产品购销合同”时不显示）。点击调用现有 `handleDomesticDocTypeChange('contract')`（第 195-223 行，函数本身不用改，天然带着“条款被编辑过就弹窗确认”的保护）。
+  - 按钮视觉与 TASK-185 的“转为外贸合同”按钮保持同一套风格（图标+文字，非纯图标，配色可复用蓝色 `#007AFF` 主题色），图标同样用 `FileSignature`（或 TASK-185 最终选定的替代图标，两处保持一致）。
+  - 设置面板里原有的单据类型切换按钮组（第 731-762 行）不删除、不改，继续保留作为“报价单⇄合同”双向切换的入口；新按钮只是新增一个更显眼的单向快捷入口。
+
+**验收标准：**
+
+- 打开内销报价单（`/quotation?tab=domestic&docType=quotation`），顶部图标按钮组里能看到“转为内销合同”按钮，点击后标题变成“产品购销合同”（沿用第 677-679 行现有展示逻辑），条款按 `DOMESTIC_NOTES_CONFIG` 默认模板填充，客户/货品/金额数据不丢失。
+- 如果当前条款已经被手动编辑过（不再等于 `DOMESTIC_QUOTATION_NOTES_CONFIG` 默认值），点击按钮会先弹出确认对话框（复用 `handleDomesticDocTypeChange` 已有的 `confirm(...)` 逻辑），确认后才真正切换；取消则保持原状。
+- 切换后再打开设置面板，里面的单据类型按钮组会同步显示“产品购销合同”为选中态（两者共享同一个 `data.domesticDocType` 状态）。
+- 当前已经是“产品购销合同”（`data.domesticDocType === 'contract'`）时，顶层这个新按钮不显示；设置面板里的切换按钮组照常可用（可以切回报价单）。
+- 外贸报价/外贸合同（`isDomesticQuotation === false`）不受影响。
+
+**Non-goals / 红线：**
+
+- 不改 `handleDomesticDocTypeChange` 函数本身的实现（条款替换、确认弹窗逻辑原样复用）。
+- 不删除设置面板里原有的单据类型切换按钮组，也不改它的样式/位置。
+- 不做“转回内销报价单”的顶层快捷按钮（用户只要求“转为内销合同”这一个方向；报价单⇄合同的双向切换继续留在设置面板里）。
+- 不改外贸报价/合同（`isDomesticQuotation === false` 分支）任何逻辑，那部分是 TASK-185 的范围。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/quotation/app/QuotationPage.tsx`
+- 手动测试：新建内销报价单，不改条款直接点“转为内销合同”，核对无确认弹窗直接切换、标题和条款都变成合同版；再新建一个内销报价单，手动改一下条款文字再点按钮，核对弹出确认对话框，取消后条款不变，确认后条款按合同默认值替换（编辑内容丢失，这是预期行为，和设置面板里原逻辑一致）。
+
+**Status:** completed（2026-07-17）
+
+**完成说明：** 内销报价视图顶部已增加同款“转为内销合同”图文按钮，点击直接复用 `handleDomesticDocTypeChange('contract')`，因此继续保留默认条款替换与已编辑条款二次确认保护；切换后按钮隐藏，设置面板的双向类型切换入口保持不变。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |
