@@ -164,9 +164,9 @@ function generateMappingFromHeaderAndSequence(headerRow: string[], sequenceColIn
     if (/^(item|序号|编号|no\.|num|index|#|line|line\s*no\.?)$/i.test(header)) {
       mapping.push('ignore'); // 序号列忽略
     }
-    // Part No. 列 - 作为描述信息显示
+    // Part No. 列
     else if (/^(part\s*no\.?|part\s*number|partno|partnumber)$/i.test(header)) {
-      mapping.push('desc'); // Part No. 列映射为desc，显示在Description列中
+      mapping.push('ignore'); // Part No. 列忽略
     }
     // 描述列 - 作为产品名称显示
     else if (/^(description|desc|描述|规格|specification|spec)$/i.test(header)) {

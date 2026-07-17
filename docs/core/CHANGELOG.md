@@ -42,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 采购订单编辑弹窗改为按 ID 读取最新 store，并仅提交相对打开时 baseline 的实际改动；供应商 ID/名称原子提交，避免后台同步字段被旧快照覆盖。
 - 正式采购单新增标准名称 fallback 与新旧混合搜索规则，兼容 CRLF、前导空行、无换行 legacy `attn`；新增只读候选扫描脚本，禁止自动建档或模糊合并。
 
+### Fixed
+
+#### 解析一致性、测试基建与生产日志降噪（TASK-187～191）
+- 报价剪贴板智能解析的两条表头映射路径统一忽略 Part No. 列，不再因是否带 Item 序号列而把 Part No. 意外塞进 Description；增强解析回归测试 9/9 通过。
+- Jest 排除 `e2e/` Playwright 规格目录；报价 store 日志测试显式、局部切换 development 环境；客户时间轴测试统一补齐 `ToastProvider`。全量 Jest 现为 56/56 suites、455/455 tests 通过，Playwright 仍独立发现 6 个文件、25 个测试。
+- 报价 PDF 保存/预览的三条调试日志补齐 development 门控；生产构建通过且构建产物不含对应日志文案，本地开发日志保留。
+
 ### Changed
 
 #### 报价单顶部快捷转合同（TASK-185/186）

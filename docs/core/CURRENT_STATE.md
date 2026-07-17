@@ -33,6 +33,9 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 - `npx tsc --noEmit`：通过。
 - `npx next lint`：0 warnings / 0 errors。
 - `npm run build`：通过。构建会重新生成 `src/lib/embedded-resources.ts`，该文件仍不应手工编辑。
+- 全量 Jest 已排除 `e2e/` Playwright 规格目录，当前 56/56 suites、455/455 tests 通过；Playwright 自身仍独立发现 6 个文件、25 个测试。
+- 报价剪贴板增强解析的 Part No. 列在“纯表头”和“表头+序号”两条识别路径中统一忽略；报价 store 日志契约测试只在局部 development 环境运行，客户时间轴测试统一由 `ToastProvider` 包裹。
+- 报价 PDF 保存/预览调试日志均受 development 环境门控，生产构建产物不包含对应日志文案。
 
 ## 路由与模块
 

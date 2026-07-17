@@ -7,6 +7,16 @@ jest.mock('@/utils/getDefaultNotes', () => ({
   getDefaultNotes: jest.fn((from: string, tab: string) => [`${from}-${tab}-note`]),
 }));
 
+function withNodeEnv(value: string, callback: () => void) {
+  const originalEnv = process.env.NODE_ENV;
+  Object.defineProperty(process.env, 'NODE_ENV', { value, configurable: true, writable: true });
+  try {
+    callback();
+  } finally {
+    Object.defineProperty(process.env, 'NODE_ENV', { value: originalEnv, configurable: true, writable: true });
+  }
+}
+
 describe('useQuotationStore Actions Contract Tests', () => {
   beforeEach(() => {
     // 重置store状态
@@ -52,72 +62,78 @@ describe('useQuotationStore Actions Contract Tests', () => {
     });
 
     it('should not trigger set when from value is the same', () => {
-      const { result } = renderHook(() => useQuotationStore());
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      withNodeEnv('development', () => {
+        const { result } = renderHook(() => useQuotationStore());
+        const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      const initialFrom = result.current.data.from;
+        const initialFrom = result.current.data.from;
 
-      act(() => {
-        result.current.updateFrom(initialFrom);
+        act(() => {
+          result.current.updateFrom(initialFrom);
+        });
+
+        // 应该跳过更新
+        expect(consoleLogSpy).toHaveBeenCalledWith('[updateFrom] from相同，跳过更新', initialFrom);
+        expect(getDefaultNotes).not.toHaveBeenCalled();
+
+        consoleLogSpy.mockRestore();
       });
-
-      // 应该跳过更新
-      expect(consoleLogSpy).toHaveBeenCalledWith('[updateFrom] from相同，跳过更新', initialFrom);
-      expect(getDefaultNotes).not.toHaveBeenCalled();
-
-      consoleLogSpy.mockRestore();
     });
   });
 
   describe('updateData', () => {
     it('should not trigger set when data has no changes (shallow equal)', () => {
-      const { result } = renderHook(() => useQuotationStore());
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      withNodeEnv('development', () => {
+        const { result } = renderHook(() => useQuotationStore());
+        const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      const currentData = result.current.data;
+        const currentData = result.current.data;
 
-      act(() => {
-        // 传入相同的数据
-        result.current.updateData({
-          quotationNo: currentData.quotationNo,
-          currency: currentData.currency,
+        act(() => {
+          // 传入相同的数据
+          result.current.updateData({
+            quotationNo: currentData.quotationNo,
+            currency: currentData.currency,
+          });
         });
+
+        // 应该跳过更新
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+          '[updateData] 无变化，跳过更新',
+          expect.objectContaining({
+            quotationNo: currentData.quotationNo,
+            currency: currentData.currency,
+          })
+        );
+
+        consoleLogSpy.mockRestore();
       });
-
-      // 应该跳过更新
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '[updateData] 无变化，跳过更新',
-        expect.objectContaining({
-          quotationNo: currentData.quotationNo,
-          currency: currentData.currency,
-        })
-      );
-
-      consoleLogSpy.mockRestore();
     });
 
     it('should apply updates when data has changes', () => {
-      const { result } = renderHook(() => useQuotationStore());
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      withNodeEnv('development', () => {
+        const { result } = renderHook(() => useQuotationStore());
+        const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      act(() => {
-        result.current.updateData({
-          quotationNo: 'QT-001',
-          currency: 'EUR' as const,
+        act(() => {
+          result.current.updateData({
+            quotationNo: 'QT-001',
+            currency: 'EUR' as const,
+          });
         });
+
+        expect(result.current.data.quotationNo).toBe('QT-001');
+        expect(result.current.data.currency).toBe('EUR');
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+          '[updateData] 应用更新+updatedAt',
+          expect.objectContaining({
+            quotationNo: 'QT-001',
+            currency: 'EUR',
+          })
+        );
+
+        consoleLogSpy.mockRestore();
       });
-
-      expect(result.current.data.quotationNo).toBe('QT-001');
-      expect(result.current.data.currency).toBe('EUR');
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '[updateData] 应用更新',
-        expect.objectContaining({
-          quotationNo: 'QT-001',
-          currency: 'EUR',
-        })
-      );
-
-      consoleLogSpy.mockRestore();
     });
   });
 

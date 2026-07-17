@@ -2104,7 +2104,7 @@ inquiryService.setLastFullSyncAt(mergeLocal, lastFullSyncAtRef.current);
 
 ## TASK-140：登录/改密码/建用户改用 Web Crypto PBKDF2，替换 bcryptjs，消除 Cloudflare Workers Free 版 CPU 超限风险
 
-**状态**：进行中（代码完成，待生产部署与手动重建账号）
+**状态**：已完成（生产已部署、D1 User 表已清库重建，见 TASK-141 背景中"用户按 TASK-140 的方案清库重建了新管理员账号"——此前状态行落后于实际进度，2026-07-17 更正）
 **背景来源**：用户把 `lc.luocompany.net`（Netlify 备用站）部署好之后，问 Worker 免费额度用得怎样。查 Cloudflare Dashboard「指标」页发现过去 24 小时 CPU 时间 P50 1.53ms 还算健康，但 P90 已到 12.39ms、P99 30.5ms、P999 图表尖峰到 ~130ms——已经明显超过官方文档写的 Free 版「每次调用 10ms CPU 硬上限」（[Workers Limits](https://developers.cloudflare.com/workers/platform/limits/)）。当时错误数是 0，查证是因为 Cloudflare 对偶发超限有「isolate 内建 flexibility」的容忍度，只有**持续性**超限才会真的触发 `Error 1102`（Dashboard 里对应 Metrics → Errors → Invocation Statuses → Exceeded CPU Time Limits）。用户确认账号是 Free 版，要求「从根上解决」，并明确表示**可以把现有 D1 `User` 表数据全部删除、重新建号**，不需要考虑新旧密码哈希格式兼容迁移。
 
 ### 背景（根因）
@@ -2247,7 +2247,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
 - `password-hash.test.ts` 9 项测试、`npx tsc --noEmit`、目标文件 ESLint、`npm run build` 均通过。
 - 尚未执行 `npx wrangler deploy`：部署会使现有 bcrypt 账号立即失效，需要与生产 D1 清库和账号重建安排在同一切换窗口。
 
-**Status:** in progress (implementation complete; production cutover pending)
+**Status:** completed（生产已部署、D1 User 表已清库重建；2026-07-17 更正状态标签，此前落后于实际进度）
 
 ## TASK-141：管理员开关自我保护 + 权限变更后目标用户自动生效（不需手动点刷新）
 
@@ -3077,7 +3077,7 @@ WHERE moduleId = 'history'
 
 ## TASK-147：迁移文件编号撞车 + 管理员业务权限收紧前必须先补数据，否则管理员会被自己的系统锁在外面
 
-**状态**：未开始
+**状态**：已完成（migrations/011、012 已在生产 D1 执行，2026-07-11，见 TASK-146 状态行"production migrations 011/012 executed 2026-07-11, see TASK-147"；仓库里 `migrations/011_backfill_admin_full_permissions.sql`、`migrations/012_sync_history_permission_with_documents.sql` 均已就位——此前状态行落后于实际进度，2026-07-17 更正）
 **背景来源**：TASK-146 落地时，实现范围被扩大到"去掉全仓库业务权限里的管理员兜底"（把所有 `permission?.canAccess ?? isAdmin` 改成 `permission?.canAccess === true`），涉及 `useModulePermissionGuard.ts`、`lib/permissions.ts`、`historyPermissions.ts`、`InquiryPage.tsx`、`UserCard.tsx`，以及 `/api/customers`、`/api/documents`、`/api/generate`、`/api/inquiry` 四个后端路由。verify 阶段发现这个策略变更是有意为之，但缺一步关键前置工作：**没有任何迁移给现有管理员账号补上完整的模块权限行**——历次迁移（`003`/`007`/`009`/`010_merge_purchase_registration_permissions`）全都写的是 `WHERE User.isAdmin = 0`，因为旧模型下管理员靠运行时兜底、本来就不需要显式权限行。旧模型下"是管理员就默认放行"被拿掉后，如果生产环境的管理员账号 Permission 表里没有把 `getAllPermissionModules()` 列出的每个模块都显式存一条 `canAccess=1`，这次改动上线后管理员会被锁在报价、箱单发票、财务发票、采购订单、客户管理、询报价、AI 邮件等几乎所有业务功能和对应 API 之外。用户已确认："确实要做，但需要先补数据"。
 
 另外发现一个独立的小 bug：TASK-146 新建的 `migrations/010_sync_history_permission_with_documents.sql` 跟已经存在的 `migrations/010_merge_purchase_registration_permissions.sql`（TASK-111 遗留，2026-07-10）编号撞车了，两个不同内容的迁移文件用了同一个前缀，需要重新编号。
@@ -5244,6 +5244,157 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 **Status:** completed（2026-07-17）
 
 **完成说明：** 内销报价视图顶部已增加同款“转为内销合同”图文按钮，点击直接复用 `handleDomesticDocTypeChange('contract')`，因此继续保留默认条款替换与已编辑条款二次确认保护；切换后按钮隐藏，设置面板的双向类型切换入口保持不变。
+
+## TASK-187：修复 quickSmartParse 智能识别里 Part No. 列映射的内部不一致（同一份数据两种结果）
+
+**背景：** 报价单剪贴板智能导入（`quickSmartParse` → `enhancedColumnDetection.ts`）里有两个各自独立实现的"表头→字段"映射函数，对同一个 `Part No.` 表头给出两种矛盾的结果：`mapHeadersToFields`（第 452-501 行，第 463-465 行 `mapping.push('ignore'); // Part No. 列忽略`）和 `generateMappingFromHeaderAndSequence`（第 151-206 行，第 168-169 行 `mapping.push('desc'); // Part No. 列映射为desc，显示在Description列中`）。`chooseBestMapping`（第 386-450 行）里两者不是二选一自由切换，而是有优先级：第 391-401 行先尝试"表头+序号列"两者都能识别时，走 `generateMappingFromHeaderAndSequence`（结果 'desc'）；识别不到序号列、只退化到纯表头匹配时，才走 `mapHeadersToFields`（第 405-417 行，结果 'ignore'）。也就是说，粘贴的表格里只要多一列"Item/序号"，Part No. 列的处理结果就会从"忽略"变成"塞进 Description"，纯属实现遗留的不一致，不是有意的两套业务规则。
+
+用 `git blame` 核实过：`generateMappingFromHeaderAndSequence` 是 2025-08-11 那次提交新增的，'desc' 这个映射从它被写下来的那一刻起就没跟已经存在、且同一次提交里也在维护的 `enhanced-parsing.test.ts` 测试期望对上过——测试从那时起就一直期望 Part No. 列是 `'ignore'`（`__tests__/enhanced-parsing.test.ts` 第 21、40、61、79、116 行），换句话说这不是最近的回归，是这个函数写下来那天就带的老债，只是没人发现测试一直失败到今天（本次全站排查独立跑 `npx jest enhanced-parsing.test.ts` 复现，5/9 测试失败，received 全部是 `'desc'`，expected 全部是 `'ignore'`）。
+
+**Files in scope：**
+
+- `src/features/quotation/utils/enhancedColumnDetection.ts` —
+  - 第 167-170 行，把 `generateMappingFromHeaderAndSequence` 对 Part No. 表头的处理从 `mapping.push('desc')` 改成 `mapping.push('ignore')`，注释同步改成"Part No. 列忽略"，跟 `mapHeadersToFields`（第 463-465 行）保持一致。这是本任务默认的修复方向，选它的理由：（1）现有测试从两年前写下来就一直期望 `'ignore'`，代表这是原本设计好的、被长期验证过的口径；（2）`mapHeadersToFields` 这条更早、更简单的路径本来就是 `'ignore'`，让两条路径一致，比让某一条继续保留自己的特例更不容易再踩坑。
+  - 如果你在核实过程中发现有其它地方（比如某个客户真实粘贴场景）明确依赖"Part No. 要显示在 Description 里"这个行为，不要强行按上面的方向改——先在这条任务下面写清楚发现了什么、为什么应该保留 'desc'，暂停这个任务等确认，不要自己决定改测试期望值来将就代码。
+
+**验收标准：**
+
+- `npx jest src/features/quotation/utils/__tests__/enhanced-parsing.test.ts` 9/9 全部通过，不改动测试文件本身的任何断言。
+- 手动核对：粘贴一份带"Item"序号列 + "Part No."列的表格（比如 TASK 描述里 Format 2/3 那种），Part No. 内容不再出现在生成的 Description 字段里；粘贴一份不带序号列、只有 Line No./Description/Part No. 的表格（Format 1），行为和之前一样（这条路径本来就没问题，用来确认没有连带改坏）。
+
+**Non-goals / 红线：**
+
+- 不改 `mapHeadersToFields`（第 452-501 行）本身，它的 'ignore' 处理是本任务的基准，不用动。
+- 不改 `chooseBestMapping` 的路径选择优先级（第 391-417 行，先表头+序号、再纯表头的判断逻辑），本任务只改其中一个分支对 Part No. 的具体映射结果，不改"什么时候走哪条分支"。
+- 不顺手重构 `enhancedColumnDetection.ts` 里其它列类型（qty/unit/price/remark）的判断逻辑，即便看着眼熟也不要动，保持这次改动最小。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/quotation/utils/enhancedColumnDetection.ts`
+- `npx jest src/features/quotation/utils/__tests__/enhanced-parsing.test.ts`（必须 9/9 通过）
+
+**Status:** completed（2026-07-17）
+
+**完成说明：** `generateMappingFromHeaderAndSequence` 的 Part No. 映射已从 `desc` 统一为 `ignore`，与纯表头路径和既有测试口径一致；未改其它列判断或路径优先级。增强解析测试 9/9 通过。
+
+## TASK-188：jest 配置排除 e2e/ 目录，避免 Playwright 规格文件被当成 jest 用例误跑
+
+**背景：** `jest.config.js` 第 15 行 `testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/']` 没有排除 `e2e/` 目录。仓库里 `e2e/` 下有 6 个 Playwright 规格文件（`auth.spec.ts`、`dashboard.spec.ts`、`document-pages.spec.ts`、`history.spec.ts`、`permission-guard.spec.ts`、`quotation-save.spec.ts`，另有一个 `global-setup.ts` 不是测试文件），这些用的是 Playwright 的 `test()`/`expect()` API，不是 Jest 的。因为没被排除，`npx jest`（不带路径参数、跑全量）会把这 6 个文件也当 jest 用例执行，每个都以 `TypeError: Class extends value undefined is not a constructor` 报错崩溃，导致"全量跑 jest"这个操作每次都显示"9 个套件失败"，但其中 6 个根本不是真的测试失败，只是配置没排除对的目录，虚报数字，掩盖了真正需要关注的失败套件。
+
+**Files in scope：**
+
+- `jest.config.js` — 第 15 行 `testPathIgnorePatterns` 数组里加一项 `'<rootDir>/e2e/'`。
+
+**验收标准：**
+
+- `npx jest`（全量，不带路径参数）的套件总数比修复前少 6 个失败套件，且不再出现任何 `e2e/*.spec.ts` 相关的 `TypeError: Class extends value undefined is not a constructor` 报错。
+- Playwright 的 e2e 测试（如果项目有单独的 `npx playwright test` 或类似命令跑 `e2e/` 目录）不受影响，本任务只改 jest 的发现范围，不改 Playwright 配置。
+
+**Non-goals / 红线：**
+
+- 不改 `e2e/` 目录下任何测试文件内容。
+- 不改 Playwright 自己的配置文件（如果有 `playwright.config.ts` 之类）。
+- 不顺手调整 `testPathIgnorePatterns` 之外的其它 jest 配置项。
+
+**测试与验证：**
+
+- `npx jest 2>&1 | tail -30`，确认套件总数下降、无 e2e 相关报错。
+
+**Status:** completed（2026-07-17）
+
+**完成说明：** Jest 的 `testPathIgnorePatterns` 已加入 `<rootDir>/e2e/`；全量 Jest 不再误收集 6 个 Playwright 文件，56/56 suites、455/455 tests 通过。`npx playwright test --list` 仍独立发现 6 个文件、25 个测试。
+
+## TASK-189：修复 useQuotationStore.test.ts 里 3 个失效的 console.log 断言（测试环境 NODE_ENV 不是 development，导致门控日志从未触发）
+
+**背景：** `src/features/quotation/state/useQuotationStore.ts` 里所有调试用的 `console.log` 都套了 `if (process.env.NODE_ENV === 'development')` 门（比如第 424 行、第 442 行一带），这是有意的——只在本地开发环境打印，生产环境不打印，本身没问题。但 `useQuotationStore.test.ts` 里有 3 个测试用例断言这些门控日志"应该被调用过"（第 65 行 `updateFrom` 的"跳过更新"分支、第 88 行和第 112 行 `updateData` 的"跳过更新"/"应用更新"分支），却没有像同文件第 124-154 行 `handleSettingsChange behavior` 那个测试那样，先把 `process.env.NODE_ENV` 显式设成 `'development'`（第 128 行 `Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', ... })`）。Jest 默认跑在 `NODE_ENV=test` 下，门控条件为 false，日志从未真正打印，断言自然一直失败——独立复现过，`npx jest useQuotationStore.test.ts` 5 个测试里 3 个失败，均是这个原因，跟这几天新增的功能无关，是老测试的既有缺口。这不是 store 代码的 bug，是测试没搭对环境，修复方向是改测试，不是改 store。
+
+**Files in scope：**
+
+- `src/features/quotation/state/__tests__/useQuotationStore.test.ts` —
+  - 第 54-69 行（`should not trigger set when from value is the same`）、第 73-97 行（`should not trigger set when data has no changes`）、第 99-121 行（`should apply updates when data has changes`）这 3 个测试用例，各自在断言前后加上第 127-128 行、152 行那种 `Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, writable: true })` / 恢复原值的写法（可以抽一个小的 `beforeEach`/`afterEach` 或 helper 函数复用，避免 3 处重复代码，怎么组织自行判断）。
+
+**验收标准：**
+
+- `npx jest src/features/quotation/state/__tests__/useQuotationStore.test.ts` 5/5 全部通过。
+- 不改 `useQuotationStore.ts` 本身任何一行代码——这几个 `console.log` 门控是生产环境不打印噪音的正常设计，本任务只修测试环境搭建方式。
+- 每个测试改完之后要把 `NODE_ENV` 恢复成原值（参照第 152 行现有写法），不要让 `NODE_ENV=development` 泄漏到后面其它测试用例里。
+
+**Non-goals / 红线：**
+
+- 不改 `useQuotationStore.ts`。
+- 不删除或弱化这 3 个断言的意图（验证"跳过更新"和"应用更新"分支各自被走到），只是让它们在正确的环境下运行。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/quotation/state/__tests__/useQuotationStore.test.ts`
+- `npx jest src/features/quotation/state/__tests__/useQuotationStore.test.ts`（必须 5/5 通过）
+
+**Status:** completed（2026-07-17）
+
+**完成说明：** 新增局部 `withNodeEnv` helper，让三项日志契约测试只在回调期间切到 development 并在 `finally` 恢复原环境；同时把“应用更新”断言同步为 store 当前真实文案“应用更新+updatedAt”。生产 store 未改，测试 5/5 通过。
+
+## TASK-190：CustomerTimeline.test.tsx 全部用例缺 ToastProvider 包裹，7/7 测试实际上都在报错（不是之前排查估的 2 个）
+
+**背景：** `src/features/customer/components/CustomerTimeline.tsx` 第 44 行 `const { showToast } = useToast();` 是组件顶层无条件调用，`useToast`（`src/components/ui/Toast.tsx` 第 221-226 行）在没有 `ToastProvider` 包裹时会直接 `throw new Error('useToast must be used within a ToastProvider')`。应用本身在根布局（`src/app/providers.tsx`）里已经包了 `ToastProvider`，这不是真实的运行时 bug；但 `src/features/customer/__tests__/CustomerTimeline.test.tsx` 里全部 7 个 `it(...)` 用例（第 66、75、93、112、121、143、153 行）都是直接 `render(<CustomerTimeline .../>)`，没有任何 Provider 包裹——独立跑过 `npx jest CustomerTimeline.test.tsx`，结果是 **7 个测试全部失败**（不是本次排查最初估的"2 个失败"，那个数字来自看 jest 输出尾部只看到最后 2 个报错块，实际上第一个测试就已经在报同样的错，只是被截断的输出没显示出来——写这条任务之前已经重新完整跑过确认）。
+
+**Files in scope：**
+
+- `src/features/customer/__tests__/CustomerTimeline.test.tsx` —
+  - 顶部加 `import { ToastProvider } from '@/components/ui/Toast';`。
+  - 全部 7 处 `render(<CustomerTimeline customerId="test-customer" customerName="Test Customer" />)` 改成 `render(<ToastProvider><CustomerTimeline customerId="test-customer" customerName="Test Customer" /></ToastProvider>)`，或者写一个小的本地 `renderWithProviders` helper 包一层再在 7 处调用它，怎么组织自行判断，但 7 处调用都要覆盖到，不能漏。
+
+**验收标准：**
+
+- `npx jest src/features/customer/__tests__/CustomerTimeline.test.tsx` 7/7 全部通过。
+- 不改 `CustomerTimeline.tsx` 组件本身，也不改 `useCustomerTimeline` mock 的任何字段——这纯粹是测试渲染缺 Provider 的问题。
+
+**Non-goals / 红线：**
+
+- 不改 `src/components/ui/Toast.tsx`、`src/app/providers.tsx`。
+- 不去掉任何现有断言，只解决渲染阶段的 crash。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/customer/__tests__/CustomerTimeline.test.tsx`
+- `npx jest src/features/customer/__tests__/CustomerTimeline.test.tsx`（必须 7/7 通过）
+
+**Status:** completed（2026-07-17）
+
+**完成说明：** 时间轴测试新增 `renderTimeline` helper，统一在 `ToastProvider` 内渲染组件，7 个用例全部覆盖且 7/7 通过；组件、hook mock 和原断言均未修改。
+
+## TASK-191：QuotationPage.tsx 三处未加 NODE_ENV 门控的 console.log，生产环境也会打印，跟同文件其它调试日志的写法不一致
+
+**背景：** `src/features/quotation/app/QuotationPage.tsx` 里绝大多数调试用的 `console.log`（第 239、259、336、345、352、367、378、455 行等）都套了 `if (process.env.NODE_ENV === 'development')`，只在本地开发环境打印——这是这个文件里已经确立的约定。但有 3 处漏了这层门控，生产环境构建后依然会在每个用户的浏览器控制台里打印：第 468 行 `console.log(\`[PDF生成] 开始保存数据，editId: ${editId}\`);`、第 479 行 `console.log(\`[PDF生成] 保存成功，记录ID: ${saveResult.id}，当前editId: ${editId}\`);`、第 524 行 `console.log('开始预览PDF生成...');`。这 3 处不是"要不要删掉调试日志"的产品决策，纯粹是补齐这个文件里已经在用的门控写法，跟其它 8 处保持一致。
+
+**Files in scope：**
+
+- `src/features/quotation/app/QuotationPage.tsx` —
+  - 第 468 行、第 479 行（`handleGenerate` 函数内）、第 524 行（`handlePreview` 函数内）这 3 处 `console.log(...)`，各自套上 `if (process.env.NODE_ENV === 'development') { ... }`，写法参照第 238-242 行 `handleItemsChange` 里已经有的门控包裹方式。
+
+**验收标准：**
+
+- 生产构建（`NODE_ENV !== 'development'`）下，点击"保存"、"生成"、"预览"这几个操作，浏览器控制台不再出现 `[PDF生成]` 和 `开始预览PDF生成...` 这几条日志。
+- 本地开发环境（`npm run dev`）下这 3 条日志依旧照常打印，方便调试，行为跟改之前一样。
+- 不改这 3 处日志打印的具体内容/文案，只加门控条件。
+
+**Non-goals / 红线：**
+
+- 不删除这 3 处日志（有人可能还在用它们本地调试 PDF 生成流程），只是加门控，不是移除。
+- 不改同文件里其它已经有门控的 8 处日志。
+- 不改 `handleGenerate`、`handlePreview` 函数除了这 3 行日志之外的任何逻辑。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/quotation/app/QuotationPage.tsx`
+- 手动测试：`npm run build && npm start`（或本地生产模式）跑一遍生成/预览流程，确认控制台干净；`npm run dev` 下确认日志还在。
+
+**Status:** completed（2026-07-17）
+
+**完成说明：** 两条 PDF 保存日志和一条预览日志已补齐 `NODE_ENV === 'development'` 门控，文案和业务流程不变。生产构建通过，静态与服务端报价构建产物中检索不到三条日志文案。
 
 ## 已关闭 / 不做
 

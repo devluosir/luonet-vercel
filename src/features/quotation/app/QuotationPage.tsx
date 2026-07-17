@@ -465,7 +465,9 @@ export default function QuotationPage() {
 
     try {
       // 先保存数据，确保数据已保存（PDF生成时进行最终保存）
-      console.log(`[PDF生成] 开始保存数据，editId: ${editId}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[PDF生成] 开始保存数据，editId: ${editId}`);
+      }
       // 使用正确的保存服务，确保notesConfig被保存
       const saveResult = await saveOrUpdate(activeTab, data, notesConfig, editId);
 
@@ -476,7 +478,9 @@ export default function QuotationPage() {
 
       // 更新editId如果保存成功（无论是新记录还是更新现有记录）
       if (saveResult.id) {
-        console.log(`[PDF生成] 保存成功，记录ID: ${saveResult.id}，当前editId: ${editId}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[PDF生成] 保存成功，记录ID: ${saveResult.id}，当前editId: ${editId}`);
+        }
         setEditId(saveResult.id);
       }
 
@@ -521,7 +525,9 @@ export default function QuotationPage() {
 
     try {
       setPreviewProgress(10); // 开始准备资源
-      console.log('开始预览PDF生成...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('开始预览PDF生成...');
+      }
 
       let pdfUrl: string;
 

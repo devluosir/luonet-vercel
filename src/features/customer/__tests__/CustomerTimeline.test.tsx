@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { ToastProvider } from '@/components/ui/Toast';
 import { CustomerTimeline } from '../components/CustomerTimeline';
 import { useCustomerTimeline } from '../hooks/useCustomerTimeline';
 
@@ -10,6 +11,14 @@ jest.mock('../hooks/useCustomerTimeline', () => ({
 }));
 
 const mockUseCustomerTimeline = useCustomerTimeline as jest.MockedFunction<typeof useCustomerTimeline>;
+
+function renderTimeline() {
+  return render(
+    <ToastProvider>
+      <CustomerTimeline customerId="test-customer" customerName="Test Customer" />
+    </ToastProvider>
+  );
+}
 
 describe('CustomerTimeline', () => {
   const mockEvents = [
@@ -64,7 +73,7 @@ describe('CustomerTimeline', () => {
   });
 
   it('renders customer timeline with events', () => {
-    render(<CustomerTimeline customerId="test-customer" customerName="Test Customer" />);
+    renderTimeline();
 
     expect(screen.getByText('Test Customer 的时间轴')).toBeInTheDocument();
     expect(screen.getByText('(2 个事件)')).toBeInTheDocument();
@@ -85,7 +94,7 @@ describe('CustomerTimeline', () => {
       deleteEvent: jest.fn()
     });
 
-    render(<CustomerTimeline customerId="test-customer" customerName="Test Customer" />);
+    renderTimeline();
 
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
@@ -103,14 +112,14 @@ describe('CustomerTimeline', () => {
       deleteEvent: jest.fn()
     });
 
-    render(<CustomerTimeline customerId="test-customer" customerName="Test Customer" />);
+    renderTimeline();
 
     expect(screen.getByText('暂无时间轴事件')).toBeInTheDocument();
     expect(screen.getByText(/点击"刷新"按钮拉取最新询价记录/)).toBeInTheDocument();
   });
 
   it('toggles filters when filter button is clicked', () => {
-    render(<CustomerTimeline customerId="test-customer" customerName="Test Customer" />);
+    renderTimeline();
 
     const filterButton = screen.getByText('筛选');
     fireEvent.click(filterButton);
@@ -132,7 +141,7 @@ describe('CustomerTimeline', () => {
       deleteEvent: jest.fn()
     });
 
-    render(<CustomerTimeline customerId="test-customer" customerName="Test Customer" />);
+    renderTimeline();
 
     const syncButton = screen.getByText('刷新');
     fireEvent.click(syncButton);
@@ -141,7 +150,7 @@ describe('CustomerTimeline', () => {
   });
 
   it('displays event details correctly', () => {
-    render(<CustomerTimeline customerId="test-customer" customerName="Test Customer" />);
+    renderTimeline();
 
     expect(screen.getByText('Test Quotation')).toBeInTheDocument();
     expect(screen.getByText('Test description')).toBeInTheDocument();
@@ -164,7 +173,7 @@ describe('CustomerTimeline', () => {
       deleteEvent: jest.fn()
     });
 
-    render(<CustomerTimeline customerId="test-customer" customerName="Test Customer" />);
+    renderTimeline();
 
     // Open filters
     fireEvent.click(screen.getByText('筛选'));
