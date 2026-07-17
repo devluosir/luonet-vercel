@@ -5048,6 +5048,89 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **完成说明：** 用户详情弹窗的管理员/账户开关已移至用户信息头右侧，独立“账户设置”分区和管理员业务权限提示条已移除；“登记表”分类在桌面改为两个父模块左右分栏，小屏退化为单列。追加当前用户自锁保护：当前登录用户不能停用自己的账户或取消自己的管理员身份，界面与 Next 管理 API 均有防护；其他管理员仍可管理目标账号。
 
+## TASK-182：客户详情页——单客户询价/已报价/订单趋势图
+
+**背景：** 客户详情页（`src/features/customer/app/CustomerDetailPage.tsx`）目前只在 `CustomerInfoCard`（第 281-291 行）里显示两个裸数字——“询价 X”、“订单 Y”（数据来自服务端 `/api/customers/[id]/stats`，见 `customerService.fetchCustomerStats`，第 359-361 行），没有“已报价”数，也没有随时间变化的趋势。首页（`DashboardPage`）已经有一套成熟的“询价/已报价/订单”三线趋势图（`InquiryOrderTrendChart` 组件 + `useInquiryOrderStats` hook + `inquiryStats.ts` 工具函数），数据来源是 `useInquiryStore` 的本地 `records`（客户端现算，不做服务端聚合——见 TASK-110 非目标注释，`src/features/dashboard/hooks/useInquiryOrderStats.ts` 第 34 行）。客户详情页本身已经 `import { useInquiryStore }` 并读取了 `records`（第 117 行 `inquiryRecords`，目前只用于收货人的 `relatedOrders` 过滤，第 254-261 行）。本任务给“客户”类型详情页（`detailType === 'customer'`）新增一个该客户专属的趋势图，直接复用首页那一套组件/算法，按 `customerId` 过滤后传入，不新增任何后端接口。
+
+**Files in scope：**
+
+- `src/features/customer/app/CustomerDetailPage.tsx` —
+  - 新增 import：`InquiryOrderTrendChart`（来自 `@/features/dashboard/components/InquiryOrderTrendChart`）、`buildTrendData`/`Granularity`（来自 `@/features/dashboard/utils/inquiryStats`）。
+  - 新增 `const [granularity, setGranularity] = useState<Granularity>('month')` 状态（默认“月”）。
+  - 新增 `const customerTrendData = useMemo(...)`：过滤 `inquiryRecords`，条件 `record.status !== 'deleted' && record.customerId === customer?.id`，再调用 `buildTrendData(filtered, granularity)`（用默认的 `quotedStatuses` 字段，客户视角）；`customer` 为空时返回 `[]`。
+  - 在 `isCustomerDetail && (<CustomerActivityFeed customer={customer} />)`（第 339-341 行）前面插入 `isCustomerDetail && (<InquiryOrderTrendChart visible granularity={granularity} onGranularityChange={setGranularity} data={customerTrendData} title="该客户询价订单统计图" quotedLineLabel="已报价" />)`。只在 `detailType === 'customer'` 时渲染。
+
+**验收标准：**
+
+- 打开任意客户详情页（`/customer/detail?id=...&type=customer`），`CustomerInfoCard` 下方新增折线图区块，标题“该客户询价订单统计图”，右上角有天/周/月/季/年粒度切换（复用 `InquiryOrderTrendChart` 自带按钮，样式与首页一致）。
+- 三条线（询价/已报价/订单）数值口径与首页“总询价订单统计图”一致，范围收窄到当前客户（`customerId` 等于当前客户 `id` 的记录）。
+- 供应商/收货人详情页不显示该图表（跟随 `CustomerActivityFeed` 同样的 `isCustomerDetail` 条件）。
+- 该客户没有任何询价记录时，图表正常渲染为空数据（三条线都是 0），不报错。
+- 不影响 `CustomerInfoCard` 里已有“询价 X / 订单 Y”数字展示的数据来源和口径。
+
+**Non-goals / 红线：**
+
+- 不新增/修改任何后端 API（`worker.ts` 里的 `handleGetCustomerStats` 等一律不动），趋势图数据完全来自客户端已有的 `useInquiryStore` records。
+- 不改 `CustomerStats` 类型和 `/api/customers/[id]/stats` 接口。
+- 不改供应商详情页“使用情况”区块（第 293-305 行）、收货人详情页“收货订单”区块（第 307-337 行）。
+- 不改 `InquiryOrderTrendChart`、`buildTrendData` 等首页共用组件/工具函数本身的实现，只新增一处调用。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/customer/app/CustomerDetailPage.tsx`
+- 手动测试：分别打开一个有较多历史询价的客户和一个全新客户（无记录）的详情页，核对图表正常显示、粒度切换正常、供应商/收货人详情页不出现该图表。
+
+**Status:** completed（2026-07-17）
+
+**完成说明：** 客户类型详情页已在资料卡下方接入复用的询价/已报价/订单趋势图，按当前客户 `customerId` 过滤非删除记录，默认按月并支持天/周/月/季/年切换；供应商和收货人详情不渲染该图，未改服务端统计接口。
+
+## TASK-183：客户管理页新增“统计分析”视图——全部客户维度统计图表
+
+**背景：** 客户管理页（`src/features/customer/app/CustomerPage.tsx`）目前只有客户/供应商/收货人三个标签（`tabs` 数组，第 238-247 行），纯列表，没有任何跨客户的汇总统计。用户希望在客户管理权限内（该页面已挂在 `useModulePermissionGuard('customer')` 下，第 63 行）看到“所有客户公司”的询价/已报价/订单汇总图表——这样即使某个只有客户管理权限、没有询价权限的用户，也能看到客户维度统计，不必依赖首页仪表盘（`DashboardPage`）那套按 `inquiry` 权限门控的趋势图。数据源同样直接用 `useInquiryStore` 的本地 `records`（客户端现算，不做服务端聚合，与 TASK-182、TASK-110 保持同一原则），页面本身已在第 79 行读取了 `inquiryRecords`，且第 224-231 行已经现成算好了 `categoryCounts`（按 A/B/C/New/Blacklist 统计的客户数量），可以直接复用。
+
+**Files in scope：**
+
+- `src/features/customer/app/CustomerPage.tsx` —
+  - 新增独立状态 `const [showStats, setShowStats] = useState(false)`。**不要**把“统计分析”塞进 `TabType`（`'customers' | 'suppliers' | 'consignees'`，定义在 `../types`）或复用 `activeTab`/`viewMode` 状态——`activeTab` 驱动一大串下游逻辑（`activeProfileType`、`handleEdit`/`handleDelete`/`handleSubmit`/`LABEL[activeTab]`/`tabs` 计数等），塞进去会牵连这些分支。用独立的 `showStats` 布尔值控制“列表视图”与“统计分析视图”二选一。
+  - 在标签栏（第 274-301 行 `tabs.map(...)`）旁边新增一个独立按钮“统计分析”（图标用 `lucide-react` 的 `BarChart3`），点击切换 `showStats`；视觉上保持和现有标签同样的 `border-b-2` 高亮风格，但不需要并入 `tabs` 数组（那三个标签的数据结构是 `{id: TabType, label, icon, count}`，没有 `count` 字段硬塞会改类型）。
+  - `showStats === true` 时：隐藏“新增{LABEL[activeTab]}”按钮（第 258-268 行）、隐藏搜索栏和分类筛选、隐藏列表/卡片视图切换及第 376 行往后的列表内容区，改为渲染 `<CustomerStatsPanel customers={customers} records={inquiryRecords} />`（见下）。`showStats === false` 时恢复原有内容，行为不变。
+  - 点击 `tabs.map` 里任一业务标签时，若当前 `showStats === true`，顺带把它设为 `false`（点客户/供应商/收货人标签自动退出统计视图）。
+
+- 新建 `src/features/customer/components/CustomerStatsPanel.tsx` —
+  - Props：`customers: Customer[]`（含 `category` 字段）、`records: InquiryRecord[]`（`useInquiryStore` 全量记录，未过滤 deleted）。内部先 `records.filter(r => r.status !== 'deleted')`。
+  - **图表一·总询价订单统计图：** 复用 `InquiryOrderTrendChart`（`@/features/dashboard/components/InquiryOrderTrendChart`）+ `buildTrendData`（`@/features/dashboard/utils/inquiryStats`），内部自维护 `Granularity` 状态（默认 `month`），数据为全部客户记录。标题“全部客户询价订单统计图”。
+  - **图表二·客户询价排名 Top 10：** 按 `customerId` 分组统计每个客户的询价数（分组记录数）、已报价数（`isRecordQuoted(record)`，来自 `inquiryStats.ts`）、订单数（`record.orderNo?.trim()` 非空）；用 `customers` 把 `customerId` 解析为客户名（`customer.shortName || customer.name.split('\n')[0]`，解析不到对应客户主档的分组跳过不展示）；按询价数降序取前 10；用 recharts `BarChart`（`layout="vertical"`，`YAxis type="category" dataKey="name"`）画横向条形图，至少包含“询价数”这个指标（是否并列展示订单数自行判断）。
+  - **图表三·客户分类占比：** 直接从 `customers` 现算（不依赖 `records`）：按 `category` 分组计数，`New`/无 `category` 归一类，口径与 `CustomerPage.tsx` 第 229 行 `categoryCounts.New` 判定一致（`c.category === 'New' || !c.category`），`Blacklist` 单独一类；用 recharts `PieChart` + `Pie`（设置 `innerRadius` 做环形）画五个分类的占比图，图例显示分类名+数量。
+  - 三块图表卡片样式（`rounded-xl border ... bg-white ... shadow-sm`）与页面已有卡片保持一致；客户/记录为空时每块图表要有“暂无数据”占位，不报错。
+
+**验收标准：**
+
+- 客户管理页标签栏旁出现“统计分析”按钮，点击后原有列表/卡片视图、搜索栏、分类筛选、新增按钮全部隐藏，显示三块图表：总趋势折线图、客户排名横向条形图（Top 10）、客户分类环形图。
+- 折线图粒度切换（天/周/月/季/年）正常工作，且数值口径与首页“总询价订单统计图”一致（算法完全复用），只是入口不受 `inquiry` 权限门控。
+- 排名条形图按询价数降序，最多 10 个客户，客户名优先用简称。
+- 分类环形图五个分类（A/B/C/New/黑名单）数量总和等于客户总数，与页面标签栏旁的 `categoryCounts` 逻辑数值一致。
+- 点击“客户/供应商/收货人”任一标签能正常退出统计视图、回到对应列表。
+- 只有客户管理模块权限（无 `inquiry` 权限）的账号也能正常看到这三块图表——检查代码里这个面板的显示不受 `inquiry` 权限判断影响，只受 `useModulePermissionGuard('customer')` 这一层门控。
+
+**Non-goals / 红线：**
+
+- 不新增后端聚合接口，不改 `worker.ts`。
+- 不改 `TabType`（`../types` 定义）、不改 `activeTab` 状态承载的业务含义，“统计分析”是页面级独立视图，不是 `TabType` 第四个值。
+- 不改现有 `categoryCounts`（第 224-231 行）、`displayedCustomers` 过滤逻辑，这些仍只服务于列表视图。
+- 不改供应商/收货人的数据展示逻辑，本任务只做“客户”维度统计。
+- 不引入 recharts 之外的图表库；`FunnelChart` 等更复杂图形本任务不做，只要求折线图+条形图+环形图三种。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/customer/app/CustomerPage.tsx src/features/customer/components/CustomerStatsPanel.tsx`
+- 手动测试：客户管理页点“统计分析”核对三块图表渲染正确、粒度切换、Top10 排名、分类占比数字与列表页标签旁计数吻合；用一个只勾了“客户管理”权限、没勾“询报价登记表”权限的测试账号登录，确认这个面板依然可见（这是本任务的核心诉求）。
+
+**Status:** completed（2026-07-17）
+
+**完成说明：** 客户管理页已增加独立“统计分析”视图，进入后隐藏新增、搜索、分类筛选、视图切换和资料列表，展示全部客户趋势、Top 10 客户排名及五类客户环形分布；点击客户/供应商/收货人标签可退出统计视图。统计只沿用客户管理页面守卫，不额外检查询报价权限，并补充聚合 helper 单元测试。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

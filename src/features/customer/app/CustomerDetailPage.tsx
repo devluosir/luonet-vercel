@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { FileText } from 'lucide-react';
@@ -9,6 +9,8 @@ import { PermissionDenied } from '@/components/PermissionDenied';
 import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
+import { InquiryOrderTrendChart } from '@/features/dashboard/components/InquiryOrderTrendChart';
+import { buildTrendData, type Granularity } from '@/features/dashboard/utils/inquiryStats';
 import { useAppUser } from '@/hooks/useAppUser';
 import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
 import {
@@ -121,6 +123,7 @@ export default function CustomerDetailPage() {
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isLoadingCustomer, setIsLoadingCustomer] = useState(true);
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
+  const [granularity, setGranularity] = useState<Granularity>('month');
 
   const showConfirm = useCallback((opts: {
     title: string;
@@ -189,6 +192,15 @@ export default function CustomerDetailPage() {
       cancelled = true;
     };
   }, [customer?.id, isCustomerDetail]);
+
+  const trendCustomerId = isCustomerDetail ? customer?.id : undefined;
+  const customerTrendData = useMemo(() => {
+    if (!trendCustomerId) return [];
+    const customerRecords = inquiryRecords.filter(
+      (record) => record.status !== 'deleted' && record.customerId === trendCustomerId
+    );
+    return buildTrendData(customerRecords, granularity);
+  }, [granularity, inquiryRecords, trendCustomerId]);
 
   const handleSaveProfileFields = async (changes: ProfileFieldChanges) => {
     if (!customer) return false;
@@ -289,6 +301,17 @@ export default function CustomerDetailPage() {
               buildOrderHref={() => buildInquiryFilterHref(customer, undefined, 'has_order')}
               buildContactHref={(contact) => buildInquiryFilterHref(customer, contact)}
             />
+
+            {isCustomerDetail && (
+              <InquiryOrderTrendChart
+                visible
+                granularity={granularity}
+                onGranularityChange={setGranularity}
+                data={customerTrendData}
+                title="该客户询价订单统计图"
+                quotedLineLabel="已报价"
+              />
+            )}
 
             {detailType === 'supplier' && (
               <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3.5 shadow-sm dark:border-gray-700 dark:bg-gray-800">

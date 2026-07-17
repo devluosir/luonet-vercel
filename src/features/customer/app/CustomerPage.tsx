@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Building2, LayoutGrid, List as ListIcon, Package, Plus, Search, Users } from 'lucide-react';
+import { BarChart3, Building2, LayoutGrid, List as ListIcon, Package, Plus, Search, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { PermissionDenied } from '@/components/PermissionDenied';
 import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
@@ -15,6 +15,7 @@ import { useModulePermissionGuard } from '@/hooks/useModulePermissionGuard';
 import { useCustomerData, useCustomerActions, useCustomerForm } from '../hooks';
 import { getConsigneeDisplayName } from '../services/customerService';
 import { CustomerList, SupplierList, ConsigneeList, CustomerModal, ProfileCardGrid } from '../components';
+import { CustomerStatsPanel } from '../components/CustomerStatsPanel';
 import type { CustomerProfileType } from '../services/customerService';
 import type { Customer, CustomerCategory, Supplier, Consignee, TabType } from '../types';
 
@@ -71,6 +72,7 @@ export default function CustomerPage() {
   // 进入页面默认只看 New 类客户（用户明确要求，2026-07-10）；all/A/B/C/Blacklist 仍可手动切换
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('New');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [showStats, setShowStats] = useState(false);
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
 
   const activeProfileType = tabToProfileType(activeTab);
@@ -214,6 +216,7 @@ export default function CustomerPage() {
 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
+    setShowStats(false);
     setSearch('');
     // 切回客户 tab 时也回到默认的 New 类；其余 tab 不用这个筛选，值本身无所谓
     setCategoryFilter(tab === 'customers' ? 'New' : 'all');
@@ -257,24 +260,26 @@ export default function CustomerPage() {
         {/* ── 页头 ── */}
         <div className="mb-3 flex items-center justify-between">
           <h1 className="text-base font-semibold text-gray-900 dark:text-white">客户管理</h1>
-          <Button
-            onClick={handleAddNew}
-            size="sm"
-            className="gap-1.5"
-          >
-            <Plus className="h-4 w-4" />
-            新增{LABEL[activeTab]}
-          </Button>
+          {!showStats && (
+            <Button
+              onClick={handleAddNew}
+              size="sm"
+              className="gap-1.5"
+            >
+              <Plus className="h-4 w-4" />
+              新增{LABEL[activeTab]}
+            </Button>
+          )}
         </div>
 
         {/* ── 主内容卡片 ── */}
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-[#1c1c1e]">
 
           {/* 标签页 */}
-          <div className="flex border-b border-gray-100 px-4 pt-1 dark:border-gray-800">
+          <div className="flex overflow-x-auto border-b border-gray-100 px-4 pt-1 dark:border-gray-800">
             {tabs.map((tab) => {
               const Icon = tab.icon;
-              const active = activeTab === tab.id;
+              const active = !showStats && activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
@@ -298,10 +303,23 @@ export default function CustomerPage() {
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => setShowStats((current) => !current)}
+              aria-pressed={showStats}
+              className={`mr-1 inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+                showStats
+                  ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              统计分析
+            </button>
           </div>
 
           {/* 搜索栏 */}
-          <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+          {!showStats && <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <div className="relative w-full sm:max-w-xs">
@@ -371,10 +389,12 @@ export default function CustomerPage() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>}
 
           {/* 列表内容 */}
-          {viewMode === 'card' ? (
+          {showStats ? (
+            <CustomerStatsPanel customers={customers} records={inquiryRecords} />
+          ) : viewMode === 'card' ? (
             <ProfileCardGrid
               items={activeTab === 'customers' ? displayedCustomers : activeTab === 'suppliers' ? suppliers : consignees}
               loading={currentTabLoading}
