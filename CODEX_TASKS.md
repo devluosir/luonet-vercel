@@ -5131,6 +5131,47 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **完成说明：** 客户管理页已增加独立“统计分析”视图，进入后隐藏新增、搜索、分类筛选、视图切换和资料列表，展示全部客户趋势、Top 10 客户排名及五类客户环形分布；点击客户/供应商/收货人标签可退出统计视图。统计只沿用客户管理页面守卫，不额外检查询报价权限，并补充聚合 helper 单元测试。
 
+## TASK-184：客户管理“统计分析”排名图——支持按询价数/已报价数/订单数切换排序
+
+**背景：** TASK-183 落地的 `src/features/customer/components/CustomerStatsPanel.tsx` 里“客户询价排名 Top 10”横向条形图（第 62-94 行 `buildCustomerRanking`，第 157-188 行渲染）目前固定按询价数（`inquiryCount`）降序取前 10，图内虽然画了询价数/已报价数/订单数三条 `Bar`，但排序和“进不进前 10”只看询价数。用户现在要求这个排名可以切换依据——按已报价数排名、按订单数排名——而不是只能看询价数视角。
+
+**Files in scope：**
+
+- `src/features/customer/components/CustomerStatsPanel.tsx` —
+  - 新增类型 `type RankingMetric = 'inquiry' | 'quoted' | 'order';` 和一份 `RANKING_METRIC_META`（每个 metric 对应 `{ key, label, dataKey }`，`label` 分别是“询价数”“已报价数”“订单数”，`dataKey` 对应 `CustomerRankingItem` 上的 `inquiryCount`/`quotedCount`/`orderCount`）。
+  - `buildCustomerRanking`（第 62-94 行）加第三个参数 `metric: RankingMetric = 'inquiry'`：排序主键从固定的 `b.inquiryCount - a.inquiryCount` 改成按 `metric` 对应字段降序，次级 tie-breaker 沿用“另外两个指标依次比较，最后按名称”的思路（具体顺序自行判断，保证结果稳定即可），`.slice(0, 10)` 不变。函数签名改动后，同目录测试文件 `__tests__/CustomerStatsPanel.test.ts` 里现有对 `buildCustomerRanking(customers, records)`（不传 metric）的调用要保持能跑通——默认值 `'inquiry'` 必须保证不传参时行为和现在完全一致，不破坏 TASK-183 已有的两个测试用例。
+  - 组件内新增 `const [rankingMetric, setRankingMetric] = useState<RankingMetric>('inquiry')`，`rankingData` 的 `useMemo`（第 131-134 行）依赖里加入 `rankingMetric` 并传给 `buildCustomerRanking`。
+  - “客户询价排名 Top 10”卡片（第 159-185 行）标题栏加一个三选一的分段切换控件（样式参考 `InquiryOrderTrendChart.tsx` 里粒度切换按钮组的写法：外层 `rounded-lg bg-gray-100 p-0.5 dark:bg-gray-700/50`，选中态 `bg-white text-blue-600 shadow-sm dark:bg-gray-900 dark:text-blue-400`），三个选项对应“询价数”“已报价数”“订单数”，点击更新 `rankingMetric`。标题文字要跟着当前 metric 变化，例如“客户{当前 metric 的 label}排名 Top 10”（不要用固定死的“客户询价排名 Top 10”）。
+  - 图表本身继续保留三条 `Bar`（询价数/已报价数/订单数都画出来，参考已有的 `#ec4899`/`#3b82f6`/`#10b981` 配色），本任务只改“排序依据 + 标题”，不要求隐藏未选中的指标条。
+
+**验收标准：**
+
+- 排名卡片标题旁出现“询价数 / 已报价数 / 订单数”三个可点击选项，默认选中“询价数”，与切换前行为一致。
+- 点击“已报价数”：列表重新按 `quotedCount` 降序排列，最多仍是 10 条；标题变成“客户已报价数排名 Top 10”（或等价表述，体现当前依据）。
+- 点击“订单数”：同理按 `orderCount` 降序排列，标题相应变化。
+- 切回“询价数”，结果和排序与切换前完全一致（即行为可逆，没有状态污染）。
+- 三条 `Bar`（询价数/已报价数/订单数）在任何 metric 下都照常显示，只是哪个客户进入 Top 10、以及排列顺序会变。
+- TASK-183 已有的两个单元测试（`buildCustomerRanking(customers, records)` 不传 metric 的用法）继续通过，不需要改测试断言。
+- 空数据（无客户/无记录）时依旧显示“暂无数据”占位，不报错；切换 metric 不会导致空数据态崩溃。
+
+**Non-goals / 红线：**
+
+- 不改“全部客户询价订单统计图”（图表一，折线图/粒度切换）和“客户分类占比”（图表三，环形图）的逻辑和交互。
+- 不改 `CustomerPage.tsx` 里 `showStats` 状态、标签栏切换逻辑，本任务只动 `CustomerStatsPanel.tsx` 内部。
+- 不新增后端接口，排名数据继续完全来自客户端 `records`（延续 TASK-182/183/110 的原则）。
+- 不删除或替换现有的三色 `Bar` 图例，只加排序切换控件。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/customer/components/CustomerStatsPanel.tsx`
+- `npx jest src/features/customer/components/__tests__/CustomerStatsPanel.test.ts`（确认 TASK-183 旧测试仍然通过），并补充至少一个新测试用例：同一组 customers/records 分别用 `metric: 'quoted'` 和 `metric: 'order'` 调用 `buildCustomerRanking`，断言排序结果确实按对应字段降序（而不是仍按 inquiryCount）。
+- 手动测试：客户管理页“统计分析”视图里点三个切换选项，核对排序、标题、Top 10 名单随之变化，且能来回切换不出错。
+
+**Status:** completed（2026-07-17）
+
+**完成说明：** 客户统计排名卡片已增加“询价数 / 已报价数 / 订单数”三项切换，标题和 Top 10 排序随当前指标同步变化，三色指标条与图例保持完整；默认询价排序保留原有行为，空数据仍可安全切换并显示占位。新增测试覆盖按已报价数和订单数排序。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

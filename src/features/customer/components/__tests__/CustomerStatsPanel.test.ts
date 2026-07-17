@@ -102,4 +102,23 @@ describe('CustomerStatsPanel helpers', () => {
     expect(counts).toEqual({ A: 1, B: 1, C: 1, New: 2, Blacklist: 1 });
     expect(categories.reduce((total, item) => total + item.count, 0)).toBe(customers.length);
   });
+
+  it('sorts the ranking by quoted and order metrics independently', () => {
+    const customers = [
+      makeCustomer('c1', '询价领先'),
+      makeCustomer('c2', '报价领先'),
+      makeCustomer('c3', '订单领先'),
+    ];
+    const records = [
+      ...Array.from({ length: 4 }, (_, index) => makeRecord(`c1-${index}`, 'c1', { quoted: index === 0 })),
+      ...Array.from({ length: 3 }, (_, index) => makeRecord(`c2-${index}`, 'c2', { quoted: true, order: index === 0 })),
+      ...Array.from({ length: 2 }, (_, index) => makeRecord(`c3-${index}`, 'c3', { quoted: index === 0, order: true })),
+    ];
+
+    const quotedRanking = buildCustomerRanking(customers, records, 'quoted');
+    const orderRanking = buildCustomerRanking(customers, records, 'order');
+
+    expect(quotedRanking.map((item) => item.customerId)).toEqual(['c2', 'c1', 'c3']);
+    expect(orderRanking.map((item) => item.customerId)).toEqual(['c3', 'c2', 'c1']);
+  });
 });

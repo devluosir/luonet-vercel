@@ -35,6 +35,17 @@ export interface CustomerRankingItem {
   orderCount: number;
 }
 
+type RankingMetric = 'inquiry' | 'quoted' | 'order';
+type RankingDataKey = 'inquiryCount' | 'quotedCount' | 'orderCount';
+
+const RANKING_METRIC_META: Record<RankingMetric, { key: RankingMetric; label: string; dataKey: RankingDataKey }> = {
+  inquiry: { key: 'inquiry', label: '询价数', dataKey: 'inquiryCount' },
+  quoted: { key: 'quoted', label: '已报价数', dataKey: 'quotedCount' },
+  order: { key: 'order', label: '订单数', dataKey: 'orderCount' },
+};
+
+const RANKING_METRICS: RankingMetric[] = ['inquiry', 'quoted', 'order'];
+
 type CategoryKey = CustomerCategory;
 
 export interface CustomerCategoryDatum {
@@ -61,7 +72,8 @@ function getCustomerDisplayName(customer: Customer) {
 
 export function buildCustomerRanking(
   customers: Customer[],
-  records: InquiryRecord[]
+  records: InquiryRecord[],
+  metric: RankingMetric = 'inquiry'
 ): CustomerRankingItem[] {
   const customerById = new Map(customers.map((customer) => [customer.id, customer]));
   const totals = new Map<string, CustomerRankingItem>();
@@ -84,12 +96,22 @@ export function buildCustomerRanking(
     totals.set(customer.id, current);
   });
 
+  const primaryKey = RANKING_METRIC_META[metric].dataKey;
+  const tieBreakerKeys: RankingDataKey[] = metric === 'inquiry'
+    ? ['orderCount']
+    : metric === 'quoted'
+      ? ['inquiryCount', 'orderCount']
+      : ['inquiryCount', 'quotedCount'];
+  const comparisonKeys = [primaryKey, ...tieBreakerKeys];
+
   return Array.from(totals.values())
-    .sort((a, b) =>
-      b.inquiryCount - a.inquiryCount ||
-      b.orderCount - a.orderCount ||
-      a.name.localeCompare(b.name, 'zh-CN')
-    )
+    .sort((a, b) => {
+      for (const key of comparisonKeys) {
+        const difference = b[key] - a[key];
+        if (difference !== 0) return difference;
+      }
+      return a.name.localeCompare(b.name, 'zh-CN');
+    })
     .slice(0, 10);
 }
 
@@ -119,6 +141,7 @@ function EmptyChartCard({ title }: { title: string }) {
 
 export function CustomerStatsPanel({ customers, records }: CustomerStatsPanelProps) {
   const [granularity, setGranularity] = useState<Granularity>('month');
+  const [rankingMetric, setRankingMetric] = useState<RankingMetric>('inquiry');
 
   const activeRecords = useMemo(
     () => records.filter((record) => record.status !== 'deleted'),
@@ -129,8 +152,8 @@ export function CustomerStatsPanel({ customers, records }: CustomerStatsPanelPro
     [activeRecords, granularity]
   );
   const rankingData = useMemo(
-    () => buildCustomerRanking(customers, activeRecords),
-    [activeRecords, customers]
+    () => buildCustomerRanking(customers, activeRecords, rankingMetric),
+    [activeRecords, customers, rankingMetric]
   );
   const categoryData = useMemo(
     () => buildCustomerCategoryData(customers),
@@ -155,37 +178,64 @@ export function CustomerStatsPanel({ customers, records }: CustomerStatsPanelPro
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {rankingData.length > 0 ? (
-          <div className={CHART_CARD_CLASS}>
-            <h3 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">
-              客户询价排名 Top 10
+        <div className={CHART_CARD_CLASS}>
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+              客户{RANKING_METRIC_META[rankingMetric].label}排名 Top 10
             </h3>
-            <div className="h-[360px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={rankingData}
-                  layout="vertical"
-                  margin={{ top: 4, right: 8, left: 16, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-gray-100 dark:stroke-gray-700" />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 11 }} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="inquiryCount" name="询价数" fill="#ec4899" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="quotedCount" name="已报价数" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="orderCount" name="订单数" fill="#10b981" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-              <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-pink-500" />询价数</span>
-              <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-blue-500" />已报价数</span>
-              <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-emerald-500" />订单数</span>
+            <div className="inline-flex w-fit rounded-lg bg-gray-100 p-0.5 dark:bg-gray-700/50">
+              {RANKING_METRICS.map((metric) => {
+                const active = rankingMetric === metric;
+                return (
+                  <button
+                    key={metric}
+                    type="button"
+                    onClick={() => setRankingMetric(metric)}
+                    aria-pressed={active}
+                    className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
+                      active
+                        ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-900 dark:text-blue-400'
+                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    {RANKING_METRIC_META[metric].label}
+                  </button>
+                );
+              })}
             </div>
           </div>
-        ) : (
-          <EmptyChartCard title="客户询价排名 Top 10" />
-        )}
+
+          {rankingData.length > 0 ? (
+            <>
+              <div className="h-[360px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={rankingData}
+                    layout="vertical"
+                    margin={{ top: 4, right: 8, left: 16, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-gray-100 dark:stroke-gray-700" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 11 }} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} />
+                    <Bar dataKey="inquiryCount" name="询价数" fill="#ec4899" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="quotedCount" name="已报价数" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="orderCount" name="订单数" fill="#10b981" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-pink-500" />询价数</span>
+                <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-blue-500" />已报价数</span>
+                <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-emerald-500" />订单数</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-gray-500">
+              暂无数据
+            </div>
+          )}
+        </div>
 
         {customers.length > 0 ? (
           <div className={CHART_CARD_CLASS}>
