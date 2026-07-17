@@ -5007,6 +5007,45 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **完成说明：** 已移除“客户询价编号”，并将客户订单号/金额重排为 75% / 25%，执行情况/回款月份/到账金额重排为 50% / 25% / 25%；小屏只读区按订单编号/联络人、询价编号/内容简述两组同排，交货日期/确认日期同排，金额/回款月份/到账金额三等分同排。无财务权限分支保留指定跨度，字段交互、权限判断和保存逻辑未改。
 
+## TASK-181：管理后台"用户详情"弹窗布局调整——开关挪顶部 + 去提示语 + 登记表分两列
+
+**背景：** `src/features/admin/components/UserDetailModal.tsx` 当前布局：顶部只有用户信息+关闭按钮；下方独立一个"账户设置"分区放管理员/账户两个开关；再下方"模块权限"区域，isAdmin 为 true 时会多出一条蓝色提示"管理员身份只控制后台管理入口，业务模块仍按以下开关授权"；"登记表"分类框内两个父模块（`inquiry` 询报价登记表/订单状态表、`purchaseRegistration` 采购部登记/采购订单表）目前用通用的 `grid-cols-2 sm:grid-cols-3` + 有子开关的模块 `col-span-2 sm:col-span-3` 撑满整行，导致两个父模块及各自子开关整体纵向堆叠占用大量竖向空间。这次是纯布局调整，不改权限数据/开关逻辑。
+
+**Files in scope：**
+
+- `src/features/admin/components/UserDetailModal.tsx` —
+  - **头部（第 129-148 行 用户信息头）：** 在关闭按钮（第 141-147 行）左侧、用户名/邮箱信息块（第 135-140 行）右侧，插入管理员开关和账户开关。两个开关复用已有 `Toggle` 组件（第 22-40 行）和图标（`Shield`/`Power`，已从 lucide-react 引入），做成图标+开关的紧凑组合（不需要保留"管理员"/"账户"/"是否/启用禁用"文字标签，用 `title` 属性承载提示文案），例如每个用 `<div className="flex items-center gap-1.5" title="管理员">`包裹图标和 `Toggle`。管理员开关沿用原有 `disabled={isBusy || isCurrentUser}` 及 `title={isCurrentUser ? '不能修改自己的管理员身份，请让其他管理员操作' : '管理员'}` 逻辑；账户开关沿用 `disabled={isBusy}`。两组开关之间、以及和关闭按钮之间用 `gap-3` 或 `gap-4` 隔开，整体 `shrink-0`，避免用户名过长时被挤压（用户名区保持 `min-w-0 flex-1` 不变）。
+  - **删除"账户设置"整个分区（第 160-196 行 `<section>...</section>`）：** 该分区连同其标题"账户设置"和内部两个开关卡片一并移除，因为开关已经挪到头部；不要留空的 section 容器。
+  - **删除模块权限提示条（第 215-219 行）：** 即 `{isAdmin && (<p className="mb-3 ...">管理员身份只控制后台管理入口，业务模块仍按以下开关授权</p>)}` 整块删除。"模块权限"标题和"重置"按钮那一行（第 200-213 行）不受影响。
+  - **"登记表"分类改两列布局：** 在分类渲染循环（第 221-279 行 `CATEGORY_ORDER.map`）中，`category === 'registration'` 时改用不同的内层网格：外层容器改成 `grid grid-cols-1 gap-3 sm:grid-cols-2`（替代第 238 行原本通用的 `grid grid-cols-2 gap-2 sm:grid-cols-3`，仅对 registration 分类生效，其它分类保持原网格不变）；每个父模块（`inquiry`、`purchaseRegistration`）各占一列，列内部结构不变——父开关（`PermissionToggle`）在上，子开关（`advancedFeatures`）紧跟在下（第 255-272 行子开关渲染逻辑不变，含 `mt-1.5 grid grid-cols-1 gap-1.5 border-l-2 pl-3 sm:grid-cols-2`）。删除第 246 行专门给 `hasAdvanced` 模块加的 `col-span-2 sm:col-span-3` 撑满整行逻辑（对 registration 分类而言，因为现在就是要占一列不是整行；其它分类目前没有 `hasAdvanced` 模块，可保留原 `hasAdvanced ? 'col-span-2 sm:col-span-3' : undefined` 逻辑不动，只需确保 registration 分类走独立的渲染分支）。
+  - 结果：`inquiry` 一列（父开关"询报价登记表 / 订单状态表" + 子开关"批量编辑/导入导出"、"订单金额/回款/到账金额"两行），`purchaseRegistration` 一列（父开关"采购部登记 / 采购订单表" + 子开关"采购订单表金额"），左右并排，小屏（`sm` 以下）退化为单列纵向堆叠。
+
+**验收标准：**
+
+- 打开任一用户详情弹窗：头部右侧、关闭按钮左侧能看到管理员开关和账户开关，无需滚动即可直接操作；两者点击后行为、禁用状态、tooltip 与改版前一致（管理员开关对当前登录用户禁用并提示原因，账户开关在保存/删除中禁用）。
+- 内容区不再出现独立的"账户设置"分区标题或卡片。
+- "模块权限"标题下方，无论 isAdmin 是否为 true，都不再出现"管理员身份只控制后台管理入口..."提示条；"重置"按钮出现逻辑（`hasChanges` 时显示）不受影响。
+- "登记表"分类框内，桌面宽度下"询报价登记表 / 订单状态表"及其两个子开关在左列，"采购部登记 / 采购订单表"及其子开关在右列，左右并排、各自内部父子开关纵向排列；小屏幕（`sm` 断点以下）退化为单列纵向堆叠，不出现横向溢出或错位。
+- "单据"、"管理"、"工具"三个分类的网格布局、"单据历史"下方说明文字、每个开关的可点击性均不受影响。
+- 保存（`handleSave`）、重置（`handleReset`）、删除（`handleDelete`）等既有交互和权限判定逻辑不受影响，只是这几处元素的位置/分组变了。
+
+**Non-goals / 红线：**
+
+- 不改 `usePermissions` hook、`togglePermission`/`toggleAdmin`/`toggleActive`/`hasChanges`/`resetPermissions` 的实现逻辑。
+- 不改 `PermissionToggle` 组件本身的 props/实现。
+- 不改 `Toggle` 组件本身的实现（第 22-40 行），头部只是新增两处调用。
+- 不改底部操作栏（第 284-326 行 删除用户/取消/保存）的位置和逻辑。
+- 不改"单据""管理""工具"三个分类当前的网格结构（保持第 238 行原逻辑，只对 registration 分类分支处理）。
+- 不新增权限模块或修改 `src/constants/permissionModules.ts` 里的模块定义。
+
+**测试与验证：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/admin/components/UserDetailModal.tsx`
+- 手动测试：管理后台打开任一用户详情弹窗，桌面宽度下核对头部开关可操作、提示条消失、登记表两列布局；缩小到 `sm` 断点以下核对登记表退化为单列、头部不横向溢出；分别用当前登录用户和其他用户测试管理员开关的禁用/提示行为。
+
+**Status:** not started
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

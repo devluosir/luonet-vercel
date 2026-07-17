@@ -138,6 +138,25 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
               {user.email || '未设置邮箱'} · 注册于 {fmtDate(user.createdAt)}
             </p>
           </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <div
+              className="flex items-center gap-1.5"
+              title={isCurrentUser ? '不能修改自己的管理员身份，请让其他管理员操作' : '管理员'}
+            >
+              <Shield className="h-4 w-4 shrink-0 text-blue-400" />
+              <Toggle
+                on={isAdmin}
+                onChange={toggleAdmin}
+                color="bg-blue-600"
+                disabled={isBusy || isCurrentUser}
+                title={isCurrentUser ? '不能修改自己的管理员身份，请让其他管理员操作' : '管理员'}
+              />
+            </div>
+            <div className="flex items-center gap-1.5" title="账户">
+              <Power className="h-4 w-4 shrink-0 text-green-400" />
+              <Toggle on={isActive} onChange={toggleActive} color="bg-green-600" disabled={isBusy} />
+            </div>
+          </div>
           <button
             onClick={onClose}
             disabled={isBusy}
@@ -157,44 +176,6 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
             </p>
           )}
 
-          {/* ── 账户设置 ── */}
-          <section>
-            <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-              账户设置
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              {/* 管理员开关 */}
-              <div className="flex items-center justify-between rounded-xl border border-gray-200 px-3.5 py-3 dark:border-gray-700">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <Shield className="h-4 w-4 shrink-0 text-blue-400" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">管理员</p>
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500">{isAdmin ? '是' : '否'}</p>
-                  </div>
-                </div>
-                <Toggle
-                  on={isAdmin}
-                  onChange={toggleAdmin}
-                  color="bg-blue-600"
-                  disabled={isBusy || isCurrentUser}
-                  title={isCurrentUser ? '不能修改自己的管理员身份，请让其他管理员操作' : undefined}
-                />
-              </div>
-
-              {/* 账户状态开关 */}
-              <div className="flex items-center justify-between rounded-xl border border-gray-200 px-3.5 py-3 dark:border-gray-700">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <Power className="h-4 w-4 shrink-0 text-green-400" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">账户</p>
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500">{isActive ? '启用' : '禁用'}</p>
-                  </div>
-                </div>
-                <Toggle on={isActive} onChange={toggleActive} color="bg-green-600" disabled={isBusy} />
-              </div>
-            </div>
-          </section>
-
           {/* ── 模块权限 ── */}
           <section>
             <div className="mb-2.5 flex items-center justify-between">
@@ -212,11 +193,6 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                 </button>
               )}
             </div>
-            {isAdmin && (
-              <p className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
-                管理员身份只控制后台管理入口，业务模块仍按以下开关授权
-              </p>
-            )}
             <div className="space-y-4">
               {CATEGORY_ORDER.map((category) => {
                 const categoryModules = PERMISSION_MODULES.filter((module) => module.category === category);
@@ -235,7 +211,9 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                         “单据历史”根据本组其它单据类权限自动开启/关闭，无需单独设置
                       </p>
                     )}
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <div className={category === 'registration'
+                      ? 'grid grid-cols-1 gap-3 sm:grid-cols-2'
+                      : 'grid grid-cols-2 gap-2 sm:grid-cols-3'}>
                       {categoryModules.map((module) => {
                         const perm = permissions.find((p) => p.moduleId === module.moduleId);
                         const parentEnabled = perm?.canAccess ?? false;
@@ -243,7 +221,12 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                         const isAutoManagedHistory = module.moduleId === 'history';
 
                         return (
-                          <div key={module.moduleId} className={hasAdvanced ? 'col-span-2 sm:col-span-3' : undefined}>
+                          <div
+                            key={module.moduleId}
+                            className={category !== 'registration' && hasAdvanced
+                              ? 'col-span-2 sm:col-span-3'
+                              : undefined}
+                          >
                             <PermissionToggle
                               moduleId={module.moduleId}
                               name={module.label}
