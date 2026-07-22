@@ -5396,6 +5396,41 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **完成说明：** 两条 PDF 保存日志和一条预览日志已补齐 `NODE_ENV === 'development'` 门控，文案和业务流程不变。生产构建通过，静态与服务端报价构建产物中检索不到三条日志文案。
 
+## TASK-192：询报价登记表搜索框搜不到询价人姓名（如 Jacob）
+
+**背景：** 用户反馈：在询报价登记表（`/inquiry`）里，某条记录的询价人（`inquirer` 字段，例如 "Jacob"）明确存在，但在搜索框里输入 "jacob" 搜不到该记录。
+
+根因：`src/features/inquiry/hooks/useInquiryFilter.ts` 第 112–120 行 `baseFiltered` 里的关键词匹配逻辑，目前只检查 `record.inquiryNo` / `record.customerNo` / `record.description` / `record.orderNo`（`orderNo` 是 [[TASK-152]] 加的）这 4 个字段，没有检查 `record.inquirer`。页面上另外有一个独立的"询价人"下拉筛选（`filter.inquirer`，精确匹配，第 123 行），但那是下拉选择，不是这个自由文本搜索框，用户容易预期搜索框也能搜到询价人姓名，但目前漏了。
+
+**Files in scope：**
+
+- `src/features/inquiry/hooks/useInquiryFilter.ts` — `baseFiltered` 里的关键词匹配逻辑（第 112–120 行），在现有 4 个 `includes(kw)` 判断基础上，加一个 `(record.inquirer ?? '').toLowerCase().includes(kw)`。
+
+**Acceptance criteria：**
+
+- 在搜索框输入某条记录询价人姓名的完整或部分子串（大小写不敏感，与现有询价编号/客户编号/内容简述/订单号搜索行为一致）能命中该记录。
+- 原有按询价编号、客户编号、内容简述、订单号搜索的行为不变。
+- 询价人字段为空字符串的记录不受影响，不报错。
+- 独立的"询价人"下拉精确筛选（`filter.inquirer`）行为不变，不与本次改动的自由文本搜索混淆。
+
+**Non-goals / 红线：**
+
+- 不改搜索框的 placeholder 文案、不新增独立的"按询价人搜索"输入框或筛选维度——就是把 `inquirer` 加进现有这一个关键词搜索的判断里。
+- 不改 `filter.inquirer` 下拉筛选的精确匹配逻辑（第 123 行）。
+- 不改 `matchesTimeRange`（当月默认时间范围）逻辑；如果用户反馈"记录存在但搜不到"其实是记录不在当月范围内，那是另一个问题，不在本任务范围。
+- 不改采购部登记等其它登记表自己的搜索逻辑，本任务只动询报价登记表这一处（`useInquiryFilter.ts` 是询报价登记表专用 hook）。
+
+**Verification steps（供实现者跑）：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/inquiry/hooks/useInquiryFilter.ts`
+- 跑现有 `src/features/inquiry/hooks/__tests__/useInquiryFilter.test.ts`，确认不回归；参照该文件里已有的"按订单号子串能搜到"用例风格，补一条"按询价人姓名子串能搜到"的用例。
+- 手动验证：在询报价登记表搜索框输入某条记录询价人姓名（如 "Jacob" 或其小写/子串），确认能筛出对应行。
+
+**Status:** completed（2026-07-22）
+
+**完成说明：** 询报价登记表的关键词搜索已纳入 `inquirer` 字段，支持大小写不敏感的完整或部分姓名匹配，并补充了空姓名兼容与姓名子串搜索测试。定向 Jest、ESLint 和 TypeScript 检查均通过。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

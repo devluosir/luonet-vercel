@@ -115,7 +115,8 @@ export function useInquiryFilter(records: InquiryRecord[]) {
           record.inquiryNo.toLowerCase().includes(kw) ||
           (record.customerNo ?? '').toLowerCase().includes(kw) ||
           (record.description ?? '').toLowerCase().includes(kw) ||
-          (record.orderNo ?? '').toLowerCase().includes(kw);
+          (record.orderNo ?? '').toLowerCase().includes(kw) ||
+          (record.inquirer ?? '').toLowerCase().includes(kw);
         if (!hit) return false;
       }
 

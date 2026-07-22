@@ -47,6 +47,16 @@ describe('useInquiryFilter keyword search', () => {
     expect(search(records, 'abc-15').map((record) => record.id)).toEqual(['one']);
   });
 
+  it('matches an inquirer name substring case-insensitively and tolerates empty names', () => {
+    const records = [
+      createRecord('one', { inquirer: 'Jacob Smith' }),
+      createRecord('two', { inquirer: 'Alice' }),
+      createRecord('three', { inquirer: '' }),
+    ];
+
+    expect(search(records, 'AcOb').map((record) => record.id)).toEqual(['one']);
+  });
+
   it.each([
     ['inquiry number', 'rfq-target'],
     ['customer number', 'customer-target'],
