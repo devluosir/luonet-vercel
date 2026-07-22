@@ -1,6 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { inquiryService } from '../../services/inquiry.service';
-import { useInquirySync } from '../useInquirySync';
+import { useInquiryStore } from '../../state/inquiry.store';
+import type { InquiryRecord } from '../../types';
+import { syncInquiryNow, useInquirySync } from '../useInquirySync';
 
 jest.mock('../../state/inquiry.store', () => ({
   useInquiryStore: { setState: jest.fn() },
@@ -27,6 +29,50 @@ function mockInquirySyncService(watermark: string) {
   jest.spyOn(inquiryService, 'save').mockImplementation(() => undefined);
   return pullFromD1;
 }
+
+describe('syncInquiryNow (TASK-193)', () => {
+  const d1Records = [{ id: 'd1' }] as InquiryRecord[];
+  const mergedRecords = [{ id: 'merged' }] as InquiryRecord[];
+
+  beforeEach(() => {
+    jest.spyOn(inquiryService, 'flushPendingSyncs').mockResolvedValue(undefined);
+    jest.spyOn(inquiryService, 'pullFromD1').mockResolvedValue(d1Records);
+    jest.spyOn(inquiryService, 'pushLocalToD1').mockImplementation(() => undefined);
+    jest.spyOn(inquiryService, 'mergeFromD1').mockReturnValue(mergedRecords);
+    jest.spyOn(inquiryService, 'mergeFieldsOnly').mockReturnValue(mergedRecords);
+    jest.spyOn(inquiryService, 'save').mockImplementation(() => undefined);
+    jest.spyOn(inquiryService, 'setLastFullSyncAt').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    jest.mocked(useInquiryStore.setState).mockClear();
+  });
+
+  it('uses full-record merge and pushes local records for the full view', async () => {
+    await syncInquiryNow({ mergeLocal: true, pushLocal: true });
+
+    expect(inquiryService.flushPendingSyncs).toHaveBeenCalledTimes(1);
+    expect(inquiryService.pullFromD1).toHaveBeenCalledWith();
+    expect(inquiryService.pushLocalToD1).toHaveBeenCalledWith(d1Records);
+    expect(inquiryService.mergeFromD1).toHaveBeenCalledWith(d1Records);
+    expect(inquiryService.mergeFieldsOnly).not.toHaveBeenCalled();
+    expect(inquiryService.save).not.toHaveBeenCalled();
+    expect(useInquiryStore.setState).toHaveBeenCalledWith({ records: mergedRecords });
+    expect(inquiryService.setLastFullSyncAt).toHaveBeenCalledWith(true, expect.any(Number));
+  });
+
+  it('uses field-only merge without pushing local records for the restricted view', async () => {
+    await syncInquiryNow({ mergeLocal: false, pushLocal: false });
+
+    expect(inquiryService.pushLocalToD1).not.toHaveBeenCalled();
+    expect(inquiryService.mergeFromD1).not.toHaveBeenCalled();
+    expect(inquiryService.mergeFieldsOnly).toHaveBeenCalledWith(d1Records);
+    expect(inquiryService.save).toHaveBeenCalledWith(mergedRecords);
+    expect(useInquiryStore.setState).toHaveBeenCalledWith({ records: mergedRecords });
+    expect(inquiryService.setLastFullSyncAt).toHaveBeenCalledWith(false, expect.any(Number));
+  });
+});
 
 describe('useInquirySync persisted baselines (TASK-139)', () => {
   beforeEach(() => {

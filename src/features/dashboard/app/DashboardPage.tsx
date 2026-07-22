@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { AppLayout } from '@/components/layout';
@@ -17,6 +17,7 @@ import { useDashboardPermissions } from '@/features/dashboard/hooks/useDashboard
 import { useDashboardDocuments } from '@/features/dashboard/hooks/useDashboardDocuments';
 import { useInquiryOrderStats, type TrendSource } from '@/features/dashboard/hooks/useInquiryOrderStats';
 import type { Granularity } from '@/features/dashboard/utils/inquiryStats';
+import { syncInquiryNow } from '@/features/inquiry/hooks/useInquirySync';
 // 调试组件已移除
 
 
@@ -68,6 +69,26 @@ export default function DashboardPage() {
   const inquiryOrderStats = useInquiryOrderStats(hasInquiryAccess, trendGranularity, 'inquiry');
   const purchaseOrderStats = useInquiryOrderStats(hasPurchaseAccess, trendGranularity, 'purchase');
   const activeOrderStats = effectiveTrendSource === 'purchase' ? purchaseOrderStats : inquiryOrderStats;
+  const isRefreshingStats = useRef(false);
+  const [refreshingStats, setRefreshingStats] = useState(false);
+
+  const handleRefreshStats = useCallback(async () => {
+    if (isRefreshingStats.current || (!hasInquiryAccess && !hasPurchaseAccess)) return;
+
+    isRefreshingStats.current = true;
+    setRefreshingStats(true);
+    try {
+      await syncInquiryNow({
+        mergeLocal: hasInquiryAccess,
+        pushLocal: hasInquiryAccess,
+      });
+    } catch {
+      // 静默失败，保留刷新前的统计数据
+    } finally {
+      isRefreshingStats.current = false;
+      setRefreshingStats(false);
+    }
+  }, [hasInquiryAccess, hasPurchaseAccess]);
 
   // 初始化逻辑
   useEffect(() => {
@@ -120,6 +141,8 @@ export default function DashboardPage() {
               loading={!mounted || isPermissionLoading || !activeOrderStats.mounted}
               month={activeOrderStats.month}
               source={effectiveTrendSource}
+              onRefresh={handleRefreshStats}
+              refreshing={refreshingStats}
             />
           </div>
         )}

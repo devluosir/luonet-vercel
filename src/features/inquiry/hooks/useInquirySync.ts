@@ -306,3 +306,26 @@ export function useInquirySync({
 
   return { lastSyncedAt, syncStatus };
 }
+
+interface SyncInquiryNowOptions {
+  mergeLocal: boolean;
+  pushLocal: boolean;
+}
+
+/** 首页等非轮询页面使用的一次性立即同步，不参与跨标签页协调和后台调度。 */
+export async function syncInquiryNow({
+  mergeLocal,
+  pushLocal,
+}: SyncInquiryNowOptions): Promise<void> {
+  await inquiryService.flushPendingSyncs();
+  const d1Records = await inquiryService.pullFromD1();
+  if (pushLocal) inquiryService.pushLocalToD1(d1Records);
+
+  const nextRecords = mergeLocal
+    ? inquiryService.mergeFromD1(d1Records)
+    : inquiryService.mergeFieldsOnly(d1Records);
+  if (!mergeLocal) inquiryService.save(nextRecords);
+
+  useInquiryStore.setState({ records: nextRecords });
+  inquiryService.setLastFullSyncAt(mergeLocal, Date.now());
+}

@@ -5431,6 +5431,60 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **完成说明：** 询报价登记表的关键词搜索已纳入 `inquirer` 字段，支持大小写不敏感的完整或部分姓名匹配，并补充了空姓名兼容与姓名子串搜索测试。定向 Jest、ESLint 和 TypeScript 检查均通过。
 
+## TASK-193：首页「本月」统计区加手动刷新按钮，立即拉取服务器最新数据
+
+**背景：** 用户反馈：有时候新登录后，服务器数据其实已经更新，但首页「本月」询价/已报价/订单统计没能及时反映出来。
+
+根因：首页统计（`src/features/dashboard/hooks/useInquiryOrderStats.ts`）直接读 `useInquiryStore` 的本地 `records`，只在挂载时调用一次 `useInquiryStore.getState().init()`（第 44 行）——这只是把 `localStorage` 里已有的旧数据读进 store，**不会**向服务器发起任何拉取。真正会从 D1 拉最新数据、刷新 `useInquiryStore` 的是 `src/features/inquiry/hooks/useInquirySync.ts`（轮询 + 跨标签页协调），但这个 hook 只在四张登记表页面（`InquiryPage.tsx`、`OrderPage.tsx`、`PurchaseRegistrationPage.tsx`、`PurchaseOrderRegistrationPage.tsx`）挂载，首页 `DashboardPage.tsx` 从未调用它。所以如果用户登录后直接停在首页、不点进任何一张登记表，本地缓存就一直是上次访问登记表页面时的旧快照，跟服务器不同步——这不是 bug，是首页原本就没接同步机制，现在要补一个"手动触发一次立即拉取"的入口。
+
+**Files in scope：**
+
+- `src/features/inquiry/hooks/useInquirySync.ts` — 在文件末尾（`useInquirySync` hook 定义之后）新增并导出一个独立的轻量拉取函数，例如 `syncInquiryNow(options: { mergeLocal: boolean; pushLocal: boolean }): Promise<void>`。内部步骤照抄 hook 内部 `fullSync`（第 124–161 行）的核心部分，但**不要**牵扯 `coordinator`（跨标签页 leader 选举）、`applyMeta`/`publishSync`（meta 广播）、`syncingRef`/`schedule`（轮询调度）这些状态机逻辑——首页只是"点一下，立即拉一次"，不需要参与后台轮询协调：
+  - `await inquiryService.flushPendingSyncs();`
+  - `const d1Records = await inquiryService.pullFromD1();`
+  - `if (options.pushLocal) inquiryService.pushLocalToD1(d1Records);`
+  - `const nextRecords = options.mergeLocal ? inquiryService.mergeFromD1(d1Records) : inquiryService.mergeFieldsOnly(d1Records);`
+  - `if (!options.mergeLocal) inquiryService.save(nextRecords);`
+  - `useInquiryStore.setState({ records: nextRecords });`
+  - `inquiryService.setLastFullSyncAt(options.mergeLocal, Date.now());`（跟 `fullSync` 一致，保持这个时间戳的语义，否则用户之后点进登记表页面时，`useInquirySync` 判断"是否需要整表同步"的逻辑会不准）
+  - 出错直接 `throw`，不在这个函数里吞掉异常——由调用方（Dashboard 按钮）决定怎么处理失败态。
+- `src/features/dashboard/components/InquiryOrderStats.tsx` — 在第 30–33 行"本月"徽标旁边加一个小的刷新图标按钮（参照 `src/features/history/app/HistoryPage.tsx` 第 381–389 行 `RefreshCw` + `animate-spin` 的按钮写法：等宽小按钮、加载中禁用并转圈）。新增 props：`onRefresh: () => void`、`refreshing: boolean`。
+- `src/features/dashboard/app/DashboardPage.tsx` — 新增 `refreshing` state 和 `handleRefresh` 回调，传给 `InquiryOrderStats`（第 118–124 行渲染处）。`handleRefresh` 逻辑：
+  - 用 `useRef` 防止重复点击（参照 `HistoryPage.tsx` 第 127–128 行 `isSyncing` ref 的写法）。
+  - 根据当前用户权限决定调用参数，不要固定写死一种模式（这是本任务最容易出错、也是唯一的红线级细节，务必对齐）：
+    - `hasInquiryAccess` 为真（用户有完整询报价登记权限）→ `syncInquiryNow({ mergeLocal: true, pushLocal: true })`，跟 `InquiryPage.tsx`/`OrderPage.tsx` 的 `useInquirySync` 默认参数（第 143–147 行、第 102–105 行）一致。
+    - 否则（用户只有 `hasPurchaseAccess`，即受限视图）→ `syncInquiryNow({ mergeLocal: false, pushLocal: false })`，跟 `PurchaseRegistrationPage.tsx`/`PurchaseOrderRegistrationPage.tsx` 的 `useInquirySync` 参数（第 63–68 行、第 79–84 行）一致。**这个区分不能省略或图省事写反**——见 `bug_inquiry_restricted_view_cache_corruption` 历史教训：受限视图如果按"整条覆盖"（`mergeLocal: true`）合并会冲掉共享 `localStorage` 里其它字段（如 `quotedStatuses`），导致询报价登记表崩溃，必须用 `mergeFieldsOnly`（`mergeLocal: false`）。
+  - 失败时静默 catch（参照 `HistoryPage.tsx` 第 139–140 行"静默失败"的写法），`finally` 里复位 `refreshing`/ref。
+  - 刷新按钮只在 `hasInquiryAccess || hasPurchaseAccess` 为真时渲染（跟第 116 行统计区块本身的可见性条件一致）。
+
+**Acceptance criteria：**
+
+- 首页「本月」统计区块（有询报价或采购部登记权限时才显示）右侧出现一个刷新图标按钮。
+- 点击后：按钮显示加载中状态（图标旋转/禁用点击），完成后「本月」询价/已报价/订单三个数字如果服务器有新数据会更新为最新值，不需要刷新整个页面或重新登录。
+- 拉取过程中重复点击不会触发第二次并发拉取。
+- 有完整询报价权限的用户点击刷新，走的是"整条合并"（`mergeLocal: true`）路径；只有采购部登记（受限）权限的用户点击刷新，走的是"仅字段合并"（`mergeLocal: false`，即 `mergeFieldsOnly`）路径——不能用错，否则会复现 `bug_inquiry_restricted_view_cache_corruption` 那次崩溃。
+- 拉取失败（网络错误等）不报错崩溃，按钮恢复可点击状态，统计数字保持刷新前的值。
+- 不影响四张登记表页面（`InquiryPage`/`OrderPage`/`PurchaseRegistrationPage`/`PurchaseOrderRegistrationPage`）已有的后台轮询同步行为——首页这次手动拉取是独立的一次性请求，不参与、不打断它们的 `useInquirySync` 轮询调度。
+
+**Non-goals / 红线：**
+
+- 不改 `useInquirySync` hook 本身的轮询、跨标签页协调（`InquirySyncCoordinator`）、meta 广播逻辑——新函数是与之平行的独立工具函数，不要把两者合并重构成一个东西，避免影响四张登记表页面已经跑稳的同步机制。
+- 不在首页加"上次同步时间"文案或 `syncStatus`/待同步条数展示——只要一个刷新按钮，不做登记表页面那种完整状态条。
+- 不加 toast 成功/失败提示——按钮本身的 loading/禁用状态就是唯一反馈，失败静默即可，跟 `HistoryPage.tsx` 现有同步按钮的反馈粒度保持一致。
+- 不改 `useInquiryOrderStats.ts` 里统计数字的计算逻辑（`countInquiriesInMonth` 等），本任务只解决"数据从哪来、什么时候拉新"，不改"怎么算"。
+- 不给"本周"相关代码加任何东西——本周统计已在 TASK-113 之后从首页去掉，不要复活。
+
+**Verification steps（供实现者跑）：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/inquiry/hooks/useInquirySync.ts src/features/dashboard/components/InquiryOrderStats.tsx src/features/dashboard/app/DashboardPage.tsx`
+- 如方便，给新增的 `syncInquiryNow` 补一条单测（可参照 `src/features/inquiry/hooks/__tests__/useInquirySync.test.ts` 里已有的 mock 方式），覆盖 `mergeLocal: true` 和 `mergeLocal: false` 两条路径分别调用了正确的 `inquiryService` 方法。
+- 手动验证：用完整询报价权限账号登录首页，在另一台设备/浏览器对同一账号新增一条询价记录，回到首页点刷新按钮，确认「本月」询价数 +1；用仅采购部登记权限的账号重复同样流程，确认统计更新且询报价登记表打开后没有出现字段被冲掉的异常（对照 `bug_inquiry_restricted_view_cache_corruption` 描述的崩溃现象）。
+
+**Status:** completed（2026-07-22）
+
+**完成说明：** 首页「本月」统计区已增加一次性同步刷新按钮，并按权限严格区分完整视图的整条合并/本地补推与采购受限视图的仅字段合并。刷新期间按钮禁用并旋转，重复点击由 ref 拦截，失败静默恢复。新增两条同步路径单测，定向 Jest、ESLint、TypeScript 检查及生产构建均通过。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |
