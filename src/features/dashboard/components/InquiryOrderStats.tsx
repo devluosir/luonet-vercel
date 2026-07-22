@@ -40,19 +40,19 @@ export function InquiryOrderStats({
       <span className="mr-1 shrink-0 rounded-md bg-gray-100 px-2 py-1 text-[11px] font-semibold tracking-wide text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">
         本月
       </span>
+      <StatChip icon={Search} label="询价" value={month.inquiryCount} colorClass="text-pink-500 dark:text-pink-400" path={inquiryPath} loading={loading} />
+      <StatChip icon={FileCheck} label="已报价" value={month.quotedCount} colorClass="text-blue-600 dark:text-blue-400" path={inquiryPath} loading={loading} />
+      <StatChip icon={ClipboardCheck} label="订单" value={month.orderCount} colorClass="text-emerald-600 dark:text-emerald-400" path={orderPath} loading={loading} />
       <button
         type="button"
         onClick={onRefresh}
         disabled={refreshing}
-        className="mr-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700/50"
+        className="ml-auto inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700/50"
         title={refreshing ? '正在刷新' : '刷新统计'}
         aria-label={refreshing ? '正在刷新统计' : '刷新统计'}
       >
         <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
       </button>
-      <StatChip icon={Search} label="询价" value={month.inquiryCount} colorClass="text-pink-500 dark:text-pink-400" path={inquiryPath} loading={loading} />
-      <StatChip icon={FileCheck} label="已报价" value={month.quotedCount} colorClass="text-blue-600 dark:text-blue-400" path={inquiryPath} loading={loading} />
-      <StatChip icon={ClipboardCheck} label="订单" value={month.orderCount} colorClass="text-emerald-600 dark:text-emerald-400" path={orderPath} loading={loading} />
     </div>
   );
 }
