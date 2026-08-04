@@ -1,6 +1,12 @@
-import { act, renderHook } from '@testing-library/react';
+import { createElement } from 'react';
+import { act, render, renderHook, screen, within } from '@testing-library/react';
+import { InquiryFilterBar } from '../../components/InquiryFilterBar';
 import type { InquiryRecord } from '../../types';
-import { useInquiryFilter } from '../useInquiryFilter';
+import {
+  matchesQuoteStatus,
+  type QuoteStatusFilter,
+  useInquiryFilter,
+} from '../useInquiryFilter';
 
 jest.mock('../../utils/inquiryUtils', () => ({
   getDateInputValueFromInquiryNo: () => '2026-07-12',
@@ -35,6 +41,26 @@ function search(records: InquiryRecord[], keyword: string): InquiryRecord[] {
 
   return result.current.filteredAndSorted;
 }
+
+const quoteStatusCases: Array<[
+  QuoteStatusFilter,
+  Partial<InquiryRecord>,
+  boolean,
+]> = [
+  ['customer_quoted', {
+    quotedStatuses: [{
+      id: 'quoted', quoteDate: '[7.1]', supplierShortName: '', version: '', type: 'quoted',
+    }],
+  }, true],
+  ['unavailable', {
+    quotedStatuses: [{
+      id: 'closed', quoteDate: '[7.1]', supplierShortName: '', version: '', type: 'closed',
+    }],
+  }, true],
+  ['has_order', { orderNo: 'ORDER-1' }, true],
+  ['cancelled', { orderSubStatus: 'cancelled' }, true],
+  ['followup', { orderSubStatus: 'followup' }, true],
+];
 
 describe('useInquiryFilter keyword search', () => {
   it('matches an order number substring case-insensitively and tolerates missing order numbers', () => {
@@ -94,5 +120,59 @@ describe('useInquiryFilter order status', () => {
       'normal',
       'suspended',
     ]);
+  });
+});
+
+describe('useInquiryFilter quote status', () => {
+  it('counts a supplemented-only record in both the 未报价 table and badge', () => {
+    const records = [
+      createRecord('supplemented', {
+        quotedStatuses: [{
+          id: 'supplemented-status',
+          quoteDate: '[6.30]',
+          supplierShortName: '',
+          version: '',
+          type: 'supplemented',
+        }],
+      }),
+      createRecord('quoted', {
+        quotedStatuses: [{
+          id: 'quoted-status',
+          quoteDate: '[7.1]',
+          supplierShortName: '',
+          version: '',
+          type: 'quoted',
+        }],
+      }),
+    ];
+    const { result } = renderHook(() => useInquiryFilter(records));
+
+    act(() => {
+      result.current.setFilter({
+        ...result.current.filter,
+        timeRange: 'all',
+        quoteStatus: 'customer_pending',
+      });
+    });
+
+    expect(result.current.filteredAndSorted.map((record) => record.id)).toEqual(['supplemented']);
+    expect(matchesQuoteStatus(records[0], 'customer_quoted')).toBe(false);
+
+    render(createElement(InquiryFilterBar, {
+      filter: result.current.filter,
+      setFilter: jest.fn(),
+      inquirers: result.current.inquirers,
+      activeCount: result.current.activeCount,
+      onReset: jest.fn(),
+      records: result.current.baseFiltered,
+      filteredCount: result.current.filteredAndSorted.length,
+    }));
+
+    const pendingChip = screen.getByRole('button', { name: /未报价/ });
+    expect(within(pendingChip).getByText('1')).toBeInTheDocument();
+  });
+
+  it.each(quoteStatusCases)('preserves the existing %s predicate', (status, overrides, expected) => {
+    expect(matchesQuoteStatus(createRecord(status, overrides), status)).toBe(expected);
   });
 });

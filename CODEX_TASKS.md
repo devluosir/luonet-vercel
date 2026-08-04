@@ -5485,6 +5485,57 @@ attn: string;                    // 继续保留完整打印快照，兼容现�
 
 **完成说明：** 首页「本月」统计区已增加一次性同步刷新按钮，并按权限严格区分完整视图的整条合并/本地补推与采购受限视图的仅字段合并。刷新期间按钮禁用并旋转，重复点击由 ref 拦截，失败静默恢复。新增两条同步路径单测，定向 Jest、ESLint、TypeScript 检查及生产构建均通过。
 
+## TASK-194：询报价登记表「未报价」角标数字跟表格实际筛出的行数对不上
+
+**背景：** 用户反馈：询报价登记页面切到「未报价」筛选时，芯片角标显示 3，但表格实际显示 4 行。
+
+根因是同一个"未报价"判定口径，在两个文件里各写了一份，且在 `v26.6.24.0.16`（commit `c84c2dba`）改判定逻辑时只改了一处：
+
+- `src/features/inquiry/hooks/useInquiryFilter.ts` 第 153–154 行（`filteredAndSorted`，决定表格实际显示哪些行）：
+  ```
+  case 'customer_pending':
+    return quotedStatuses.every((s) => s.type === 'supplemented');
+  ```
+  空数组 `[].every(...)` 恒真，所以这个判定覆盖两种记录：① `quotedStatuses` 完全为空；② `quotedStatuses` 非空但里面所有条目 `type` 都是 `'supplemented'`（即只有"已补充信息"标记、没有真正报价）。
+
+- `src/features/inquiry/components/InquiryFilterBar.tsx` 第 49 行（`countByStatus`，决定"未报价"芯片角标数字）仍是改动前的旧逻辑：
+  ```
+  case 'customer_pending':  return quotedStatuses.length === 0;
+  ```
+  只统计①，漏统计②，导致角标数字比表格实际行数少。
+
+截图里的 `C260625G`（状态列显示"已补充(6.30)"）就是②类记录：命中表格筛选、不计入角标。两个文件的 `records` 入参在页面层是同一份 `baseFiltered`（见 `InquiryPage.tsx` 第 482 行、`PurchaseRegistrationPage.tsx` 第 261 行），所以差异纯粹来自判定逻辑不一致，不是数据源或时间范围的问题。
+
+**Files in scope：**
+
+- `src/features/inquiry/hooks/useInquiryFilter.ts` — 把 `customer_pending`（以及其它几个状态：`customer_quoted`／`unavailable`／`has_order`／`cancelled`／`followup`）的判定逻辑从 `filteredAndSorted` 的 `switch` 里抽成一个独立的具名函数（例如 `matchesQuoteStatus(record, status): boolean`），导出给 `InquiryFilterBar.tsx` 复用。`supplier_pending` 这个分支不在角标 `statusOptions` 列表里（`InquiryFilterBar.tsx` 的 `statusOptions` 常量没有它），可以留在 `switch` 里或一并抽出，按你觉得自然的方式处理，不强制。
+- `src/features/inquiry/components/InquiryFilterBar.tsx` — `countByStatus`（第 44–62 行）改为调用上面抽出的共享函数，删除本地重复的 `switch` 判定，避免两处逻辑再次分叉。
+
+**Acceptance criteria：**
+
+- "未报价"角标数字与切换到"未报价"筛选后表格实际显示的行数始终一致（包括存在 `quotedStatuses` 全为 `type: 'supplemented'` 的记录时）。
+- 其余 5 个状态芯片（已报价/无法报价/已成单/已辙销/善后）角标数字同样跟对应筛选下的表格行数一致（这几个之前逻辑本来就是重复抄写、没有实际分叉，但抽公共函数后顺带验证一遍，防止抽取过程手滑改错）。
+- `/inquiry`（`InquiryPage.tsx`）和采购部登记页（`PurchaseRegistrationPage.tsx`）两处都要验证，因为两边共用同一个 `InquiryFilterBar` + `useInquiryFilter`。
+- 不改变现有 `quotedStatuses`/`supplierStatuses` 数据结构、不改变 `InquiryQuoteStatus.tsx` 里"已补充信息" checkbox 的写入逻辑——本任务只统一"读"的判定口径。
+
+**Non-goals / 红线：**
+
+- 不改 `customer_pending` 之外的判定条件的"业务含义"（比如不要顺手把"已补充信息"记录算进"已报价"）——只是把现有 `filteredAndSorted` 那份已经正确的口径，原样搬去给角标复用，不重新设计口径。
+- 不改 `baseFiltered`（时间范围/关键词/客户/询价人/关联客户过滤，第 106–140 行）。
+- 不改 `linkFilter`/`defaultUnlinkedCount`（"待关联客户"芯片）逻辑，那是完全独立的另一个计数。
+- 不改采购部登记页面自己的 `purchaseInquiryStatus.ts` 色彩/状态判定（`getRecordColorState` 等），那是给采购部自己 `purchaseQuotedStatuses` 用的另一套口径，不在本次范围内。
+
+**Verification steps（供实现者跑）：**
+
+- `npx tsc --noEmit`
+- `npx eslint src/features/inquiry/hooks/useInquiryFilter.ts src/features/inquiry/components/InquiryFilterBar.tsx`
+- 跑现有 `src/features/inquiry/hooks/__tests__/useInquiryFilter.test.ts`，并补一条用例：构造一条 `quotedStatuses` 只含 `type: 'supplemented'` 的记录，断言它同时满足"表格筛选命中"和"角标计数命中"（如果之前有测试直接断言 `countByStatus` 或角标数字，一并检查/修正）。
+- 手动验证：在 `/inquiry` 切到"未报价"，对比角标数字和表格行数一致；找一条只有"已补充信息"、没有实际报价记录的询价（对照截图里 `C260625G` 那种），确认它出现在"未报价"筛选结果里、且被计入角标。
+
+**Status:** completed（2026-08-04）
+
+**完成说明：** 已将询报价状态判断统一收敛到 `matchesQuoteStatus`，表格筛选与状态芯片角标共用同一口径；仅含 `supplemented` 的记录现会同时出现在「未报价」列表并计入角标。新增回归测试覆盖该场景及其余 5 个状态，询报价/采购部登记相关 12 个测试套件共 214 例、ESLint、TypeScript 与 `git diff --check` 均通过。
+
 ## 已关闭 / 不做
 
 | 项 | 说明 |

@@ -23,6 +23,45 @@ export function hasOrderNumber(record: Pick<InquiryRecord, 'orderNo'>): boolean 
   return Boolean(record.orderNo?.trim());
 }
 
+/** 询报价状态筛选与角标计数的统一判定口径。 */
+export function matchesQuoteStatus(
+  record: InquiryRecord,
+  status: QuoteStatusFilter
+): boolean {
+  // 防御性兜底：受限视图/异常数据可能缺失状态字段
+  const quotedStatuses = record.quotedStatuses ?? [];
+  const supplierStatuses = record.supplierStatuses ?? [];
+
+  switch (status) {
+    case 'supplier_pending':
+      return supplierStatuses.some((supplierStatus) =>
+        !supplierStatus.status || supplierStatus.status === 'pending'
+      );
+    case 'customer_pending':
+      return quotedStatuses.every((quotedStatus) => quotedStatus.type === 'supplemented');
+    case 'customer_quoted':
+      return (
+        !quotedStatuses.some(
+          (quotedStatus) => quotedStatus.type === 'unavailable' || quotedStatus.type === 'closed'
+        ) && quotedStatuses.some(
+          (quotedStatus) => !quotedStatus.type || quotedStatus.type === 'quoted'
+        )
+      );
+    case 'unavailable':
+      return quotedStatuses.some(
+        (quotedStatus) => quotedStatus.type === 'unavailable' || quotedStatus.type === 'closed'
+      );
+    case 'has_order':
+      return hasOrderNumber(record);
+    case 'cancelled':
+      return record.orderSubStatus === 'cancelled';
+    case 'followup':
+      return record.orderSubStatus === 'followup';
+    case 'all':
+      return true;
+  }
+}
+
 export interface InquiryFilterState {
   timeRange: TimeRange;
   customerNo: string;
@@ -141,37 +180,7 @@ export function useInquiryFilter(records: InquiryRecord[]) {
 
   const filteredAndSorted = useMemo(() => {
     return baseFiltered
-      .filter((record) => {
-        // 防御性兜底：受限视图/异常数据可能缺失 quotedStatuses/supplierStatuses 字段
-        const quotedStatuses = record.quotedStatuses ?? [];
-        const supplierStatuses = record.supplierStatuses ?? [];
-        switch (filter.quoteStatus) {
-          case 'supplier_pending':
-            return supplierStatuses.some(
-              (s) => !s.status || s.status === 'pending'
-            );
-          case 'customer_pending':
-            return quotedStatuses.every((s) => s.type === 'supplemented');
-          case 'customer_quoted':
-            return (
-              !quotedStatuses.some(
-                (s) => s.type === 'unavailable' || s.type === 'closed'
-              ) && quotedStatuses.some((s) => !s.type || s.type === 'quoted')
-            );
-          case 'unavailable':
-            return quotedStatuses.some(
-              (s) => s.type === 'unavailable' || s.type === 'closed'
-            );
-          case 'has_order':
-            return hasOrderNumber(record);
-          case 'cancelled':
-            return record.orderSubStatus === 'cancelled';
-          case 'followup':
-            return record.orderSubStatus === 'followup';
-          default:
-            return true;
-        }
-      })
+      .filter((record) => matchesQuoteStatus(record, filter.quoteStatus))
       .sort((a, b) =>
         filter.sortDir === 'desc'
           ? b.inquiryNo.localeCompare(a.inquiryNo)

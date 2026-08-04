@@ -5,7 +5,7 @@ import { FilterChip } from '@/components/FilterChip';
 import { MonthRangeNav } from '@/components/MonthRangeNav';
 import type { InquiryRecord } from '../types';
 import {
-  hasOrderNumber,
+  matchesQuoteStatus,
   type InquiryFilterState,
   type QuoteStatusFilter,
 } from '../hooks/useInquiryFilter';
@@ -42,23 +42,7 @@ interface InquiryFilterBarProps {
 
 // ── 状态角标计数 ──────────────────────────────────────────
 function countByStatus(records: InquiryRecord[], status: QuoteStatusFilter): number {
-  return records.filter((r) => {
-    // 防御性兜底：受限视图/异常数据可能缺失 quotedStatuses 字段
-    const quotedStatuses = r.quotedStatuses ?? [];
-    switch (status) {
-      case 'customer_pending':  return quotedStatuses.length === 0;
-      case 'customer_quoted':
-        return (
-          !quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed') &&
-           quotedStatuses.some((s) => !s.type || s.type === 'quoted')
-        );
-      case 'unavailable': return quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed');
-      case 'has_order':   return hasOrderNumber(r);
-      case 'cancelled':   return r.orderSubStatus === 'cancelled';
-      case 'followup':    return r.orderSubStatus === 'followup';
-      default:            return false;
-    }
-  }).length;
+  return records.filter((record) => matchesQuoteStatus(record, status)).length;
 }
 
 // ── 常量 ─────────────────────────────────────────────────
